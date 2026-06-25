@@ -163,8 +163,11 @@ app.ticker.add(() => {
   for (const v of chars.values()) {
     const k = Math.min(1, dt * 9), ox = v.dx, oy = v.dy;
     v.dx += (v.tx - v.dx) * k; v.dy += (v.ty - v.dy) * k;
-    const moving = Math.hypot(v.dx - ox, v.dy - oy) > 0.15;
-    if (v.tface) v.face = v.tface;
+    const vx = v.dx - ox, vy = v.dy - oy;
+    const moving = Math.hypot(vx, vy) > 0.15;
+    if (moving && Math.abs(vx) > 0.05) v.face = vx < 0 ? -1 : 1; // face the way you travel
+    const leanT = moving ? Math.max(-0.14, Math.min(0.14, vx * 0.05)) : 0;
+    v.lean = (v.lean || 0) + (leanT - (v.lean || 0)) * Math.min(1, dt * 8); // ease a lean into the motion
     const p = v.view._p;
     v.view.position.set(v.dx, v.dy);
     // idle actions: when standing around, occasionally hop and puff an emote
@@ -180,7 +183,7 @@ app.ticker.add(() => {
         p.bob += dt * 11;
         const s = Math.sin(p.bob);
         p.spr.y = 19 - Math.abs(s) * 4.5;                 // hop while walking
-        p.spr.rotation = s * 0.07 * v.face;               // sway in travel direction
+        p.spr.rotation = s * 0.06 * v.face + (v.lean || 0); // sway plus a lean into the direction of travel
         p.spr.scale.y = p.sc * (1 - Math.abs(s) * 0.05);  // squash
         p.shadow.scale.set(1 + Math.abs(s) * 0.12, 1);
       } else {
