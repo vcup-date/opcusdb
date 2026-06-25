@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-161%20passing-success)
+![tests](https://img.shields.io/badge/tests-165%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-161 tests · 35 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+165 tests · 36 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -157,6 +157,27 @@ cargo run -p opcusdb-server --bin opcusdb-smash      # open http://localhost:900
 # arrows move · Z attack · X/↑ jump (double) · open more tabs to add fighters
 ```
 
+## Boomborn — co-op survivor (Vampire-Survivors-style) 💣🧛
+
+`opcusdb-survivors` is a "bullet heaven": you're a **Bomberman** whose bombs
+**auto-fire** (lob bombs, a Bomberman cross-blast, homing rockets, a nova pulse)
+against hordes of **vampires** (bats, ghouls, vampires, elite bat-lords). You only
+**move** (WASD/arrows); killed vampires drop **XP gems** — collect them to level up
+and stack/upgrade weapons, and survive the escalating waves. **Co-op**: everyone
+who opens the page fights the same horde. The Rust server simulates hundreds of
+enemies + projectiles + explosions at a fixed tick and broadcasts the world;
+best kill counts persist to a local DB file (`survivors.db`, gitignored).
+
+<div align="center">
+<img src="assets/survivors.png" width="760"/><br/>
+<b>opcusdb Boomborn</b> — two bombers vs. a vampire horde; auto-bombs carpet the field with explosions, XP gems, levels & a kills leaderboard.
+</div>
+
+```sh
+cargo run -p opcusdb-server --bin opcusdb-survivors   # open http://localhost:9006
+# WASD / arrows to move — bombs fire automatically; open more tabs for co-op
+```
+
 ## Architecture
 
 <div align="center"><img src="assets/diagram-arch.png" width="560" alt="architecture"/></div>
@@ -185,7 +206,7 @@ cargo run -p opcusdb-server --bin opcusdb-smash      # open http://localhost:900
 | `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
 | `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
 | `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
-| `demos/server` | five authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku** (5-in-a-row), **Arena** (snake), and **Smackdown** (Smash-style platform fighter) — with rooms, leaderboards, and physics |
+| `demos/server` | six authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), and **Boomborn** (Vampire-Survivors-style horde survivor) — with rooms, leaderboards, physics, and AI |
 
 ## The five game types → demos
 
@@ -201,6 +222,7 @@ cargo run -p opcusdb-server --bin opcusdb-smash      # open http://localhost:900
 | **live human + AI chat** | `server` (chat) | `OPENROUTER_API_KEY=… cargo run -p opcusdb-server --bin opcusdb-chat` → :9002 | IRC-style channel; anyone logs in; **10 AI chatters via OpenRouter** |
 | **Gomoku (5-in-a-row)** | `server` (gomoku) | `cargo run -p opcusdb-server --bin opcusdb-gomoku` → :9004 | turn-based **five-in-a-row**; rooms; win detection; persistent win leaderboard |
 | **platform fighter** | `server` (smash) | `cargo run -p opcusdb-server --bin opcusdb-smash` → :9005 | Smash-style brawl; auto-join; arrows + Z/X; damage % + KOs; pixel fighters, parallax, particles, sound |
+| **survivor (Vampire-Survivors-like)** | `server` (survivors) | `cargo run -p opcusdb-server --bin opcusdb-survivors` → :9006 | co-op bomberman vs vampire hordes; auto-bombs, XP/levels, waves, kills leaderboard |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start
@@ -252,6 +274,7 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 | WebSocket handshake (SHA-1/base64) per RFC 6455 | `server … rfc6455_accept_example` |
 | Gomoku detects horizontal/diagonal five-in-a-row | `server … detects_horizontal_five`, `detects_diagonal_five` |
 | Fighter attack hits in front, knockback & KO credit | `server … attack_in_front_damages_and_knocks_back`, `falling_into_blast_zone_kos_and_credits_last_hitter` |
+| Survivor: explosion kills + xp drop, enemy AI, level-up | `server … explosion_kills_enemy_drops_gem_and_scores`, `enemy_moves_toward_player`, `level_up_grants_weapon_or_upgrade` |
 | Snake eats/grows; wall-crash records score | `server … snake_moves_and_eats`, `wall_collision_kills_and_records_score` |
 
 ## Status

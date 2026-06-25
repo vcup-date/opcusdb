@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>opcusdb Boomborn · bomberman vs vampires</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #05060c; color: #e6ecff;
+        font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+      #stageWrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+      canvas { image-rendering: pixelated; max-width: 100%; max-height: 100%; }
+      .accent { color: #ff5d5d; }
+      #top { position: fixed; top: 10px; left: 0; right: 0; text-align: center; z-index: 4; text-shadow: 0 2px 6px #000; pointer-events: none; }
+      #timer { font-size: 34px; font-weight: 800; letter-spacing: 1px; }
+      #wave { font-size: 13px; color: #b7c4e6; }
+      #sound { position: fixed; top: 10px; right: 12px; z-index: 5; background:#14203a; color:#bcd; border:0; border-radius:8px; padding:5px 10px; cursor:pointer; }
+      #title { position: fixed; top: 10px; left: 14px; z-index: 4; font-size:13px; text-shadow:0 2px 6px #000; }
+      #players { position: fixed; top: 56px; right: 12px; z-index: 4; width: 184px; }
+      .pc { background:#0c1322cc; border:1px solid #233; border-left-width:4px; border-radius:8px; padding:5px 8px; margin-bottom:6px; font-size:12px; }
+      .pc .nm { font-weight:700; display:flex; justify-content:space-between; }
+      .bar { height:6px; border-radius:4px; background:#26304a; margin-top:3px; overflow:hidden; }
+      .bar > i { display:block; height:100%; }
+      #lb { position: fixed; bottom: 54px; right: 12px; z-index:4; width:184px; background:#0c1322cc; border:1px solid #233; border-radius:8px; padding:6px 10px; }
+      #lb h4 { margin:0 0 4px; font-size:10px; letter-spacing:1px; color:#6b7a99; }
+      #lb .row { display:flex; justify-content:space-between; font-size:12px; }
+      #xpwrap { position: fixed; left: 0; right: 0; bottom: 0; z-index:4; padding:6px 12px; background:#070b16; border-top:2px solid #18223c; display:flex; align-items:center; gap:10px; }
+      #xpbar { flex:1; height:14px; background:#1a2440; border-radius:7px; overflow:hidden; }
+      #xpfill { height:100%; width:0; background:linear-gradient(90deg,#4de1e6,#7dcfff); transition:width .1s; }
+      #lvl { font-weight:800; color:#7dcfff; }
+      #downmsg { position: fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:6; pointer-events:none; }
+      #downmsg span { background:#04060cc0; color:#ff7eb6; font-size:26px; font-weight:800; padding:12px 22px; border-radius:12px; }
+      #overlay { position: fixed; inset:0; display:flex; align-items:center; justify-content:center;
+        background: radial-gradient(800px 460px at 50% 28%, #2a0f1a, #06070e 75%); z-index:10; }
+      .panel { text-align:center; background:#0c1322ee; border:1px solid #3a1f2a; border-radius:18px; padding:30px 36px; width:440px; }
+      .panel h1 { font-size:30px; margin:0 0 4px; }
+      .panel p { color:#b3a0a8; margin:6px 0; }
+      .keys { background:#1a1220; border:1px solid #4a2535; border-radius:6px; padding:2px 7px; }
+      .panel input { width:100%; font:inherit; text-align:center; padding:11px; margin:14px 0 6px; border-radius:10px; border:1px solid #4a2535; background:#1a1018; color:#ffe; }
+      .panel button { width:100%; font:inherit; font-weight:800; font-size:16px; padding:13px; border:0; border-radius:12px; cursor:pointer; background:linear-gradient(180deg,#ff5d5d,#c52f2f); color:#fff; }
+      .muted { color:#8a7a82; font-size:12px; }
+    </style>
+  </head>
+  <body>
+    <div id="stageWrap"></div>
+    <div id="title"><span class="accent">opcusdb</span> Boomborn</div>
+    <button id="sound">🔊 sound on</button>
+    <div id="top"><div id="timer">0:00</div><div id="wave">survive the horde</div></div>
+    <div id="players"></div>
+    <div id="lb"><h4>🏆 BEST KILLS</h4><div id="lbrows"></div></div>
+    <div id="downmsg"><span>💀 DOWNED — respawning…</span></div>
+    <div id="xpwrap"><span id="lvl">Lv 1</span><div id="xpbar"><div id="xpfill"></div></div><span id="kills">☠ 0</span></div>
+
+    <div id="overlay"><div class="panel">
+      <h1>💣 <span class="accent">Boomborn</span></h1>
+      <p>You're a <b>Bomberman</b> in a field of <b>vampires</b>. Your bombs fire automatically — just <b>move</b> and survive.</p>
+      <p><span class="keys">W A S D</span> / <span class="keys">arrows</span> to move · collect 💎 gems to level up &amp; stack bombs</p>
+      <input id="nick" placeholder="your name (optional)" maxlength="12" />
+      <button id="start">enter the field ▶</button>
+      <p class="muted">co-op: open more tabs to fight the horde together</p>
+    </div></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
+    <script src="/survivors.js"></script>
+  </body>
+</html>

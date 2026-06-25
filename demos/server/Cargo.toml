@@ -33,5 +33,9 @@ path = "src/gomoku.rs"
 name = "opcusdb-smash"
 path = "src/smash.rs"
 
+[[bin]]
+name = "opcusdb-survivors"
+path = "src/survivors.rs"
+
 [dependencies]
 opcusdb-core = { path = "../../crates/opcusdb-core" }
