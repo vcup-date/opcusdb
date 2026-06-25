@@ -34,7 +34,9 @@ const TICK_MS: u64 = 50; // 20 Hz movement
 const DT: f32 = 0.05;
 const DAY_SECS: f32 = 200.0; // a full day cycle
 const SPEED: f32 = 46.0;
-const MODEL: &str = "nvidia/nemotron-3-ultra-550b-a55b:free";
+// A free model that fails fast when the free tier is rate-limited (so the town
+// drops to a canned line in about a second) instead of hanging like the 550B id did.
+const MODEL: &str = "meta-llama/llama-3.3-70b-instruct:free";
 
 // (name, persona, role, work-location index, favourite social-location index)
 const RESIDENTS: [(&str, &str, &str, usize, usize); 12] = [
@@ -397,13 +399,25 @@ fn canned(name: &str, persona: &str) -> String {
     let base = [
         "Lovely weather for it, isn't it?",
         "Did you hear what happened by the market?",
-        "I've too much to do and too little time.",
-        "Sit a while, no need to rush.",
+        "Too much to do and too little time today.",
+        "Sit a while, no need to rush off.",
         "Prices again, everything costs more these days.",
-        "Have you eaten? You look hungry.",
+        "Have you eaten? You look a little hungry.",
+        "Quiet morning, just how I like it.",
+        "I keep meaning to fix that fence by the well.",
+        "They say it might rain before evening.",
+        "Otto swears the fish are biting again.",
+        "My back is not what it used to be.",
+        "Have you been down to the garden lately?",
+        "The tavern was lively last night, I hear.",
+        "Mind how you go on those cobbles.",
+        "I could do with a hot cup of something.",
+        "New faces in town, always good to see.",
+        "Bit of a chill in the air, wrap up warm.",
+        "Tell me, what brings you our way?",
     ];
-    let i = (name.len() + persona.len()) % base.len();
-    base[i].to_string()
+    let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 7 + persona.len() * 3;
+    base[h % base.len()].to_string()
 }
 
 fn sanitize(s: &str) -> String {
