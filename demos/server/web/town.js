@@ -24,9 +24,19 @@ $("app").appendChild(app.view);
 function fit() { const s = Math.min(innerWidth / W, innerHeight / H) * 0.98; app.view.style.width = W * s + "px"; app.view.style.height = H * s + "px"; }
 addEventListener("resize", fit); fit();
 
-const bgL = new PIXI.Container(), groundL = new PIXI.Container(), labelL = new PIXI.Container(), charL = new PIXI.Container(), bubbleL = new PIXI.Container(), fxL = new PIXI.Container(), nightL = new PIXI.Container();
-app.stage.addChild(bgL, groundL, labelL, charL, bubbleL, fxL, nightL);
-fxL.eventMode = "none";
+const bgL = new PIXI.Container(), groundL = new PIXI.Container(), labelL = new PIXI.Container(), charL = new PIXI.Container(), bubbleL = new PIXI.Container(), fxL = new PIXI.Container(), nightL = new PIXI.Container(), glowL = new PIXI.Container();
+app.stage.addChild(bgL, groundL, labelL, charL, bubbleL, fxL, nightL, glowL);
+fxL.eventMode = "none"; glowL.eventMode = "none";
+// warm lamp glows + drifting fireflies, drawn above the night tint so they shine in the dark
+const lampG = new PIXI.Graphics(); const fireG = new PIXI.Graphics(); fireG.blendMode = PIXI.BLEND_MODES.ADD; glowL.addChild(lampG, fireG);
+const fireflies = Array.from({ length: 38 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, ph: Math.random() * 6 }));
+function nightAmt(p) {
+  if (p < 0.20) return 0.85 - p / 0.20 * 0.6;
+  if (p < 0.50) return 0.0;
+  if (p < 0.72) return (p - 0.50) / 0.22 * 0.22;
+  if (p < 0.85) return 0.22 + (p - 0.72) / 0.13 * 0.46;
+  return 0.68 + (p - 0.85) / 0.15 * 0.32;
+}
 let hasBg = false;
 const night = new PIXI.Graphics().beginFill(0xffffff).drawRect(0, 0, W, H).endFill();
 nightL.addChild(night); nightL.eventMode = "none"; night.blendMode = PIXI.BLEND_MODES.MULTIPLY;
@@ -43,6 +53,9 @@ function buildScenery() {
     const t = new PIXI.Text(l.name, { fontFamily: "system-ui", fontSize: 12, fontWeight: "700", fill: 0xfff4d6, stroke: 0x2a1c0a, strokeThickness: 3 });
     t.anchor.set(0.5, 1); t.position.set(l.x, l.y - 40); t.alpha = 0.85; labelL.addChild(t);
   }
+  // soft warm lamp glow near each spot, brightest at night
+  lampG.clear(); lampG.blendMode = PIXI.BLEND_MODES.ADD;
+  for (const l of LOCS) { const col = l.kind === "plaza" ? 0x8fbfff : 0xffb24a; for (let i = 8; i >= 1; i--) lampG.beginFill(col, 0.05).drawCircle(l.x, l.y - 6, 6 * i).endFill(); }
   if (hasBg) groundL.visible = false;
 }
 
@@ -216,6 +229,17 @@ app.ticker.add(() => {
   for (const b of bubbleL.children) { const v = chars.get(+b.name.slice(1)); if (v) b.position.set(v.dx - (b._w || 80) / 2, v.dy - 40 - (b._h || 24)); }
   // day/night
   const [col, a] = skyTint(phase); night.tint = col; night.alpha = a;
+  // lamp glow + fireflies fade in as it gets dark
+  const na = nightAmt(phase);
+  glowL.alpha = na;
+  fireG.clear();
+  for (const f of fireflies) {
+    f.x += f.vx * dt; f.y += f.vy * dt; f.ph += dt * 2.2;
+    if (f.x < 0) f.x += W; else if (f.x > W) f.x -= W;
+    if (f.y < 0) f.y += H; else if (f.y > H) f.y -= H;
+    const fa = 0.25 + 0.55 * Math.max(0, Math.sin(f.ph));
+    fireG.beginFill(0xffe88a, fa).drawCircle(f.x, f.y, 1.7).endFill();
+  }
   updateClock();
 });
 // returns [tintColor, alpha]; applied as a MULTIPLY layer so the scene darkens and
