@@ -349,11 +349,14 @@ fn converse(town: Arc<Mutex<Town>>) {
         };
         thread::sleep(Duration::from_millis(if urgent { 700 } else { 2600 }));
         let Some((speaker, system, user)) = job else { continue };
-        let (name, persona) = {
+        let (name, persona, human_facing) = {
             let t = town.lock().unwrap();
-            (t.chars[&speaker].name.clone(), t.chars[&speaker].persona)
+            let here = t.chars[&speaker].here;
+            let hf = here >= 0 && t.pending[here as usize];
+            (t.chars[&speaker].name.clone(), t.chars[&speaker].persona, hf)
         };
-        let line = ai_say(&system, &user).unwrap_or_else(|| canned(&name, persona));
+        // if the model is rate-limited, a visitor still gets a real greeting, not filler
+        let line = ai_say(&system, &user).unwrap_or_else(|| if human_facing { canned_greet(&name) } else { canned(&name, persona) });
         let mut t = town.lock().unwrap();
         let li = t.chars[&speaker].here;
         if li < 0 {
@@ -417,6 +420,23 @@ fn canned(name: &str, persona: &str) -> String {
         "Tell me, what brings you our way?",
     ];
     let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 7 + persona.len() * 3;
+    base[h % base.len()].to_string()
+}
+
+/// Visitor-facing fallback: used when a human is present but the model is unavailable,
+/// so newcomers are still greeted rather than ignored.
+fn canned_greet(name: &str) -> String {
+    let base = [
+        "Welcome, stranger. Make yourself at home.",
+        "Good to see a new face. What brings you our way?",
+        "Hello there. Lovely day to wander, isn't it?",
+        "Pull up a spot, traveler. What's on your mind?",
+        "Ah, a visitor. How can I help you today?",
+        "You're new here, aren't you? Welcome to Hearth.",
+        "Mind the cobbles, friend, and stay a while.",
+        "Hello, hello. Come, tell me your story.",
+    ];
+    let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 5 + 3;
     base[h % base.len()].to_string()
 }
 
