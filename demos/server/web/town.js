@@ -28,57 +28,24 @@ const bgL = new PIXI.Container(), groundL = new PIXI.Container(), labelL = new P
 app.stage.addChild(bgL, groundL, labelL, charL, bubbleL, nightL);
 let hasBg = false;
 const night = new PIXI.Graphics().beginFill(0xffffff).drawRect(0, 0, W, H).endFill();
-nightL.addChild(night); nightL.eventMode = "none";
+nightL.addChild(night); nightL.eventMode = "none"; night.blendMode = PIXI.BLEND_MODES.MULTIPLY;
 
 // ---- map / scenery --------------------------------------------------------
 function buildScenery() {
   groundL.removeChildren(); labelL.removeChildren();
+  // plain grass fallback (hidden when the generated map loads)
   const g = new PIXI.Graphics();
-  // grass with a soft checker
   for (let y = 0; y < 19; y++) for (let x = 0; x < 30; x++) { g.beginFill((x + y) % 2 ? 0x33502c : 0x39572f).drawRect(x * 32, y * 32, 32, 32).endFill(); }
   groundL.addChild(g);
-  // paths from plaza to each location
-  const plaza = LOCS.find(l => l.kind === "plaza");
-  if (plaza) { const pc = [(plaza.x + plaza.w / 2) * 32, (plaza.y + plaza.h / 2) * 32];
-    const pg = new PIXI.Graphics(); pg.lineStyle(14, 0x8a7048, 1);
-    for (const l of LOCS) { if (l === plaza) continue; pg.moveTo(pc[0], pc[1]); pg.lineTo((l.x + l.w / 2) * 32, (l.y + l.h / 2) * 32); }
-    pg.lineStyle(8, 0xa3865a, 1);
-    for (const l of LOCS) { if (l === plaza) continue; pg.moveTo(pc[0], pc[1]); pg.lineTo((l.x + l.w / 2) * 32, (l.y + l.h / 2) * 32); }
-    groundL.addChild(pg);
-  }
-  // buildings / features
-  for (const l of LOCS) drawLoc(l);
-  // labels (always visible — vital once a generated bg replaces the buildings)
+  // location signs sit just above each ground stand point (pixel coords)
   for (const l of LOCS) {
     const t = new PIXI.Text(l.name, { fontFamily: "system-ui", fontSize: 12, fontWeight: "700", fill: 0xfff4d6, stroke: 0x2a1c0a, strokeThickness: 3 });
-    t.anchor.set(0.5, 1); t.position.set((l.x + l.w / 2) * 32, l.y * 32 - 2); labelL.addChild(t);
+    t.anchor.set(0.5, 1); t.position.set(l.x, l.y - 40); t.alpha = 0.85; labelL.addChild(t);
   }
-  if (hasBg) groundL.visible = false; // generated art replaces the drawn ground
-}
-function drawLoc(l) {
-  const x = l.x * 32, y = l.y * 32, w = l.w * 32, h = l.h * 32, g = new PIXI.Graphics();
-  const roof = { bakery: 0xd98a4a, forge: 0x6a6a72, tavern: 0x8a4a2a, library: 0x4a6fb0, market: 0x4caf7d, homes: 0xb0584a }[l.kind];
-  if (roof !== undefined) {
-    g.beginFill(0x000000, 0.22).drawEllipse(x + w / 2, y + h + 6, w * 0.5, 8).endFill();
-    g.beginFill(0xc9b79a).drawRoundedRect(x + 4, y + h * 0.42, w - 8, h * 0.62, 4).endFill();        // walls
-    g.beginFill(0x4a3526).drawRoundedRect(x + w / 2 - 7, y + h * 0.7, 14, h * 0.34, 2).endFill();    // door
-    g.beginFill(roof).moveTo(x, y + h * 0.5).lineTo(x + w / 2, y - 4).lineTo(x + w, y + h * 0.5).closePath().endFill(); // roof
-    g.lineStyle(2, 0x00000022).moveTo(x, y + h * 0.5).lineTo(x + w / 2, y - 4).lineTo(x + w, y + h * 0.5);
-  } else if (l.kind === "plaza") {
-    g.beginFill(0x9a8a6a).drawCircle(x + w / 2, y + h / 2, Math.min(w, h) * 0.5).endFill();
-    g.beginFill(0x6fb3d6).drawCircle(x + w / 2, y + h / 2, 16).endFill();
-    g.beginFill(0xbfe6f5).drawCircle(x + w / 2, y + h / 2, 7).endFill();
-  } else if (l.kind === "garden") {
-    g.beginFill(0x2f6b34).drawRoundedRect(x, y, w, h, 8).endFill();
-    for (let i = 0; i < 6; i++) { const px = x + 14 + (i * 53) % (w - 20), py = y + 14 + ((i * 37) % (h - 20)); g.beginFill(0x000000, 0.2).drawEllipse(px, py + 9, 8, 3).endFill(); g.beginFill(0x6b4a2a).drawRect(px - 2, py, 4, 9).endFill(); g.beginFill(0x3a9a49).drawCircle(px, py - 4, 9).endFill(); }
-  } else if (l.kind === "dock") {
-    g.beginFill(0x355f86).drawRoundedRect(x - 4, y, w + 8, h, 6).endFill();
-    g.beginFill(0x8a6a44).drawRect(x + w * 0.4, y + 6, 10, h - 12).endFill();
-  }
-  groundL.addChild(g);
+  if (hasBg) groundL.visible = false;
 }
 
-// optional generated background (Qwen-Image). Falls back silently if absent.
+// generated town map; falls back silently to the grass above if absent.
 (function loadBg() {
   const img = new Image();
   img.onload = () => { if (img.naturalWidth >= 400) { const sp = PIXI.Sprite.from(PIXI.Texture.from(img)); sp.width = W; sp.height = H; bgL.addChild(sp); hasBg = true; groundL.visible = false; } };
@@ -106,7 +73,7 @@ function makeChar(pal, isHuman, palIdx) {
   head.beginFill(0x1a1a22).drawCircle(-3, -15, 1.4).drawCircle(3, -15, 1.4).endFill(); // eyes
   body.addChild(legL, legR, torso, head);
   const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: isHuman ? 0xffe07a : 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
-  nm.anchor.set(0.5, 0); nm.position.set(0, 21); c.addChild(nm);
+  nm.anchor.set(0.5, 0); nm.position.set(0, -38); c.addChild(nm); // name above the head
   c._p = { body, legL, legR, head, nm, ring, walk: Math.random() * 6 };
   charL.addChild(c);
   return c;
@@ -119,7 +86,7 @@ function makeSpriteChar(row) {
   const sc = 50 / 128; spr.scale.set(sc); spr.position.set(0, 19); spr.gotoAndStop(0);
   c.addChild(spr);
   const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
-  nm.anchor.set(0.5, 0); nm.position.set(0, 22); c.addChild(nm);
+  nm.anchor.set(0.5, 0); nm.position.set(0, -56); c.addChild(nm); // name above the head
   c._p = { spr, nm, sc, isSprite: true };
   charL.addChild(c);
   return c;
@@ -136,7 +103,7 @@ function connect() {
       else if (tag === "clk") phase = +rest;
       else if (tag === "map") {
         const p = rest.split("\t");
-        LOCS = (p[3] || "").split(";").filter(Boolean).map(s => { const a = s.split(","); return { name: a[0], x: +a[1], y: +a[2], w: +a[3], h: +a[4], kind: a[5] }; });
+        LOCS = (p[3] || "").split(";").filter(Boolean).map(s => { const a = s.split(","); return { name: a[0], x: +a[1], y: +a[2], kind: a[3] }; });
         buildScenery();
       } else if (tag === "p") {
         const seen = new Set();
@@ -206,12 +173,15 @@ app.ticker.add(() => {
   const [col, a] = skyTint(phase); night.tint = col; night.alpha = a;
   updateClock();
 });
+// returns [tintColor, alpha]; applied as a MULTIPLY layer so the scene darkens and
+// shifts hue naturally instead of being veiled by a flat overlay.
 function skyTint(p) {
-  if (p < 0.22) return [0xffd9a0, 0.16 * (1 - p / 0.22) + 0.04];
-  if (p < 0.5) return [0xffffff, 0.0];
-  if (p < 0.72) return [0xffb066, 0.12 * (p - 0.5) / 0.22];
-  if (p < 0.85) return [0xff8a4a, 0.20];
-  return [0x16204a, 0.20 + 0.34 * Math.min(1, (p - 0.85) / 0.15)];
+  if (p < 0.20) { const k = (0.20 - p) / 0.20; return [0x33456f, 0.5 * k]; }            // pre-dawn lifting into day
+  if (p < 0.46) return [0xffffff, 0.0];                                                  // full day, untinted
+  if (p < 0.62) { const k = (p - 0.46) / 0.16; return [0xffd2a0, 0.30 * k]; }            // afternoon, warm
+  if (p < 0.78) { const k = (p - 0.62) / 0.16; return [0xff9a5a, 0.30 + 0.18 * k]; }     // sunset, orange
+  if (p < 0.90) { const k = (p - 0.78) / 0.12; return [0x6b5e92, 0.30 + 0.28 * k]; }     // dusk into violet-blue
+  const k = Math.min(1, (p - 0.90) / 0.10); return [0x2c3a66, 0.58 + 0.10 * k];          // night, deep blue
 }
 let lastClk = -1;
 function updateClock() {

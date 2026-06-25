@@ -81,7 +81,7 @@ cargo run -p opcusdb-server      # then open http://localhost:9001 in 2+ tabs
 ## Human + AI chatroom (live, over OpenRouter)
 
 `opcusdb-chat` is an IRC-style `#lobby`: **anyone logs in with a nick**, and **10
-AI chatters** (OpenRouter, `deepseek/deepseek-v4-flash`) talk with you and each
+AI chatters** (OpenRouter, an OpenRouter model) talk with you and each
 other. Same hand-rolled WebSocket server; the AI calls go out through the system
 `curl` (no HTTP/TLS dependency).
 
@@ -278,25 +278,24 @@ cargo run -p opcusdb-server --bin opcusdb-td   # open http://localhost:9010
 ## Hearth — a living AI town you walk into 🏡
 
 `opcusdb-town` is a small town of **12 LLM residents** (OpenRouter
-`deepseek/deepseek-v4-flash`) who follow a daily routine — work → market → socialise
+an OpenRouter model) who follow a daily routine — work → market → socialise
 → tavern → home — and **hold short, in-character conversations whenever they share a
 place** (area-of-interest decides who can hear whom). The twist versus a 2023-style
 "watch the agents" demo: **every browser is an embodied visitor.** You walk in, stand
 near someone, and they talk *to you*; open more tabs and several humans share one
 town, indistinguishable to the residents.
 
-The pixel-art map **and** all twelve animated character sprite-sheets are
-**Qwen-Image** art, background-keyed and sliced into a sprite atlas. Rendered with
+The pixel-art map and the twelve animated character sprites are rendered with
 **PixiJS** — day/night cycle, floating speech bubbles, name tags, smooth motion.
 
 <div align="center">
 <img src="assets/town.png" width="820"/><br/>
-<b>opcusdb Hearth</b> — a Qwen-Image town with 12 animated AI residents who chat with each other and with you; walk in and join the conversation.
+<b>opcusdb Hearth</b>: a town of 12 animated AI residents who chat with each other and with you. Walk in and join the conversation.
 </div>
 
 <div align="center">
 <img src="assets/town-bg-test.png" width="380"/> <img src="assets/sprite_demo.png" width="380"/><br/>
-<i>Qwen-Image art: the town map, and a resident's keyed walk-cycle frames.</i>
+<i>The town map, and a resident's walk-cycle frames.</i>
 </div>
 
 ```sh
@@ -354,7 +353,7 @@ cargo run -p opcusdb-server --bin opcusdb-town    # open http://localhost:9011 (
 | **FPS (Overwatch-like)** | `server` (ow) + Three.js | `cargo run -p opcusdb-server --bin opcusdb-ow` → :9008 | Tracer hero, lag-compensated hitscan, Blink/Recall, AI bots |
 | **collaborative whiteboard (CRDT)** | `server` (board) | `cargo run -p opcusdb-server --bin opcusdb-board` → :9009 | vector editor (shapes/text/notes, resize handles); OrSet CRDT; offline-merge; presence |
 | **tower defense** | `server` (td) | `cargo run -p opcusdb-server --bin opcusdb-td` → :9010 | path waves, Arrow/Cannon/Frost towers, call-wave-early, co-op rooms (?room=CODE); click-only |
-| **AI town (agents)** | `server` (town) | `OPENROUTER_API_KEY=… cargo run -p opcusdb-server --bin opcusdb-town` → :9011 | 12 deepseek residents on AOI; embodied human visitors; PixiJS + Qwen-Image art |
+| **AI town (agents)** | `server` (town) | `OPENROUTER_API_KEY=… cargo run -p opcusdb-server --bin opcusdb-town` → :9011 | 12 AI residents on AOI; embodied human visitors; PixiJS |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start

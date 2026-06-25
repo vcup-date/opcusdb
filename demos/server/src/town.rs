@@ -1,6 +1,6 @@
 //! opcusdb Hearth — a living **AI town** you can walk into.
 //!
-//! Twelve LLM residents (OpenRouter `deepseek/deepseek-v4-flash`) live in one
+//! Twelve LLM residents (OpenRouter) live in one
 //! shared town: they follow a daily routine (work → market → social → tavern →
 //! home), and whenever characters share a place they hold a short, in-character
 //! conversation. The twist vs. a 2023-style "watch the agents" demo: **every
@@ -34,7 +34,7 @@ const TICK_MS: u64 = 50; // 20 Hz movement
 const DT: f32 = 0.05;
 const DAY_SECS: f32 = 200.0; // a full day cycle
 const SPEED: f32 = 46.0;
-const MODEL: &str = "deepseek/deepseek-v4-flash";
+const MODEL: &str = "nvidia/nemotron-3-ultra-550b-a55b:free";
 
 // (name, persona, role, work-location index, favourite social-location index)
 const RESIDENTS: [(&str, &str, &str, usize, usize); 12] = [
@@ -53,16 +53,19 @@ const RESIDENTS: [(&str, &str, &str, usize, usize); 12] = [
 ];
 
 // (name, tile_x, tile_y, tile_w, tile_h, kind) — kind drives client rendering
-const LOCS: [(&str, i32, i32, i32, i32, &str); 9] = [
-    ("Plaza", 12, 8, 6, 4, "plaza"),
-    ("Bakery", 3, 2, 4, 3, "bakery"),
-    ("Forge", 23, 3, 4, 3, "forge"),
-    ("Garden", 2, 13, 5, 4, "garden"),
-    ("Tavern", 22, 13, 5, 4, "tavern"),
-    ("Library", 24, 8, 4, 3, "library"),
-    ("Market", 11, 2, 6, 3, "market"),
-    ("Dock", 3, 8, 4, 3, "dock"),
-    ("Homes", 13, 14, 6, 4, "homes"),
+// Stand points in pixel coords on WALKABLE ground (the plaza and the cobblestone
+// paths of the generated map), kept well inside the 960x608 view so nobody walks
+// on a roof or wanders off-screen. Index order is fixed (RESIDENTS reference it).
+const LOCS: [(&str, f32, f32, &str); 9] = [
+    ("Plaza", 480.0, 300.0, "plaza"),
+    ("Bakery", 320.0, 178.0, "bakery"),
+    ("Forge", 640.0, 178.0, "forge"),
+    ("Garden", 320.0, 430.0, "garden"),
+    ("Tavern", 640.0, 430.0, "tavern"),
+    ("Library", 690.0, 300.0, "library"),
+    ("Market", 480.0, 168.0, "market"),
+    ("Dock", 270.0, 300.0, "dock"),
+    ("Homes", 480.0, 446.0, "homes"),
 ];
 
 struct Char {
@@ -96,20 +99,19 @@ struct Town {
 }
 
 fn loc_stand(i: usize) -> (f32, f32) {
-    let (_, x, y, w, h, _) = LOCS[i];
-    ((x as f32 + w as f32 / 2.0) * TILE, (y as f32 + h as f32 + 0.6) * TILE)
+    (LOCS[i].1, LOCS[i].2)
 }
 
 fn new_town() -> Town {
     let mut chars = BTreeMap::new();
     let mut rng = Rng::seed(0x484541_u64);
     for (i, &(name, persona, role, work, fav)) in RESIDENTS.iter().enumerate() {
-        let (sx, sy) = loc_stand(8); // start near homes
+        let (sx, sy) = loc_stand(work); // start spread out, each at their own workplace
         let id = i as u32 + 1;
         chars.insert(
             id,
             Char {
-                x: sx + (rng.below(80) as f32 - 40.0),
+                x: sx + (rng.below(40) as f32 - 20.0),
                 y: sy + (rng.below(40) as f32 - 20.0),
                 tx: sx,
                 ty: sy,
@@ -140,19 +142,23 @@ fn new_town() -> Town {
     }
 }
 
-/// Where should this resident be right now? Returns a location index.
+/// Where should this resident be right now? Returns a location index. Residents
+/// mostly stay at their own workplace; a rotating, per-resident-staggered third
+/// drifts to the plaza so small groups form and break up instead of everyone
+/// piling onto one spot and marching in lockstep.
 fn schedule(c: &Char, time: f32) -> usize {
     let p = (time % DAY_SECS) / DAY_SECS;
-    if p < 0.30 {
-        c.work // morning: at work
-    } else if p < 0.52 {
-        6 // midday: everyone to the Market -> big scene
-    } else if p < 0.78 {
-        c.fav // afternoon: favourite social spot
-    } else if p < 0.93 {
-        4 // evening: the Tavern
+    if p >= 0.95 {
+        return 8; // late night: home
+    }
+    if p >= 0.80 {
+        return c.fav; // evening: your favourite social spot (small groups)
+    }
+    let slot = (time / 11.0) as u64 + c.work as u64 + c.fav as u64 + c.pal as u64;
+    if slot % 3 == 0 {
+        0 // a rotating third hang out at the plaza
     } else {
-        8 // night: Homes
+        c.work // otherwise at your own workplace
     }
 }
 
@@ -182,11 +188,12 @@ fn tick(t: &mut Town) {
             let step = SPEED * DT;
             c.x += dx / d * step.min(d);
             c.y += dy / d * step.min(d);
-            c.facing = dx.atan2(0.0001 + dy.abs()).signum(); // -1 left, 1 right (rough)
-            if dx.abs() > 0.5 {
+            if dx.abs() > 0.4 {
                 c.facing = if dx < 0.0 { -1.0 } else { 1.0 };
             }
         }
+        c.x = c.x.clamp(24.0, 936.0); // stay on-screen
+        c.y = c.y.clamp(24.0, 584.0);
         if c.bubble_t > 0.0 {
             c.bubble_t -= DT;
             if c.bubble_t <= 0.0 {
@@ -412,7 +419,7 @@ fn decode_json_string(s: &str) -> String {
 fn map_line() -> String {
     let locs: String = LOCS
         .iter()
-        .map(|(n, x, y, w, h, k)| format!("{n},{x},{y},{w},{h},{k}"))
+        .map(|(n, x, y, k)| format!("{n},{:.0},{:.0},{k}", x, y))
         .collect::<Vec<_>>()
         .join(";");
     format!("map\t{COLS}\t{ROWS}\t{}\t{locs}\n", TILE as i32)
@@ -636,12 +643,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn schedule_sends_everyone_to_the_market_at_midday() {
+    fn schedule_keeps_residents_spread_and_goes_home_at_night() {
         let t = new_town();
-        let c = &t.chars[&1];
-        assert_eq!(schedule(c, DAY_SECS * 0.4), 6, "midday -> Market");
-        assert_eq!(schedule(c, DAY_SECS * 0.85), 4, "evening -> Tavern");
+        let c = &t.chars[&1]; // Mara, work = Bakery (1)
+        assert_eq!(schedule(c, DAY_SECS * 0.85), c.fav, "evening -> favourite spot");
         assert_eq!(schedule(c, DAY_SECS * 0.97), 8, "night -> Homes");
+        // daytime: she is either at her workplace or rotating through the plaza, never elsewhere
+        let day = schedule(c, DAY_SECS * 0.4);
+        assert!(day == c.work || day == 0, "daytime -> own workplace or the plaza");
     }
 
     #[test]
