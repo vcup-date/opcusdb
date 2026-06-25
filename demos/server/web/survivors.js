@@ -268,8 +268,8 @@ function updateHUD() {
   for (const [id, p] of [...players].sort((a, b) => b[1].kills - a[1].kills)) {
     const col = "#" + PCOL[(id - 1) % PCOL.length].toString(16).padStart(6, "0");
     const hpf = Math.max(0, 100 * p.hp / p.maxhp);
-    const d = document.createElement("div"); d.className = "pc"; d.style.borderLeftColor = col;
-    d.innerHTML = `<div class="nm"><span style="color:${col}">${esc(p.name)}${id===myId?" ★":""}</span><span>Lv${p.level} ☠${p.kills}</span></div>
+    const d = document.createElement("div"); d.className = "pc";
+    d.innerHTML = `<div class="nm"><span><i class="pdot" style="background:${col}"></i>${esc(p.name)}${id===myId?" ★":""}</span><span class="meta">Lv${p.level} · ☠${p.kills}</span></div>
       <div class="bar"><i style="width:${hpf}%;background:${hpf<30?'#ff4d4d':hpf<60?'#ffd24a':'#6ee27a'}"></i></div>`;
     box.appendChild(d);
   }
