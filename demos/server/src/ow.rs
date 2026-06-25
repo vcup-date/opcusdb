@@ -68,12 +68,12 @@ const INTERMISSION: f32 = 6.0;
 
 // cover boxes: (cx, cz, half_x, half_z, height)
 const COVER: [(f32, f32, f32, f32, f32); 7] = [
-    (0.0, 0.0, 2.0, 2.0, 2.4),
-    (10.0, 8.0, 1.5, 1.5, 2.0),
-    (-10.0, 8.0, 1.5, 1.5, 2.0),
-    (10.0, -8.0, 1.5, 1.5, 2.0),
-    (-10.0, -8.0, 1.5, 1.5, 2.0),
-    (0.0, 14.0, 4.0, 1.0, 3.0),
+    (0.0, 0.0, 2.0, 2.0, 2.4),    // central pillar (too tall to mount)
+    (10.0, 8.0, 1.7, 1.7, 1.3),   // jumpable crates (stand on top)
+    (-10.0, 8.0, 1.7, 1.7, 1.3),
+    (10.0, -8.0, 1.7, 1.7, 1.3),
+    (-10.0, -8.0, 1.7, 1.7, 1.3),
+    (0.0, 14.0, 4.0, 1.0, 3.0),   // tall walls
     (0.0, -14.0, 4.0, 1.0, 3.0),
 ];
 
@@ -380,7 +380,9 @@ fn step_player(m: &mut Match, id: u32) {
         p.on_ground = false;
     }
     p.vel.y -= GRAVITY * DT;
+    let oldy = p.pos.y;
     p.pos = p.pos.add(p.vel.scale(DT));
+    p.on_ground = false;
     // ground
     if p.pos.y <= 0.0 {
         p.pos.y = 0.0;
@@ -390,19 +392,28 @@ fn step_player(m: &mut Match, id: u32) {
     // arena bounds
     p.pos.x = p.pos.x.clamp(-ARENA, ARENA);
     p.pos.z = p.pos.z.clamp(-ARENA, ARENA);
-    // resolve cover (XZ circle vs AABB)
-    for (cx, cz, hx, hz, _h) in COVER {
-        let nx = p.pos.x.clamp(cx - hx, cx + hx);
-        let nz = p.pos.z.clamp(cz - hz, cz + hz);
-        let (dx, dz) = (p.pos.x - nx, p.pos.z - nz);
-        let d = (dx * dx + dz * dz).sqrt();
-        if d < P_RADIUS {
-            if d > 0.0001 {
-                let push = P_RADIUS - d;
-                p.pos.x += dx / d * push;
-                p.pos.z += dz / d * push;
-            } else {
-                p.pos.x = cx + hx + P_RADIUS; // degenerate: shove out +x
+    // solid cover: land on top when descending onto it, wall otherwise
+    for (cx, cz, hx, hz, h) in COVER {
+        let over = p.pos.x > cx - hx && p.pos.x < cx + hx && p.pos.z > cz - hz && p.pos.z < cz + hz;
+        if over && p.vel.y <= 0.0 && oldy >= h - 0.05 && p.pos.y < h {
+            p.pos.y = h;
+            p.vel.y = 0.0;
+            p.on_ground = true;
+            continue;
+        }
+        if p.pos.y < h - 0.05 {
+            let nx = p.pos.x.clamp(cx - hx, cx + hx);
+            let nz = p.pos.z.clamp(cz - hz, cz + hz);
+            let (dx, dz) = (p.pos.x - nx, p.pos.z - nz);
+            let d = (dx * dx + dz * dz).sqrt();
+            if d < P_RADIUS {
+                if d > 0.0001 {
+                    let push = P_RADIUS - d;
+                    p.pos.x += dx / d * push;
+                    p.pos.z += dz / d * push;
+                } else {
+                    p.pos.x = cx + hx + P_RADIUS;
+                }
             }
         }
     }
@@ -1134,6 +1145,20 @@ mod tests {
         m.players.get_mut(&1).unwrap().hp = 40.0;
         check_packs(&mut m);
         assert_eq!(m.players[&1].hp, 40.0, "depleted pack gives no heal");
+    }
+
+    #[test]
+    fn player_lands_on_top_of_a_crate() {
+        let mut m = m1();
+        let mut p = Player::new("p".into(), false, 0, V3::new(10.0, 2.5, 8.0)); // above the (10,8) crate
+        p.vel.y = -1.0;
+        m.players.insert(1, p);
+        for _ in 0..40 {
+            step_player(&mut m, 1);
+        }
+        let y = m.players[&1].pos.y;
+        assert!((y - 1.3).abs() < 0.06, "should rest on the 1.3-tall crate, got {y}");
+        assert!(m.players[&1].on_ground, "grounded on the crate");
     }
 
     #[test]

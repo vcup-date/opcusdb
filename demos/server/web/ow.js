@@ -5,8 +5,8 @@
 const $ = (id) => document.getElementById(id);
 const ARENA = 28.0, EYE = 1.55, MOVE = 7.0, GRAVITY = 24.0, JUMP = 8.2, BLINK_DIST = 7.0;
 const COVER = [ // must match the server
-  [0,0,2,2,2.4],[10,8,1.5,1.5,2.0],[-10,8,1.5,1.5,2.0],[10,-8,1.5,1.5,2.0],
-  [-10,-8,1.5,1.5,2.0],[0,14,4,1,3.0],[0,-14,4,1,3.0],
+  [0,0,2,2,2.4],[10,8,1.7,1.7,1.3],[-10,8,1.7,1.7,1.3],[10,-8,1.7,1.7,1.3],
+  [-10,-8,1.7,1.7,1.3],[0,14,4,1,3.0],[0,-14,4,1,3.0],
 ];
 const TEAMCOL = [0x5aa0ff, 0xff8a4a];
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
@@ -285,13 +285,19 @@ function stepLocal(dt){
   vel.x=wx*MOVE; vel.z=wz*MOVE;
   if(keys.jump&&onGround){vel.y=JUMP;onGround=false;}
   vel.y-=GRAVITY*dt;
+  const oldy=pos.y;
   pos.x+=vel.x*dt; pos.y+=vel.y*dt; pos.z+=vel.z*dt;
+  onGround=false;
   if(pos.y<=0){pos.y=0;vel.y=0;onGround=true;}
   pos.x=clamp(pos.x,-ARENA,ARENA); pos.z=clamp(pos.z,-ARENA,ARENA);
-  for(const [cx,cz,hx,hz] of COVER){
-    const nx=clamp(pos.x,cx-hx,cx+hx), nz=clamp(pos.z,cz-hz,cz+hz);
-    const dx=pos.x-nx, dz=pos.z-nz, d=Math.hypot(dx,dz);
-    if(d<0.45 && d>0.0001){ const push=0.45-d; pos.x+=dx/d*push; pos.z+=dz/d*push; }
+  for(const [cx,cz,hx,hz,h] of COVER){
+    const over = pos.x>cx-hx&&pos.x<cx+hx&&pos.z>cz-hz&&pos.z<cz+hz;
+    if(over && vel.y<=0 && oldy>=h-0.05 && pos.y<h){ pos.y=h; vel.y=0; onGround=true; continue; }
+    if(pos.y<h-0.05){
+      const nx=clamp(pos.x,cx-hx,cx+hx), nz=clamp(pos.z,cz-hz,cz+hz);
+      const dx=pos.x-nx, dz=pos.z-nz, d=Math.hypot(dx,dz);
+      if(d<0.45 && d>0.0001){ const push=0.45-d; pos.x+=dx/d*push; pos.z+=dz/d*push; }
+    }
   }
 }
 
@@ -334,9 +340,17 @@ function updateHUD(){
 function renderBoard(){
   const all=[...players.values()].map(e=>({name:e.name,team:e.team,elims:e.elims,deaths:e.deaths,me:false}));
   if(me) all.push({name:me.name,team:me.team,elims:me.elims,deaths:me.deaths,me:true});
-  all.sort((a,b)=>b.elims-a.elims);
-  $("boardBody").innerHTML = all.map(r=>`<tr class="${r.me?'me':''}"><td>${r.name}</td><td style="color:${r.team===0?'#6fb7ff':'#ff8a5a'}">${r.team===0?'BLUE':'ORANGE'}</td><td>${r.elims}</td><td>${r.deaths}</td></tr>`).join("");
+  let html="";
+  for(const t of [0,1]){
+    const rows=all.filter(r=>r.team===t).sort((a,b)=>b.elims-a.elims);
+    const tot=rows.reduce((s,r)=>s+r.elims,0);
+    const col=t===0?'#6fb7ff':'#ff8a5a';
+    html+=`<tr><td colspan="4" style="color:${col};border-bottom:1px solid #233;padding-top:10px">${t===0?'BLUE':'ORANGE'} TEAM — ${tot} elims</td></tr>`;
+    html+=rows.map(r=>{const kd=(r.elims/Math.max(1,r.deaths)).toFixed(1); return `<tr class="${r.me?'me':''}"><td>${esc(r.name)}${r.me?' ★':''}</td><td style="color:${col}">${t===0?'BLUE':'ORANGE'}</td><td>${r.elims} / ${r.deaths}</td><td>${kd} K/D</td></tr>`;}).join("");
+  }
+  $("boardBody").innerHTML = html;
 }
+const esc=(s)=>(s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 
 // ---- main loop ------------------------------------------------------------
 let last=performance.now();
