@@ -35,7 +35,7 @@ const CREEP = [
 ];
 
 // ---- networking (auto-reconnect) ------------------------------------------
-function setConn(ok) { const c = $("conn"); if (!c) return; c.textContent = ok ? "● online" : "● offline"; c.style.color = ok ? "#3ec46a" : "#ff6b6b"; if (typeof dbg === "function") dbg(); }
+function setConn(ok) { const c = $("conn"); if (!c) return; c.textContent = ok ? "● online" : "● offline"; c.style.color = ok ? "#3ec46a" : "#ff6b6b"; }
 function connect() {
   ws = new WebSocket(`ws://${location.host}/ws${ROOM ? "?room=" + encodeURIComponent(ROOM) : ""}`);
   ws.onopen = () => setConn(true);
@@ -96,7 +96,6 @@ function updateHud() {
   $("over").style.display = (state >= 2) ? "flex" : "none";
   if (state >= 2) { $("otxt").textContent = state === 2 ? "VICTORY 🏆" : "DEFEAT"; $("otxt").style.color = state === 2 ? "#3ec46a" : "#ff5d5d"; }
   document.querySelectorAll(".tw").forEach(el => el.classList.toggle("poor", gold < COST[+el.dataset.k]));
-  if (typeof dbg === "function") dbg();
 }
 
 // deterministic scenery on non-road tiles
@@ -261,21 +260,16 @@ cv.addEventListener("mousemove", (ev) => hover = tileAt(ev));
 cv.addEventListener("mouseleave", () => hover = null);
 cv.addEventListener("click", (ev) => { const [c, r] = tileAt(ev); ws && ws.readyState === 1 && ws.send(`place ${pick} ${c} ${r}`); });
 document.querySelectorAll(".tw").forEach(el => el.onclick = () => { pick = +el.dataset.k; document.querySelectorAll(".tw").forEach(x => x.classList.toggle("sel", x === el)); });
-let clicks = 0, sent = 0;
-function dbg() { const d = $("dbg"); if (d) d.textContent = `[ws:${ws ? ws.readyState : "-"} clk:${clicks} snt:${sent}]`; }
 function callWave() {
-  clicks++;
   const now = performance.now();
-  if (now - lastWaveClick < 500) { dbg(); return; }   // debounce double-clicks
+  if (now - lastWaveClick < 500) return;   // debounce double-clicks (don't stack waves)
   lastWaveClick = now;
   const w = $("wave");
-  if (!ws || ws.readyState !== 1) { w.textContent = "⟳ reconnecting…"; dbg(); return; }
-  try { ws.send("wave"); sent++; } catch (e) { dbg(); return; }
-  w.style.transform = "scale(0.95)"; setTimeout(() => { w.style.transform = ""; }, 110);
-  dbg();
+  if (!ws || ws.readyState !== 1) { w.textContent = "⟳ reconnecting…"; return; }
+  try { ws.send("wave"); } catch (e) { return; }
+  w.style.transform = "scale(0.95)"; setTimeout(() => { w.style.transform = ""; }, 110); // tactile feedback
 }
 $("wave").addEventListener("click", callWave);
-$("wave").addEventListener("pointerup", callWave); // belt-and-suspenders for Safari
 $("again").onclick = () => ws && ws.readyState === 1 && ws.send("reset");
 addEventListener("keydown", (e) => {
   if (e.key >= "1" && e.key <= "3") { pick = +e.key - 1; document.querySelectorAll(".tw").forEach(x => x.classList.toggle("sel", +x.dataset.k === pick)); }
