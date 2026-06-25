@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-188%20passing-success)
+![tests](https://img.shields.io/badge/tests-191%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-188 tests · 40 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+191 tests · 41 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -275,6 +275,36 @@ cargo run -p opcusdb-server --bin opcusdb-td   # open http://localhost:9010
 # click a tower in the palette, click an empty tile to build · Start Wave (or Space)
 ```
 
+## Hearth — a living AI town you walk into 🏡
+
+`opcusdb-town` is a small town of **12 LLM residents** (OpenRouter
+`deepseek/deepseek-v4-flash`) who follow a daily routine — work → market → socialise
+→ tavern → home — and **hold short, in-character conversations whenever they share a
+place** (area-of-interest decides who can hear whom). The twist versus a 2023-style
+"watch the agents" demo: **every browser is an embodied visitor.** You walk in, stand
+near someone, and they talk *to you*; open more tabs and several humans share one
+town, indistinguishable to the residents.
+
+The pixel-art map **and** all twelve animated character sprite-sheets are
+**Qwen-Image** art, background-keyed and sliced into a sprite atlas. Rendered with
+**PixiJS** — day/night cycle, floating speech bubbles, name tags, smooth motion.
+
+<div align="center">
+<img src="assets/town.png" width="820"/><br/>
+<b>opcusdb Hearth</b> — a Qwen-Image town with 12 animated AI residents who chat with each other and with you; walk in and join the conversation.
+</div>
+
+<div align="center">
+<img src="assets/town-bg-test.png" width="380"/> <img src="assets/sprite_demo.png" width="380"/><br/>
+<i>Qwen-Image art: the town map, and a resident's keyed walk-cycle frames.</i>
+</div>
+
+```sh
+export OPENROUTER_API_KEY=sk-...                  # residents use canned lines without it
+cargo run -p opcusdb-server --bin opcusdb-town    # open http://localhost:9011 (more tabs = more visitors)
+# click to walk · type to talk to whoever's nearby
+```
+
 ## Architecture
 
 <div align="center"><img src="assets/diagram-arch.png" width="560" alt="architecture"/></div>
@@ -303,7 +333,7 @@ cargo run -p opcusdb-server --bin opcusdb-td   # open http://localhost:9010
 | `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
 | `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
 | `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
-| `demos/server` | ten authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), **Townfall** (Godot 4 3D MMO town), **Overlode** (Overwatch-style FPS, lag-compensated), **Co-Board** (CRDT vector canvas), and **Rampart** (tower defense) — with rooms, leaderboards, physics, quests, and AI |
+| `demos/server` | eleven authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), **Townfall** (Godot 4 3D MMO town), **Overlode** (Overwatch-style FPS, lag-compensated), **Co-Board** (CRDT vector canvas), and **Rampart** (tower defense) — with rooms, leaderboards, physics, quests, and AI |
 
 ## The five game types → demos
 
@@ -324,6 +354,7 @@ cargo run -p opcusdb-server --bin opcusdb-td   # open http://localhost:9010
 | **FPS (Overwatch-like)** | `server` (ow) + Three.js | `cargo run -p opcusdb-server --bin opcusdb-ow` → :9008 | Tracer hero, lag-compensated hitscan, Blink/Recall, AI bots |
 | **collaborative whiteboard (CRDT)** | `server` (board) | `cargo run -p opcusdb-server --bin opcusdb-board` → :9009 | vector editor (shapes/text/notes, resize handles); OrSet CRDT; offline-merge; presence |
 | **tower defense** | `server` (td) | `cargo run -p opcusdb-server --bin opcusdb-td` → :9010 | path waves, Arrow/Cannon/Frost towers, call-wave-early, co-op rooms (?room=CODE); click-only |
+| **AI town (agents)** | `server` (town) | `OPENROUTER_API_KEY=… cargo run -p opcusdb-server --bin opcusdb-town` → :9011 | 12 deepseek residents on AOI; embodied human visitors; PixiJS + Qwen-Image art |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start
@@ -380,6 +411,7 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 | FPS: lag-compensated hit, no friendly fire, Recall rewind, Blink | `server … lag_comp_hits_a_target_directly_ahead`, `no_friendly_fire`, `recall_restores_past_position` |
 | Co-Board: concurrent CRDT adds survive, offline stroke merges, clear | `server … concurrent_adds_all_survive_and_erase_removes_one`, `late_offline_stroke_merges_after_an_erase` |
 | Tower defense: towers kill creeps for bounty, builds reject the path, leaks cost lives, waves advance | `server … a_tower_kills_a_creep_and_pays_bounty`, `placing_a_tower_costs_gold_and_rejects_the_road` |
+| AI town: midday schedule, co-located scene + speaker, human line marks pending | `server … schedule_sends_everyone_to_the_market_at_midday`, `co_located_characters_form_a_scene_with_a_speaker` |
 | Snake eats/grows; wall-crash records score | `server … snake_moves_and_eats`, `wall_collision_kills_and_records_score` |
 
 ## Status
