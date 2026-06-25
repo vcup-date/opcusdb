@@ -259,9 +259,9 @@ cargo run -p opcusdb-server --bin opcusdb-board   # open http://localhost:9009
 escalating waves** and you spend gold to build towers — **Arrow** (fast, single
 target), **Cannon** (slow, splash), **Frost** (slows) — that auto-target and fire.
 Kill creeps for gold; let one reach your keep and you lose a life; clear every wave
-to win. The Rust server is the **authoritative** simulation (one shared game, fixed
-tick, broadcast over WebSocket), so it's **co-op** — open more tabs and defend
-together. All mouse, Mac-friendly: click a tower, click a tile.
+to win. The Rust server is the **authoritative** simulation (fixed tick, broadcast
+over WebSocket); **each browser gets its own private game**, so you always start
+clean at wave 0. All mouse, Mac-friendly: click a tower, click a tile.
 
 <div align="center">
 <img src="assets/td.png" width="820"/><br/>
