@@ -97,6 +97,7 @@ struct Room {
     players: BTreeMap<u32, Player>,
     wolves: BTreeMap<u32, Wolf>,
     chat: Vec<(String, String)>,
+    events: Vec<(char, u32, f32, f32)>, // (kind, id, x, z): 's' swing, 'h' wolf hit, 'k' wolf death
     rng: Rng,
     time: f32,
     snapshot: String,
@@ -119,6 +120,7 @@ fn main() {
                 let mut room = w.rooms.remove(&code).unwrap();
                 tick_room(&mut room);
                 room.snapshot = build_snapshot(&room);
+                room.events.clear(); // events were just baked into the snapshot
                 if !room.players.is_empty() {
                     w.rooms.insert(code, room);
                 }
@@ -156,7 +158,7 @@ fn new_room(seed: u64) -> Room {
             },
         );
     }
-    Room { players: BTreeMap::new(), wolves, chat: Vec::new(), rng, time: 0.0, snapshot: String::new() }
+    Room { players: BTreeMap::new(), wolves, chat: Vec::new(), events: Vec::new(), rng, time: 0.0, snapshot: String::new() }
 }
 
 fn d2(ax: f32, az: f32, bx: f32, bz: f32) -> f32 {
@@ -266,6 +268,7 @@ fn player_attack(room: &mut Room, id: u32) {
     if let Some(p) = room.players.get_mut(&id) {
         p.atk_cd = ATK_CD;
     }
+    room.events.push(('s', id, px, pz)); // swing (shown even on a miss)
     let target = room
         .wolves
         .iter()
@@ -273,15 +276,19 @@ fn player_attack(room: &mut Room, id: u32) {
         .min_by(|a, b| d2(px, pz, a.1.x, a.1.z).total_cmp(&d2(px, pz, b.1.x, b.1.z)))
         .map(|(wid, _)| *wid);
     if let Some(wid) = target {
-        let dead = {
+        let (wx, wz, dead) = {
             let w = room.wolves.get_mut(&wid).unwrap();
             w.hp -= PLAYER_DMG;
-            w.hp <= 0.0
+            (w.x, w.z, w.hp <= 0.0)
         };
+        room.events.push(('h', wid, wx, wz)); // wolf hit -> flinch + spark
         if dead {
-            let w = room.wolves.get_mut(&wid).unwrap();
-            w.state = 2;
-            w.respawn = WOLF_RESPAWN;
+            {
+                let w = room.wolves.get_mut(&wid).unwrap();
+                w.state = 2;
+                w.respawn = WOLF_RESPAWN;
+            }
+            room.events.push(('k', wid, wx, wz)); // death poof
             if let Some(p) = room.players.get_mut(&id) {
                 p.kills += 1;
                 if p.quest == 1 {
@@ -325,7 +332,7 @@ fn player_interact(room: &mut Room, id: u32) -> Option<String> {
 
 fn build_snapshot(room: &Room) -> String {
     let mut s = String::new();
-    s.push_str(&format!("t\t{:.1}\n", room.time));
+    s.push_str(&format!("t\t{:.2}\n", room.time));
     for (i, (name, x, z, q)) in NPCS.iter().enumerate() {
         s.push_str(&format!("n\t{i}\t{name}\t{x:.2}\t{z:.2}\t{}\n", u8::from(*q)));
     }
@@ -345,6 +352,13 @@ fn build_snapshot(room: &Room) -> String {
             (w.hp / WOLF_HP).max(0.0)
         ));
     }
+    let ev = room
+        .events
+        .iter()
+        .map(|(k, id, x, z)| format!("{k}:{id}:{x:.2}:{z:.2}"))
+        .collect::<Vec<_>>()
+        .join(";");
+    s.push_str(&format!("x\t{ev}\n"));
     s
 }
 

@@ -36,6 +36,8 @@ var capture_path := ""
 var captured := false
 var elapsed := 0.0
 var did_interact := false
+var _msg_time := 0.0
+var _last_evt_time := -1.0
 
 const PCOLORS := [Color("4f8cff"), Color("ff5d5d"), Color("57d977"), Color("ffd24a"), Color("c07dff"), Color("ff9f5a"), Color("4de1e6"), Color("f75fb4")]
 
@@ -138,10 +140,12 @@ func _make_player(id: int, pname: String) -> Dictionary:
 	mi.material_override = _mat(col); mi.position = Vector3(0, 0.95, 0)
 	root.add_child(mi)
 	_box(Vector3(0.5, 0.5, 0.2), Color(0.95, 0.85, 0.6), Vector3(0, 1.35, -0.4), root) # face
-	_box(Vector3(0.18, 0.9, 0.18), Color(0.85, 0.85, 0.9), Vector3(0.5, 0.9, -0.2), root) # sword
+	# sword on a pivot so it can swing
+	var arm := Node3D.new(); arm.position = Vector3(0.55, 1.1, -0.1); root.add_child(arm)
+	_box(Vector3(0.16, 1.0, 0.16), Color(0.85, 0.85, 0.92), Vector3(0, 0.4, 0), arm)
 	var nm := pname + (" (you)" if id == my_id else "")
 	_label3d(nm, Color.WHITE if id != my_id else Color("9fe0ff"), 2.3, root)
-	return {"root": root, "tx": 0.0, "tz": 0.0, "tyaw": 0.0, "name": pname}
+	return {"root": root, "tx": 0.0, "tz": 0.0, "tyaw": 0.0, "name": pname, "arm": arm, "swing": 0.0}
 
 func _make_wolf(id: int) -> Dictionary:
 	var root := Node3D.new(); add_child(root)
@@ -155,7 +159,11 @@ func _make_wolf(id: int) -> Dictionary:
 	for legx in [-0.45, 0.45]:
 		for legz in [-0.4, 0.4]:
 			_box(Vector3(0.18, 0.5, 0.18), Color(0.24, 0.25, 0.28), Vector3(legx, 0.25, legz), root)
-	return {"root": root, "tx": 0.0, "tz": 0.0, "tyaw": 0.0, "state": 0}
+	# floating HP bar (hidden until hurt)
+	var hpbg := _box(Vector3(1.1, 0.16, 0.06), Color(0, 0, 0), Vector3(0, 1.7, 0), root)
+	var hpfg := _box(Vector3(1.05, 0.13, 0.08), Color(1, 0.25, 0.2), Vector3(0, 1.7, 0.01), root)
+	hpbg.visible = false; hpfg.visible = false
+	return {"root": root, "tx": 0.0, "tz": 0.0, "tyaw": 0.0, "state": 0, "hp": 1.0, "hpbg": hpbg, "hpfg": hpfg}
 
 func _make_npc(idx: int, name: String, x: float, z: float, giver: bool) -> Node3D:
 	var root := Node3D.new(); root.position = Vector3(x, 0, z); add_child(root)
@@ -290,6 +298,8 @@ func _handle(msg: String) -> void:
 		match p[0]:
 			"w":
 				my_id = int(p[1])
+			"t":
+				_msg_time = float(p[1])
 			"p":
 				var id := int(p[1])
 				if not players.has(id):
@@ -304,7 +314,19 @@ func _handle(msg: String) -> void:
 					wolves[id] = _make_wolf(id)
 				var e: Dictionary = wolves[id]
 				e.tx = float(p[2]); e.tz = float(p[3]); e.tyaw = float(p[4]); e.state = int(p[5])
+				e.hp = float(p[6])
 				e.root.visible = e.state != 2
+				var show_hp: bool = e.hp < 0.99 and e.state != 2
+				e.hpbg.visible = show_hp
+				e.hpfg.visible = show_hp
+				e.hpfg.scale.x = max(0.04, e.hp)
+			"x":
+				if _msg_time != _last_evt_time:
+					_last_evt_time = _msg_time
+					for ev in p[1].split(";", false):
+						var f := ev.split(":")
+						if f.size() < 4: continue
+						_play_event(f[0], int(f[1]), float(f[2]), float(f[3]))
 			"n":
 				var idx := int(p[1])
 				if not npcs.has(idx):
@@ -314,12 +336,46 @@ func _handle(msg: String) -> void:
 				if chat_lines.size() > 8: chat_lines.pop_front()
 				chat_log.text = "\n".join(chat_lines)
 
+func _play_event(kind: String, id: int, x: float, z: float) -> void:
+	match kind:
+		"s":
+			if players.has(id):
+				players[id].swing = 0.28          # trigger a sword swing
+		"h":
+			_spark(Vector3(x, 0.9, z), Color(1, 0.85, 0.2), 6)
+			if wolves.has(id):
+				var r: Node3D = wolves[id].root   # flinch
+				r.scale = Vector3.ONE * 1.28
+				create_tween().tween_property(r, "scale", Vector3.ONE, 0.16)
+		"k":
+			_spark(Vector3(x, 0.7, z), Color(0.7, 0.25, 0.2), 16)
+
+func _spark(pos: Vector3, color: Color, n: int) -> void:
+	for i in n:
+		var m := MeshInstance3D.new()
+		var bm := BoxMesh.new(); bm.size = Vector3(0.16, 0.16, 0.16); m.mesh = bm
+		m.material_override = _mat(color)
+		m.position = pos
+		add_child(m)
+		var dir := Vector3(randf() - 0.5, randf() * 0.9, randf() - 0.5).normalized() * (1.0 + randf() * 1.6)
+		var tw := create_tween().set_parallel(true)
+		tw.tween_property(m, "position", pos + dir, 0.4)
+		tw.tween_property(m, "scale", Vector3.ZERO, 0.4)
+		tw.set_parallel(false)
+		tw.tween_callback(m.queue_free)
+
 func _interp(delta: float) -> void:
 	var t: float = clamp(delta * 12.0, 0.0, 1.0)
 	for e in players.values():
 		var r: Node3D = e.root
 		r.position = r.position.lerp(Vector3(e.tx, 0, e.tz), t)
 		r.rotation.y = lerp_angle(r.rotation.y, e.tyaw, t)
+		if e.swing > 0.0:
+			e.swing -= delta
+			var ph: float = 1.0 - clamp(e.swing / 0.28, 0.0, 1.0)
+			e.arm.rotation.x = -2.6 * sin(ph * PI)
+		elif e.arm.rotation.x != 0.0:
+			e.arm.rotation.x = 0.0
 	for e in wolves.values():
 		var r: Node3D = e.root
 		r.position = r.position.lerp(Vector3(e.tx, 0, e.tz), t)
