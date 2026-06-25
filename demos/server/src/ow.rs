@@ -49,6 +49,12 @@ const NUM_BOTS: usize = 3;
 const HIST: usize = 70; // lag-comp position history (~1.1s)
 const RECALL_HIST: usize = 200; // ~3.2s of self-state for Recall
 
+// health pickups: positions (must match the client), heal amount, respawn cd
+const PACKS: [(f32, f32); 4] = [(15.0, 0.0), (-15.0, 0.0), (0.0, 18.0), (0.0, -18.0)];
+const PACK_HEAL: f32 = 75.0;
+const PACK_CD: f32 = 10.0;
+const PACK_R: f32 = 1.8;
+
 // cover boxes: (cx, cz, half_x, half_z, height)
 const COVER: [(f32, f32, f32, f32, f32); 7] = [
     (0.0, 0.0, 2.0, 2.0, 2.4),
@@ -175,6 +181,7 @@ struct Match {
     rng: Rng,
     time: f32,
     score: [u32; 2],
+    pack_cd: Vec<f32>,
     snapshot: String,
     next_bot: u32,
 }
@@ -225,6 +232,7 @@ fn new_match(seed: u64) -> Match {
         rng: Rng::seed(seed),
         time: 0.0,
         score: [0, 0],
+        pack_cd: vec![0.0; PACKS.len()],
         snapshot: String::new(),
         next_bot: 100000,
     };
@@ -250,6 +258,7 @@ fn tick(m: &mut Match) {
     for id in &ids {
         try_fire(m, *id);
     }
+    check_packs(m);
     // record histories
     let t = m.time;
     for p in m.players.values_mut() {
@@ -483,6 +492,32 @@ fn try_fire(m: &mut Match, id: u32) {
     }
 }
 
+fn check_packs(m: &mut Match) {
+    for c in m.pack_cd.iter_mut() {
+        if *c > 0.0 {
+            *c = (*c - DT).max(0.0);
+        }
+    }
+    let ids: Vec<u32> = m.players.keys().copied().collect();
+    for (i, (px, pz)) in PACKS.iter().enumerate() {
+        if m.pack_cd[i] > 0.0 {
+            continue;
+        }
+        for id in &ids {
+            let p = m.players.get_mut(id).unwrap();
+            if !p.alive || p.hp >= MAX_HP {
+                continue;
+            }
+            if ((p.pos.x - px).powi(2) + (p.pos.z - pz).powi(2)).sqrt() < PACK_R {
+                p.hp = (p.hp + PACK_HEAL).min(MAX_HP);
+                m.pack_cd[i] = PACK_CD;
+                m.events.push(format!("m:{i}:{px:.2}:{pz:.2}"));
+                break;
+            }
+        }
+    }
+}
+
 fn hist_at(hist: &[(f32, V3)], t: f32) -> Option<V3> {
     if hist.is_empty() {
         return None;
@@ -633,6 +668,8 @@ fn build_snapshot(m: &Match) -> String {
             p.name,
         ));
     }
+    let packs = m.pack_cd.iter().map(|c| if *c <= 0.0 { "1" } else { "0" }).collect::<Vec<_>>().join(" ");
+    s.push_str(&format!("d\t{packs}\n"));
     s.push_str(&format!("x\t{}\n", m.events.join(";")));
     s
 }
@@ -661,10 +698,12 @@ fn handle(mut stream: TcpStream, server: Arc<Mutex<Server>>) {
         id
     };
     let mine: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    let pong: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
 
     let mut writer = stream.try_clone().expect("clone");
     let wserver = server.clone();
     let wmine = mine.clone();
+    let wpong = pong.clone();
     let writer_handle = thread::spawn(move || loop {
         thread::sleep(Duration::from_millis(TICK_MS));
         let snap = {
@@ -676,6 +715,12 @@ fn handle(mut stream: TcpStream, server: Arc<Mutex<Server>>) {
                 return;
             }
         }
+        // piggyback any pong (single-writer: avoids interleaved frames)
+        if let Some(pg) = wpong.lock().unwrap().take() {
+            if ws::write_text(&mut writer, &pg).is_err() {
+                return;
+            }
+        }
     });
 
     loop {
@@ -683,6 +728,9 @@ fn handle(mut stream: TcpStream, server: Arc<Mutex<Server>>) {
             Ok(Some(ws::Msg::Text(t))) => {
                 let parts: Vec<&str> = t.split_whitespace().collect();
                 match parts.as_slice() {
+                    ["ping", t] => {
+                        *pong.lock().unwrap() = Some(format!("P\t{t}"));
+                    }
                     ["join", nick] => {
                         let nick = clean_nick(nick, id);
                         let mut s = server.lock().unwrap();
@@ -867,6 +915,21 @@ mod tests {
         do_recall(&mut m, 1);
         assert!((m.players[&1].pos.x - 0.0).abs() < 0.01, "recalled to the old position");
         assert!(m.players[&1].recall_cd > 0.0, "recall on cooldown");
+    }
+
+    #[test]
+    fn health_pack_heals_and_goes_on_cooldown() {
+        let mut m = m1();
+        let mut p = Player::new("p".into(), false, 0, V3::new(PACKS[0].0, 0.0, PACKS[0].1));
+        p.hp = 40.0;
+        m.players.insert(1, p);
+        check_packs(&mut m);
+        assert!(m.players[&1].hp > 40.0, "healed by the pack");
+        assert!(m.pack_cd[0] > 0.0, "pack on cooldown");
+        // standing on a depleted pack does nothing
+        m.players.get_mut(&1).unwrap().hp = 40.0;
+        check_packs(&mut m);
+        assert_eq!(m.players[&1].hp, 40.0, "depleted pack gives no heal");
     }
 
     #[test]

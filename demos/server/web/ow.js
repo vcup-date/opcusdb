@@ -18,6 +18,31 @@ let scoreA=0, scoreB=0;
 let pos={x:0,y:0,z:22}, vel={x:0,y:0,z:0}, yaw=Math.PI, pitch=0, onGround=true;
 let keys={w:false,s:false,a:false,d:false,jump:false};
 let feed=[];
+let latMs=0, prevHp=150, prevReload=false;
+
+// ---- audio (Web Audio, procedural) ----------------------------------------
+let actx=null;
+function ac(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return actx; }
+function tone(f0,f1,d,type,v){ const c=ac(); if(!c)return; const o=c.createOscillator(),g=c.createGain();
+  o.type=type; o.frequency.setValueAtTime(f0,c.currentTime); o.frequency.exponentialRampToValueAtTime(Math.max(1,f1),c.currentTime+d);
+  g.gain.setValueAtTime(v,c.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+d); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+d); }
+function noise(d,v,hp){ const c=ac(); if(!c)return; const n=c.sampleRate*d|0,b=c.createBuffer(1,n,c.sampleRate),dt=b.getChannelData(0);
+  for(let i=0;i<n;i++)dt[i]=(Math.random()*2-1)*(1-i/n); const s=c.createBufferSource();s.buffer=b;
+  const g=c.createGain();g.gain.value=v; const f=c.createBiquadFilter();f.type="highpass";f.frequency.value=hp; s.connect(f).connect(g).connect(c.destination); s.start(); }
+const sfxFire=(v=0.12)=>{ tone(880,300,0.05,"square",v); noise(0.035,v*0.5,1600); };
+const sfxBlink=()=>tone(300,1300,0.18,"sawtooth",0.12);
+const sfxRecall=()=>tone(1300,200,0.45,"sine",0.16);
+const sfxReload=()=>{ tone(220,420,0.07,"square",0.08); setTimeout(()=>tone(420,220,0.07,"square",0.08),150); };
+const sfxHit=()=>tone(1700,1700,0.035,"square",0.11);
+const sfxKill=()=>{ tone(700,1400,0.12,"triangle",0.18); setTimeout(()=>tone(1100,1500,0.1,"triangle",0.14),90); };
+const sfxHurt=()=>noise(0.18,0.22,450);
+const sfxHeal=()=>tone(520,920,0.2,"sine",0.13);
+
+// ---- damage vignette ------------------------------------------------------
+const vig=document.createElement("div");
+vig.style.cssText="position:fixed;inset:0;z-index:3;pointer-events:none;box-shadow:inset 0 0 200px 40px rgba(255,30,30,0);transition:box-shadow .12s";
+document.body.appendChild(vig);
+function flashDmg(){ vig.style.boxShadow="inset 0 0 220px 70px rgba(255,30,30,0.55)"; setTimeout(()=>vig.style.boxShadow="inset 0 0 200px 40px rgba(255,30,30,0)",100); }
 
 // ---- three.js setup -------------------------------------------------------
 const renderer = new THREE.WebGLRenderer({antialias:true});
@@ -61,6 +86,17 @@ for (const [z,c] of [[22,0x2a4a7a],[-22,0x7a3a1a]]) {
   pad.rotation.x=-Math.PI/2; pad.position.set(0,0.03,z); scene.add(pad);
 }
 
+// health packs (positions must match the server)
+const PACK_POS=[[15,0],[-15,0],[0,18],[0,-18]];
+const packMeshes=[]; let packAvail=[true,true,true,true];
+for(const [px,pz] of PACK_POS){
+  const g=new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.9,0.9,0.9), new THREE.MeshStandardMaterial({color:0xf2f2f2,emissive:0x0c2a14})));
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.58,0.2,0.5), new THREE.MeshBasicMaterial({color:0x2ee06a})));
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.2,0.58,0.5), new THREE.MeshBasicMaterial({color:0x2ee06a})));
+  g.position.set(px,1.0,pz); scene.add(g); packMeshes.push(g);
+}
+
 // first-person weapon viewmodel (Tracer's pulse pistols)
 const gun = new THREE.Group();
 for (const sx of [-0.28, 0.28]) {
@@ -71,6 +107,9 @@ for (const sx of [-0.28, 0.28]) {
 }
 camera.add(gun);
 let recoil=0;
+const muzzle = new THREE.Mesh(new THREE.PlaneGeometry(0.55,0.55), new THREE.MeshBasicMaterial({color:0xfff0a0,transparent:true,opacity:0,depthTest:false}));
+muzzle.position.set(0,-0.32,-1.0); gun.add(muzzle);
+let muzzleT=0; const flashMuzzle=()=>{ muzzleT=0.05; };
 
 const tracers=[]; // {line, life}
 const sparks=[];  // {mesh, life, vel}
@@ -78,7 +117,7 @@ const sparks=[];  // {mesh, life, vel}
 // ---- networking -----------------------------------------------------------
 function connect(nick) {
   ws = new WebSocket(`ws://${location.host}/ws`);
-  ws.onopen = ()=> ws.send("join "+nick);
+  ws.onopen = ()=>{ ws.send("join "+nick); setInterval(()=>{ if(ws.readyState===1) ws.send("ping "+performance.now().toFixed(0)); }, 1000); };
   ws.onmessage = (e)=>{
     const seen=new Set();
     for (const line of e.data.split("\n")) {
@@ -87,6 +126,8 @@ function connect(nick) {
       if (p[0]==="w") myId=+p[1];
       else if (p[0]==="g") { scoreA=+p[2]; scoreB=+p[3]; }
       else if (p[0]==="p") { handlePlayer(p); seen.add(+p[1]); }
+      else if (p[0]==="d") { packAvail = (p[1]||"").split(" ").map(v=>v==="1"); }
+      else if (p[0]==="P") { latMs = Math.min(300, (performance.now()-(+p[1]))/2); }
       else if (p[0]==="x") { for (const ev of (p[1]||"").split(";")) if(ev) handleEvent(ev); }
     }
     for (const id of [...players.keys()]) if(!seen.has(id)) { scene.remove(players.get(id).grp); players.delete(id); }
@@ -138,11 +179,16 @@ function makePlate(name, team) {
 
 function handleEvent(ev) {
   const f = ev.split(":");
-  if (f[0]==="t") addTracer(+f[1],+f[2],+f[3],+f[4],+f[5],+f[6]);
-  else if (f[0]==="h") { addSparks(+f[2],+f[3],+f[4], 0xff6a4a); if(+f[1]===myId) hitmark(); }
-  else if (f[0]==="k") killfeed(+f[1],+f[2]);
-  else if (f[0]==="b") addSparks(+f[2],1.0,+f[4], 0x6fe0ff, 14);
-  else if (f[0]==="r") addRings(+f[2],+f[4]);
+  if (f[0]==="t") {
+    addTracer(+f[1],+f[2],+f[3],+f[4],+f[5],+f[6]);
+    const dmine=Math.hypot(+f[1]-pos.x, +f[2]-(pos.y+EYE), +f[3]-pos.z);
+    if (dmine<2){ flashMuzzle(); sfxFire(0.14); } else if (dmine<28){ sfxFire(0.045*(1-dmine/28)); }
+  }
+  else if (f[0]==="h") { addSparks(+f[2],+f[3],+f[4], 0xff7a4a, 3); if(+f[1]===myId){ hitmark(); sfxHit(); } }
+  else if (f[0]==="k") { killfeed(+f[1],+f[2]); if(+f[1]===myId) sfxKill(); }
+  else if (f[0]==="b") { addSparks(+f[2],1.0,+f[4], 0x6fe0ff, 14); if(+f[1]===myId) sfxBlink(); }
+  else if (f[0]==="r") { addRings(+f[2],+f[4]); if(+f[1]===myId) sfxRecall(); }
+  else if (f[0]==="m") { addSparks(+f[2],1.0,+f[3], 0x2ee06a, 14); if(Math.hypot(+f[2]-pos.x,+f[3]-pos.z)<3) sfxHeal(); }
 }
 function addTracer(x1,y1,z1,x2,y2,z2) {
   const geo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x1,y1,z1),new THREE.Vector3(x2,y2,z2)]);
@@ -223,7 +269,7 @@ let lastSend=0;
 function sendInput(now){
   if(!ws||ws.readyState!==1) return;
   if(now-lastSend < 33) return; lastSend=now;
-  ws.send(`in ${+keys.w} ${+keys.s} ${+keys.a} ${+keys.d} ${+keys.jump} ${yaw.toFixed(3)} ${pitch.toFixed(3)} 0`);
+  ws.send(`in ${+keys.w} ${+keys.s} ${+keys.a} ${+keys.d} ${+keys.jump} ${yaw.toFixed(3)} ${pitch.toFixed(3)} ${latMs.toFixed(0)}`);
 }
 
 // ---- HUD ------------------------------------------------------------------
@@ -262,6 +308,16 @@ function loop(now){
   camera.rotation.y=yaw; camera.rotation.x=pitch;
   recoil*=0.8; gun.position.z=recoil*0.1; gun.rotation.x=recoil*0.3;
   if(firing && me && me.ammo>0 && !me.reload) recoil=Math.min(recoil+0.5,1.2);
+  muzzleT=Math.max(0,muzzleT-dt); muzzle.material.opacity=muzzleT>0?0.9:0; muzzle.rotation.z+=0.6;
+  // health packs bob/spin + availability
+  for(let i=0;i<packMeshes.length;i++){ packMeshes[i].visible=packAvail[i]; packMeshes[i].rotation.y+=dt*1.5; packMeshes[i].position.y=1.0+Math.sin(now/400+i)*0.15; }
+  // damage / reload feedback
+  if(me){
+    if(me.hp < prevHp-0.5){ flashDmg(); sfxHurt(); }
+    prevHp=me.hp;
+    if(me.reload && !prevReload) sfxReload();
+    prevReload=me.reload;
+  }
   // remote interpolation
   for(const e of players.values()){
     e.grp.position.x+=(e.tx-e.grp.position.x)*Math.min(1,dt*14);
@@ -294,6 +350,7 @@ requestAnimationFrame(loop);
 // ---- start / pointer lock -------------------------------------------------
 function start(){
   started=true; $("overlay").style.display="none";
+  const c=ac(); if(c && c.state==="suspended") c.resume();
   connect(($("nick").value.trim())||("Tracer"+(Math.random()*900+100|0)));
   if(!shot) renderer.domElement.requestPointerLock();
 }
@@ -306,9 +363,8 @@ let shotStart=0;
 function driveShot(now){
   if(!shotStart) shotStart=now;
   const t=(now-shotStart)/1000;
-  yaw=Math.PI; pitch=-0.05;             // look toward the enemy team
-  keys.w = t>0.5 && t<2.2;              // walk into the arena
-  if(t>1.0 && !firing && ws){ ws.send("fire"); firing=true; }
+  yaw=0; pitch=-0.04;                   // look down-field toward the enemy team
+  if(t>0.5 && !firing && ws && ws.readyState===1){ ws.send("fire"); firing=true; }
 }
 if(shot){ // auto-join for the capture
   $("nick").value="Tracer"; start();
