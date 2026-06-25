@@ -38,6 +38,10 @@
       .pip.on { background: #4de1e6; }
       #topscore { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 4; display: flex; gap: 14px; align-items: center; font-size: 22px; font-weight: 800; text-shadow: 0 2px 4px #000; }
       #topscore .a { color: #6fb7ff; } #topscore .b { color: #ff8a5a; }
+      #point { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); z-index: 4; text-align: center; pointer-events: none; text-shadow: 0 2px 4px #000; }
+      #pointLabel { font-size: 13px; font-weight: 700; letter-spacing: 1px; }
+      #pointBar { width: 230px; height: 10px; background: #161f33; border: 1px solid #2c3a55; border-radius: 6px; margin: 4px auto 0; overflow: hidden; }
+      #pointFill { height: 100%; width: 0; }
       #feed { position: fixed; top: 56px; right: 16px; z-index: 4; text-align: right; }
       #feed div { background: #0009; padding: 3px 8px; border-radius: 6px; margin: 3px 0; display: inline-block; font-size: 13px; }
       #respawn { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 6; background: #2009; }
@@ -65,6 +69,7 @@
     <div id="cross"></div>
     <div id="hitm">✕</div>
     <div id="topscore"><span class="a" id="scoreA">0</span><span style="color:#9fb0d0">—</span><span class="b" id="scoreB">0</span></div>
+    <div id="point"><div id="pointLabel">◇ POINT</div><div id="pointBar"><div id="pointFill"></div></div></div>
     <div id="hint">WASD move · Mouse aim · Click fire · Shift Blink · E Recall · R reload · Tab scores</div>
     <div id="feed"></div>
     <div id="hud">

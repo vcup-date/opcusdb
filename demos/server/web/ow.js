@@ -15,6 +15,8 @@ const shot = new URLSearchParams(location.search).has("shot");
 let ws=null, myId=0, started=false;
 let players=new Map();   // id -> {grp, plate, alive, team, name, tx,ty,tz,tyaw, elims,deaths}
 let scoreA=0, scoreB=0, winner=0, target=25, inter=0;
+let ptOwner=0, ptCap=0, ptA=0, ptB=0;
+const POINT_R=6.5;
 let pos={x:0,y:0,z:22}, vel={x:0,y:0,z:0}, yaw=Math.PI, pitch=0, onGround=true;
 let keys={w:false,s:false,a:false,d:false,jump:false};
 let feed=[];
@@ -100,6 +102,14 @@ for (const [z,c] of [[22,0x2a4a7a],[-22,0x7a3a1a]]) {
   pad.rotation.x=-Math.PI/2; pad.position.set(0,0.03,z); scene.add(pad);
 }
 
+// capture point (centre objective)
+const pointRing = new THREE.Mesh(new THREE.TorusGeometry(POINT_R,0.22,8,48), new THREE.MeshBasicMaterial({color:0xaab4c8}));
+pointRing.rotation.x=-Math.PI/2; pointRing.position.set(0,0.06,0); scene.add(pointRing);
+const pointDisc = new THREE.Mesh(new THREE.CircleGeometry(POINT_R,48), new THREE.MeshBasicMaterial({color:0xaab4c8,transparent:true,opacity:0.12}));
+pointDisc.rotation.x=-Math.PI/2; pointDisc.position.set(0,0.05,0); scene.add(pointDisc);
+const pointBeam = new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,34,14,1,true), new THREE.MeshBasicMaterial({color:0xaab4c8,transparent:true,opacity:0.1,side:THREE.DoubleSide}));
+pointBeam.position.set(0,17,0); scene.add(pointBeam);
+
 // health packs (positions must match the server)
 const PACK_POS=[[15,0],[-15,0],[0,18],[0,-18]];
 const packMeshes=[]; let packAvail=[true,true,true,true];
@@ -154,6 +164,7 @@ function connect(nick) {
       else if (p[0]==="p") { handlePlayer(p); seen.add(+p[1]); }
       else if (p[0]==="d") { packAvail = (p[1]||"").split(" ").map(v=>v==="1"); }
       else if (p[0]==="z") { updateBombs3((p[1]||"").split(";").filter(Boolean).map(s=>s.split(":").map(Number))); }
+      else if (p[0]==="o") { ptOwner=+p[1]; ptCap=+p[2]; ptA=+p[3]; ptB=+p[4]; }
       else if (p[0]==="P") { latMs = Math.min(300, (performance.now()-(+p[1]))/2); }
       else if (p[0]==="x") { for (const ev of (p[1]||"").split(";")) if(ev) handleEvent(ev); }
     }
@@ -318,6 +329,11 @@ function updateHUD(){
     $("bannerTxt").style.color = winner===1?"#6fb7ff":"#ff8a5a";
     $("bannerSub").textContent = "next round in "+Math.ceil(inter)+"s  ·  first to "+target+" elims";
   } else ban.style.display="none";
+  // capture-point HUD
+  $("pointFill").style.width=Math.abs(ptCap)+"%";
+  $("pointFill").style.background= ptCap>=0 ? "#5aa0ff":"#ff8a4a";
+  $("pointLabel").textContent = ptOwner===1?"◆ BLUE HOLDS THE POINT": ptOwner===2?"◆ ORANGE HOLDS THE POINT": (ptA>0&&ptB>0)?"◇ POINT CONTESTED": ptA>0?"◇ BLUE CAPTURING": ptB>0?"◇ ORANGE CAPTURING":"◇ POINT NEUTRAL";
+  $("pointLabel").style.color = ptOwner===1?"#6fb7ff": ptOwner===2?"#ff8a5a": (ptA>0&&ptB>0)?"#ffd24a":"#aab4c8";
   if(!me) return;
   $("hpnum").textContent=Math.max(0,Math.round(me.hp));
   $("hpfill").style.width=clamp(me.hp/150*100,0,100)+"%";
@@ -366,6 +382,10 @@ function loop(now){
   recoil*=0.8; gun.position.z=recoil*0.1; gun.rotation.x=recoil*0.3;
   if(firing && me && me.ammo>0 && !me.reload) recoil=Math.min(recoil+0.5,1.2);
   muzzleT=Math.max(0,muzzleT-dt); muzzle.material.opacity=muzzleT>0?0.9:0; muzzle.rotation.z+=0.6;
+  // capture-point visuals (colour by owner/contested + pulse)
+  { const col = ptOwner===1?0x5aa0ff: ptOwner===2?0xff8a4a: (ptA>0&&ptB>0)?0xffd24a:0xaab4c8;
+    pointRing.material.color.setHex(col); pointDisc.material.color.setHex(col); pointBeam.material.color.setHex(col);
+    pointDisc.material.opacity=0.12+0.09*Math.sin(now/250); pointBeam.material.opacity=ptOwner?0.2:0.09; }
   // health packs bob/spin + availability
   for(let i=0;i<packMeshes.length;i++){ packMeshes[i].visible=packAvail[i]; packMeshes[i].rotation.y+=dt*1.5; packMeshes[i].position.y=1.0+Math.sin(now/400+i)*0.15; }
   // damage / reload feedback

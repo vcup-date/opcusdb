@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-179%20passing-success)
+![tests](https://img.shields.io/badge/tests-180%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-179 tests · 38 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+180 tests · 38 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -208,19 +208,27 @@ cargo run -p opcusdb-server --bin opcusdb-wow         # server on :9007
 
 `opcusdb-ow` is a team FPS that shows the engine's **netcode model**: a 60 Hz
 authoritative server with **lag-compensated hitscan** (it rewinds targets into the
-shooter's view for fair hits) and **Recall** — Tracer's rewind-3-seconds ability,
-which is literally opcusdb's timeline as a hero power. Humans are team Blue; **AI
-bots** fill team Orange so you can test solo. The client is **Three.js**
-(pointer-lock FPS, client-predicted movement); the kit is **pulse pistols, Blink, Recall, and the Pulse Bomb ultimate** (charge meter + AoE explosion).
+shooter's view, using each client's measured latency, for fair hits) and **Recall**
+— Tracer's rewind-3-seconds ability, literally opcusdb's timeline as a hero power.
+Humans are team Blue; **AI bots** (they aim, strafe, and retreat to health packs
+when hurt) fill team Orange so you can test solo. The client is **Three.js**
+(pointer-lock FPS with client-predicted movement + soft reconciliation).
+
+Full kit & mode: **pulse pistols** (mag/reload), **Blink** (3 charges), **Recall**,
+and the **Pulse Bomb ultimate** (charge meter → thrown AoE explosion). Plus a
+**capture-point objective** + elims racing to the round win (win banner &
+auto-reset), **health packs**, **stand-on-cover verticality**, and full game feel —
+**Web Audio** SFX, floating **damage numbers**, hit markers, **killfeed**, a team
+**scoreboard** (Tab), damage vignette, muzzle flash & screen shake.
 
 <div align="center">
 <img src="assets/ow.png" width="760"/><br/>
-<b>opcusdb Overlode</b> — first-person Tracer: crosshair, HP/ammo, Blink + Recall, killfeed, tracers & sparks, bots that shoot back.
+<b>opcusdb Overlode</b> — first-person Tracer: crosshair, HP/ammo, Blink + Recall + Pulse Bomb, the capture-point objective, killfeed, tracers, and bots that shoot back.
 </div>
 
 ```sh
 cargo run -p opcusdb-server --bin opcusdb-ow          # open http://localhost:9008
-# WASD move · mouse aim · click fire · Shift Blink · E Recall · R reload · Tab scores
+# WASD move · mouse aim · click fire · Shift Blink · E Recall · Q Ult · R reload · Tab scores
 ```
 
 ## Architecture

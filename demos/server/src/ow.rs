@@ -63,8 +63,12 @@ const PB_FUSE: f32 = 1.3;
 const PB_RADIUS: f32 = 5.0;
 const PB_DMG: f32 = 350.0;
 const PB_DMG_MIN: f32 = 130.0;
-const SCORE_WIN: u32 = 25; // elims for a team to win a round
+const SCORE_WIN: u32 = 25; // points for a team to win a round (elims + objective)
 const INTERMISSION: f32 = 6.0;
+// capture point (contest the centre, hold it to score)
+const POINT: (f32, f32) = (0.0, 0.0);
+const POINT_R: f32 = 6.5;
+const CAP_RATE: f32 = 45.0; // % per second
 
 // cover boxes: (cx, cz, half_x, half_z, height)
 const COVER: [(f32, f32, f32, f32, f32); 7] = [
@@ -205,6 +209,11 @@ struct Match {
     score: [u32; 2],
     winner: u8, // 0 none, 1 team A, 2 team B
     intermission: f32,
+    point_owner: u8, // 0 neutral, 1 A, 2 B
+    cap: f32,        // -100..100 (B..A) capture meter
+    hold: f32,       // accumulator for per-second point scoring
+    point_a: u8,
+    point_b: u8,
     pack_cd: Vec<f32>,
     snapshot: String,
     next_bot: u32,
@@ -259,6 +268,11 @@ fn new_match(seed: u64) -> Match {
         score: [0, 0],
         winner: 0,
         intermission: 0.0,
+        point_owner: 0,
+        cap: 0.0,
+        hold: 0.0,
+        point_a: 0,
+        point_b: 0,
         pack_cd: vec![0.0; PACKS.len()],
         snapshot: String::new(),
         next_bot: 100000,
@@ -287,6 +301,7 @@ fn tick(m: &mut Match) {
     }
     update_bombs(m);
     check_packs(m);
+    update_point(m);
     check_match(m);
     // record histories
     let t = m.time;
@@ -628,9 +643,45 @@ fn check_match(m: &mut Match) {
     }
 }
 
+/// Capture-point objective: a team alone on the point captures it; owning it
+/// scores 1 point/second, contributing to the round win condition.
+fn update_point(m: &mut Match) {
+    if m.winner != 0 {
+        return;
+    }
+    let (mut a, mut b) = (0u8, 0u8);
+    for p in m.players.values() {
+        if p.alive && ((p.pos.x - POINT.0).powi(2) + (p.pos.z - POINT.1).powi(2)).sqrt() < POINT_R {
+            if p.team == 0 {
+                a += 1;
+            } else {
+                b += 1;
+            }
+        }
+    }
+    m.point_a = a;
+    m.point_b = b;
+    if a > 0 && b == 0 {
+        m.cap = (m.cap + CAP_RATE * DT).min(100.0);
+    } else if b > 0 && a == 0 {
+        m.cap = (m.cap - CAP_RATE * DT).max(-100.0);
+    }
+    m.point_owner = if m.cap >= 100.0 { 1 } else if m.cap <= -100.0 { 2 } else { 0 };
+    if m.point_owner != 0 {
+        m.hold += DT;
+        if m.hold >= 1.0 {
+            m.hold -= 1.0;
+            m.score[(m.point_owner - 1) as usize] += 1;
+        }
+    }
+}
+
 fn reset_match(m: &mut Match) {
     m.score = [0, 0];
     m.winner = 0;
+    m.point_owner = 0;
+    m.cap = 0.0;
+    m.hold = 0.0;
     m.bombs.clear();
     let teams: Vec<(u32, u8)> = m.players.iter().map(|(id, p)| (*id, p.team)).collect();
     for (id, team) in teams {
@@ -845,6 +896,7 @@ fn build_snapshot(m: &Match) -> String {
     s.push_str(&format!("z\t{bombs}\n"));
     let packs = m.pack_cd.iter().map(|c| if *c <= 0.0 { "1" } else { "0" }).collect::<Vec<_>>().join(" ");
     s.push_str(&format!("d\t{packs}\n"));
+    s.push_str(&format!("o\t{}\t{}\t{}\t{}\n", m.point_owner, m.cap as i32, m.point_a, m.point_b));
     s.push_str(&format!("x\t{}\n", m.events.join(";")));
     s
 }
@@ -1117,6 +1169,17 @@ mod tests {
         }
         assert!(m.bombs.is_empty(), "bomb detonated");
         assert!(m.players[&2].hp < MAX_HP, "pulse bomb damaged the enemy");
+    }
+
+    #[test]
+    fn capturing_the_point_awards_score() {
+        let mut m = m1();
+        m.players.insert(1, Player::new("a".into(), false, 0, V3::new(POINT.0 + 3.0, 0.0, POINT.1)));
+        for _ in 0..(4.0 / DT) as usize {
+            update_point(&mut m);
+        }
+        assert_eq!(m.point_owner, 1, "team A captured and owns the point");
+        assert!(m.score[0] > 0, "holding the point scored for team A");
     }
 
     #[test]
