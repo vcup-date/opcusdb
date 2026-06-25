@@ -301,8 +301,11 @@ function nameOf(id) { const r = roster.find(r => r.id === id); return r ? r.name
 function logChatter(id, text) {
   if (!text || lastLine.get(id) === text) return;
   lastLine.set(id, text);
-  chatter.push({ name: nameOf(id), text });
-  if (chatter.length > 9) chatter.shift();
+  const now = performance.now(), last = chatter[chatter.length - 1];
+  // a quick follow-up from the same speaker is the real reply upgrading the instant
+  // line, so replace the entry in place rather than logging a duplicate
+  if (last && last.id === id && now - last.t < 4000) { last.text = text; last.t = now; }
+  else { chatter.push({ id, name: nameOf(id), text, t: now }); if (chatter.length > 9) chatter.shift(); }
   const el = $("chatter"); if (el) el.innerHTML = chatter.map(c => `<div class="cl"><b>${esc(c.name)}</b> ${esc(c.text)}</div>`).join("");
 }
 
