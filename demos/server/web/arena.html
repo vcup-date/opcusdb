@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>opcusdb Arena · multiplayer snake</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; background:
+        radial-gradient(1200px 600px at 50% -10%, #11203f 0%, #060912 60%, #04060c 100%);
+        color: #c8d3f5; font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+      h1 { font-size: 20px; letter-spacing: .5px; margin: 0; }
+      .accent { color: #7dcfff; }
+      header { display: flex; align-items: baseline; gap: 14px; padding: 14px 20px; }
+      #wrap { display: flex; gap: 18px; justify-content: center; padding: 0 16px 24px; flex-wrap: wrap; }
+      #stage { display: block; border-radius: 12px; box-shadow: 0 0 0 1px #1c2742, 0 0 60px #0a1a3a inset; }
+      #side { width: 230px; }
+      .card { background: #0c1322cc; border: 1px solid #1c2742; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+      .card h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #6b7a99; }
+      .row { display: flex; justify-content: space-between; padding: 3px 0; }
+      .row .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: middle; }
+      .me { color: #fff; font-weight: 700; }
+      /* lobby overlay */
+      #lobby { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+        background: #04060ce6; backdrop-filter: blur(4px); z-index: 10; }
+      .panel { background: #0c1322; border: 1px solid #233; border-radius: 16px; padding: 28px 30px; width: 360px; text-align: center;
+        box-shadow: 0 20px 80px #000a; }
+      .panel input { width: 100%; font: inherit; padding: 10px 12px; margin: 6px 0; border-radius: 10px; border: 1px solid #2a3550; background:#121a2c; color:#e6edff; text-align:center; }
+      .panel button { width: 100%; font: inherit; font-weight: 700; padding: 11px; margin-top: 8px; border: 0; border-radius: 10px; cursor: pointer; }
+      .primary { background: linear-gradient(180deg,#3a86ff,#2f6feb); color: #fff; }
+      .ghost { background: #14203a; color: #bcd; }
+      .hint { color: #6b7a99; font-size: 12px; margin: 10px 0 0; }
+      #roomTag { color:#ffd24a; font-weight:700; }
+      #over { position:absolute; inset:0; display:none; align-items:center; justify-content:center; pointer-events:none; }
+      #over span { background:#04060cc0; padding:10px 18px; border-radius:10px; font-size:18px; color:#ff7eb6; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1><span class="accent">opcusdb</span> Arena</h1>
+      <div>multiplayer snake · room <span id="roomTag">—</span> · <span id="hud">—</span></div>
+    </header>
+    <div id="wrap">
+      <div style="position:relative">
+        <canvas id="stage"></canvas>
+        <div id="over"><span>you crashed — respawning…</span></div>
+      </div>
+      <div id="side">
+        <div class="card"><h3>this room</h3><div id="players"></div></div>
+        <div class="card"><h3>🏆 all-time leaderboard</h3><div id="leaderboard"></div></div>
+        <div class="card"><h3>controls</h3><div style="color:#9fb3d9">Arrow keys / WASD to steer.<br/>Eat food to grow + score.<br/>Don't hit walls or snakes.</div></div>
+      </div>
+    </div>
+
+    <div id="lobby">
+      <div class="panel">
+        <h1><span class="accent">opcusdb</span> Arena</h1>
+        <p class="hint">real-time multiplayer snake — authoritative Rust server</p>
+        <input id="nick" placeholder="nickname" maxlength="14" />
+        <input id="code" placeholder="room code (e.g. ABCD)" maxlength="6" />
+        <button class="primary" id="join">join room</button>
+        <button class="ghost" id="create">create new room</button>
+        <p class="hint">share the room code so friends can join the same game.</p>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
+    <script src="/arena.js"></script>
+  </body>
+</html>

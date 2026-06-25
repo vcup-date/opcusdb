@@ -21,5 +21,9 @@ path = "src/main.rs"
 name = "opcusdb-chat"
 path = "src/chat.rs"
 
+[[bin]]
+name = "opcusdb-arena"
+path = "src/arena.rs"
+
 [dependencies]
 opcusdb-core = { path = "../../crates/opcusdb-core" }

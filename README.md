@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-152%20passing-success)
+![tests](https://img.shields.io/badge/tests-155%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-152 tests · 32 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+155 tests · 33 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -99,6 +99,24 @@ The key is read from **`OPENROUTER_API_KEY`** and is **never stored in the repo*
 (`.env` and `run-chat.sh` are gitignored; see [`.env.example`](.env.example)). To
 save credits, the bots only chat while at least one human is connected.
 
+## Arena — a multiplayer game with rooms, rules & a persistent leaderboard
+
+`opcusdb-arena` is a real-time multiplayer **snake** game: **create or join a room
+by code**, steer with arrows/WASD, eat food to grow and score, crash into a
+wall/snake and you die (then auto-respawn). The Rust server is authoritative (one
+grid per room, fixed tick, broadcast over WebSocket); scores persist to a small
+**local DB file** (`leaderboard.db`, gitignored) shown as an all-time leaderboard.
+
+<div align="center">
+<img src="assets/arena.png" width="600"/><br/>
+<b>opcusdb Arena</b> — neon board, per-room scores, and a persistent all-time leaderboard.
+</div>
+
+```sh
+cargo run -p opcusdb-server --bin opcusdb-arena      # open http://localhost:9003
+# create a room, share the code (or ?room=CODE), open more tabs and race
+```
+
 ## Architecture
 
 <div align="center"><img src="assets/diagram-arch.png" width="560" alt="architecture"/></div>
@@ -127,7 +145,7 @@ save credits, the bots only chat while at least one human is connected.
 | `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
 | `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
 | `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
-| `demos/server` | authoritative **game server** + **human/AI chatroom**, both over a **hand-rolled WebSocket** (dependency-free); the chat's AI chatters use OpenRouter via the system `curl` |
+| `demos/server` | three authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), and **Arena** — multiplayer snake with rooms + a persistent leaderboard |
 
 ## The five game types → demos
 
@@ -141,6 +159,7 @@ save credits, the bots only chat while at least one human is connected.
 | *(bonus)* | `particles` | browser | interactive fixed-point particle galaxy |
 | **real multiplayer** | `server` (game) | `cargo run -p opcusdb-server` → open :9001 in 2+ tabs | **authoritative ECS server + WebSocket**; many browsers share one live world |
 | **live human + AI chat** | `server` (chat) | `OPENROUTER_API_KEY=… cargo run -p opcusdb-server --bin opcusdb-chat` → :9002 | IRC-style channel; anyone logs in; **10 AI chatters via OpenRouter** |
+| **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start
 
@@ -166,7 +185,7 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 
 ## Test cases — what's actually proven
 
-`cargo test --workspace` → **152 passing across 32 binaries**, clippy-clean. A selection:
+`cargo test --workspace` → **155 passing across 33 binaries**, clippy-clean. A selection:
 
 | Property proven | Test |
 |---|---|
@@ -189,6 +208,7 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 | Two lockstep peers stay byte-identical | `lockstep … two_peers_stay_in_perfect_sync` |
 | Shared world holds every connected player + spawns | `server … shared_world_holds_all_players_and_spawns` |
 | WebSocket handshake (SHA-1/base64) per RFC 6455 | `server … rfc6455_accept_example` |
+| Snake eats/grows; wall-crash records score | `server … snake_moves_and_eats`, `wall_collision_kills_and_records_score` |
 
 ## Status
 
