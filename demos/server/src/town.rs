@@ -185,15 +185,15 @@ fn new_town() -> Town {
 /// piling onto one spot and marching in lockstep.
 fn schedule(c: &Char, time: f32) -> usize {
     let p = (time % DAY_SECS) / DAY_SECS;
-    if p >= 0.95 {
-        return 8; // late night: home
+    if p >= 0.86 {
+        return c.work; // night: everyone heads back to their own corner, town goes quiet
     }
-    if p >= 0.80 {
-        return c.fav; // evening: your favourite social spot (small groups)
+    if p >= 0.72 {
+        return c.fav; // evening: gather at your favourite social spot (matches the sunset)
     }
     let slot = (time / 11.0) as u64 + c.work as u64 + c.fav as u64 + c.pal as u64;
     if slot % 3 == 0 {
-        0 // a rotating third hang out at the plaza
+        0 // daytime: a rotating third keep the plaza busy
     } else {
         c.work // otherwise at your own workplace
     }
@@ -780,8 +780,8 @@ mod tests {
     fn schedule_keeps_residents_spread_and_goes_home_at_night() {
         let t = new_town();
         let c = &t.chars[&1]; // Mara, work = Bakery (1)
-        assert_eq!(schedule(c, DAY_SECS * 0.85), c.fav, "evening -> favourite spot");
-        assert_eq!(schedule(c, DAY_SECS * 0.97), 8, "night -> Homes");
+        assert_eq!(schedule(c, DAY_SECS * 0.78), c.fav, "evening -> favourite spot");
+        assert_eq!(schedule(c, DAY_SECS * 0.95), c.work, "night -> back to her own corner");
         // daytime: she is either at her workplace or rotating through the plaza, never elsewhere
         let day = schedule(c, DAY_SECS * 0.4);
         assert!(day == c.work || day == 0, "daytime -> own workplace or the plaza");
