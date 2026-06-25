@@ -52,3 +52,7 @@ opcusdb-algebra = { path = "../../crates/opcusdb-algebra" }
 [[bin]]
 name = "opcusdb-board"
 path = "src/board.rs"
+
+[[bin]]
+name = "opcusdb-rts"
+path = "src/rts.rs"
