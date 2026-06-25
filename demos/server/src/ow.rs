@@ -134,8 +134,9 @@ struct Player {
     respawn: f32,
     elims: u32,
     deaths: u32,
-    ult: f32, // ultimate charge (0..ULT_MAX)
-    lat: f32, // shooter one-way latency (s)
+    ult: f32,    // ultimate charge (0..ULT_MAX)
+    invuln: f32, // spawn-protection timer (immune while > 0)
+    lat: f32,    // shooter one-way latency (s)
     // inputs
     inf: bool,
     inb: bool,
@@ -174,6 +175,7 @@ impl Player {
             elims: 0,
             deaths: 0,
             ult: 0.0,
+            invuln: 0.0,
             lat: 0.0,
             inf: false,
             inb: false,
@@ -332,6 +334,7 @@ fn step_player(m: &mut Match, id: u32) {
             p.hp = MAX_HP;
             p.ammo = MAG;
             p.blink = BLINK_MAX;
+            p.invuln = 2.0; // spawn protection
             p.self_hist.clear();
             respawn_to = Some(p.team);
         } else {
@@ -340,6 +343,9 @@ fn step_player(m: &mut Match, id: u32) {
         // cooldowns
         if p.fire_cd > 0.0 {
             p.fire_cd -= DT;
+        }
+        if p.invuln > 0.0 {
+            p.invuln -= DT;
         }
         if p.recall_cd > 0.0 {
             p.recall_cd -= DT;
@@ -523,29 +529,33 @@ fn try_fire(m: &mut Match, id: u32) {
     m.events.push(format!("t:{:.2}:{:.2}:{:.2}:{:.2}:{:.2}:{:.2}", eye.x, eye.y, eye.z, end.x, end.y, end.z));
     if let Some((tid, dist, head)) = best {
         let dmg = (DMG_NEAR - (DMG_NEAR - DMG_FAR) * (dist / RANGE).min(1.0)) * if head { HEAD_MULT } else { 1.0 };
-        let dead = {
+        let (applied, dead) = {
             let t = m.players.get_mut(&tid).unwrap();
-            t.hp -= dmg;
-            t.hp <= 0.0
+            if t.invuln > 0.0 {
+                (0.0, false)
+            } else {
+                t.hp -= dmg;
+                (dmg, t.hp <= 0.0)
+            }
         };
-        if let Some(k) = m.players.get_mut(&shooter_id) {
-            k.ult = (k.ult + dmg).min(ULT_MAX);
-        }
-        m.events.push(format!("h:{shooter_id}:{:.2}:{:.2}:{:.2}:{:.0}", end.x, end.y, end.z, dmg));
-        if dead {
-            {
-                let t = m.players.get_mut(&tid).unwrap();
-                t.alive = false;
-                t.respawn = RESPAWN;
-                t.deaths += 1;
-            }
-            let vteam = m.players[&tid].team;
+        if applied > 0.0 {
             if let Some(k) = m.players.get_mut(&shooter_id) {
-                k.elims += 1;
+                k.ult = (k.ult + applied).min(ULT_MAX);
             }
-            m.score[team as usize] += 1;
-            let _ = vteam;
-            m.events.push(format!("k:{shooter_id}:{tid}"));
+            m.events.push(format!("h:{shooter_id}:{:.2}:{:.2}:{:.2}:{:.0}", end.x, end.y, end.z, applied));
+            if dead {
+                {
+                    let t = m.players.get_mut(&tid).unwrap();
+                    t.alive = false;
+                    t.respawn = RESPAWN;
+                    t.deaths += 1;
+                }
+                if let Some(k) = m.players.get_mut(&shooter_id) {
+                    k.elims += 1;
+                }
+                m.score[team as usize] += 1;
+                m.events.push(format!("k:{shooter_id}:{tid}"));
+            }
         }
     }
 }
@@ -603,6 +613,9 @@ fn update_bombs(m: &mut Match) {
                 let dmg = PB_DMG - (PB_DMG - PB_DMG_MIN) * (d / PB_RADIUS);
                 let dead = {
                     let t = m.players.get_mut(&tid).unwrap();
+                    if t.invuln > 0.0 {
+                        continue;
+                    }
                     t.hp -= dmg;
                     t.hp <= 0.0
                 };
@@ -694,6 +707,7 @@ fn reset_match(m: &mut Match) {
         p.ammo = MAG;
         p.blink = BLINK_MAX;
         p.ult = 0.0;
+        p.invuln = 2.0;
         p.respawn = 0.0;
         p.self_hist.clear();
     }
@@ -1125,6 +1139,22 @@ mod tests {
         assert!(m.players[&2].hp < MAX_HP, "target took damage");
         assert!(m.players[&1].ult > 0.0, "shooter gained ult charge from damage");
         assert!(m.events.iter().any(|e| e.starts_with("t:")), "tracer emitted");
+    }
+
+    #[test]
+    fn spawn_protection_blocks_damage() {
+        let mut m = m1();
+        let mut s = Player::new("s".into(), false, 0, V3::new(8.0, 0.0, 5.0));
+        s.firing = true;
+        let mut t = Player::new("t".into(), false, 1, V3::new(8.0, 0.0, -2.0));
+        t.invuln = 2.0; // freshly spawned
+        for _ in 0..HIST {
+            t.hist.push((m.time, t.eye()));
+        }
+        m.players.insert(1, s);
+        m.players.insert(2, t);
+        try_fire(&mut m, 1);
+        assert_eq!(m.players[&2].hp, MAX_HP, "spawn-protected target takes no damage");
     }
 
     #[test]
