@@ -246,9 +246,49 @@ function afterAtlas(nick) {
   connect();
   const wait = setInterval(() => { if (ws && ws.readyState === 1) { if (nick) ws.send("name " + nick); clearInterval(wait); $("say").focus(); } }, 100);
 }
+// ---- ambient music (generated live with Web Audio, no asset, no dependency) ----
+// A soft evolving pad plus a slow pentatonic music box, so the town has a cosy
+// score. Starts on the first user gesture (the join click) to satisfy autoplay.
+let audio = null, musicOn = true;
+function startMusic() {
+  if (audio) return;
+  const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
+  const ctx = new Ctx();
+  const master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
+  const filt = ctx.createBiquadFilter(); filt.type = "lowpass"; filt.frequency.value = 850; filt.Q.value = 0.6;
+  const pad = ctx.createGain(); pad.gain.value = 0.16; filt.connect(pad); pad.connect(master);
+  // sustained chord (A major, low and warm)
+  for (const f of [110, 164.81, 220, 277.18]) { const o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = f; const g = ctx.createGain(); g.gain.value = 0.22; o.connect(g); g.connect(filt); o.start(); }
+  // slow filter sweep so the pad breathes
+  const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05; const lg = ctx.createGain(); lg.gain.value = 320; lfo.connect(lg); lg.connect(filt.frequency); lfo.start();
+  // gentle music-box plucks on a pentatonic scale
+  const scale = [440, 523.25, 587.33, 659.25, 783.99, 880, 1046.5];
+  function pluck() {
+    if (!audio) return;
+    if (musicOn) {
+      const f = scale[(Math.random() * scale.length) | 0];
+      const o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = f;
+      const g = ctx.createGain(); const t = ctx.currentTime;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+      o.connect(g); g.connect(pad); o.start(t); o.stop(t + 1.7);
+    }
+    setTimeout(pluck, 2200 + Math.random() * 3600);
+  }
+  setTimeout(pluck, 1200);
+  audio = { ctx, master };
+  setMusic(true);
+}
+function setMusic(on) {
+  musicOn = on;
+  if (audio) audio.master.gain.setTargetAtTime(on ? 0.85 : 0.0, audio.ctx.currentTime, 0.4);
+  const b = $("mute"); if (b) b.textContent = on ? "🔊" : "🔈";
+}
+$("mute").onclick = () => { if (!audio) startMusic(); else setMusic(!musicOn); };
+
 function start() {
   const nick = $("nick").value.trim();
   started = true; $("join").style.display = "none";
+  startMusic();
   const img = new Image();
   img.onload = () => { atlasBase = PIXI.BaseTexture.from(img); atlasBase.scaleMode = PIXI.SCALE_MODES.NEAREST; afterAtlas(nick); };
   img.onerror = () => afterAtlas(nick);
