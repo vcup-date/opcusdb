@@ -14,7 +14,7 @@ const shot = new URLSearchParams(location.search).has("shot");
 
 let ws=null, myId=0, started=false;
 let players=new Map();   // id -> {grp, plate, alive, team, name, tx,ty,tz,tyaw, elims,deaths}
-let scoreA=0, scoreB=0;
+let scoreA=0, scoreB=0, winner=0, target=25, inter=0;
 let pos={x:0,y:0,z:22}, vel={x:0,y:0,z:0}, yaw=Math.PI, pitch=0, onGround=true;
 let keys={w:false,s:false,a:false,d:false,jump:false};
 let feed=[];
@@ -150,7 +150,7 @@ function connect(nick) {
       if (!line) continue;
       const p = line.split("\t");
       if (p[0]==="w") myId=+p[1];
-      else if (p[0]==="g") { scoreA=+p[2]; scoreB=+p[3]; }
+      else if (p[0]==="g") { scoreA=+p[2]; scoreB=+p[3]; winner=+p[4]; target=+p[5]; inter=+p[6]; }
       else if (p[0]==="p") { handlePlayer(p); seen.add(+p[1]); }
       else if (p[0]==="d") { packAvail = (p[1]||"").split(" ").map(v=>v==="1"); }
       else if (p[0]==="z") { updateBombs3((p[1]||"").split(";").filter(Boolean).map(s=>s.split(":").map(Number))); }
@@ -305,6 +305,13 @@ function sendInput(now){
 // ---- HUD ------------------------------------------------------------------
 function updateHUD(){
   $("scoreA").textContent=scoreA; $("scoreB").textContent=scoreB;
+  // win banner / intermission
+  const ban=$("banner");
+  if(winner!==0){ ban.style.display="flex";
+    $("bannerTxt").textContent = winner===1?"BLUE TEAM WINS":"ORANGE TEAM WINS";
+    $("bannerTxt").style.color = winner===1?"#6fb7ff":"#ff8a5a";
+    $("bannerSub").textContent = "next round in "+Math.ceil(inter)+"s  ·  first to "+target+" elims";
+  } else ban.style.display="none";
   if(!me) return;
   $("hpnum").textContent=Math.max(0,Math.round(me.hp));
   $("hpfill").style.width=clamp(me.hp/150*100,0,100)+"%";

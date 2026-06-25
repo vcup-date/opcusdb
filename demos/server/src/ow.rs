@@ -63,6 +63,8 @@ const PB_FUSE: f32 = 1.3;
 const PB_RADIUS: f32 = 5.0;
 const PB_DMG: f32 = 350.0;
 const PB_DMG_MIN: f32 = 130.0;
+const SCORE_WIN: u32 = 25; // elims for a team to win a round
+const INTERMISSION: f32 = 6.0;
 
 // cover boxes: (cx, cz, half_x, half_z, height)
 const COVER: [(f32, f32, f32, f32, f32); 7] = [
@@ -201,6 +203,8 @@ struct Match {
     rng: Rng,
     time: f32,
     score: [u32; 2],
+    winner: u8, // 0 none, 1 team A, 2 team B
+    intermission: f32,
     pack_cd: Vec<f32>,
     snapshot: String,
     next_bot: u32,
@@ -253,6 +257,8 @@ fn new_match(seed: u64) -> Match {
         rng: Rng::seed(seed),
         time: 0.0,
         score: [0, 0],
+        winner: 0,
+        intermission: 0.0,
         pack_cd: vec![0.0; PACKS.len()],
         snapshot: String::new(),
         next_bot: 100000,
@@ -281,6 +287,7 @@ fn tick(m: &mut Match) {
     }
     update_bombs(m);
     check_packs(m);
+    check_match(m);
     // record histories
     let t = m.time;
     for p in m.players.values_mut() {
@@ -592,6 +599,44 @@ fn update_bombs(m: &mut Match) {
     }
 }
 
+/// Round flow: declare a winner at the score target, then reset after intermission.
+fn check_match(m: &mut Match) {
+    if m.winner == 0 {
+        for t in 0..2 {
+            if m.score[t] >= SCORE_WIN {
+                m.winner = (t + 1) as u8;
+                m.intermission = INTERMISSION;
+                m.events.push(format!("V:{}", t + 1));
+            }
+        }
+    } else {
+        m.intermission -= DT;
+        if m.intermission <= 0.0 {
+            reset_match(m);
+        }
+    }
+}
+
+fn reset_match(m: &mut Match) {
+    m.score = [0, 0];
+    m.winner = 0;
+    m.bombs.clear();
+    let teams: Vec<(u32, u8)> = m.players.iter().map(|(id, p)| (*id, p.team)).collect();
+    for (id, team) in teams {
+        let sp = spawn_point(&mut m.rng, team);
+        let p = m.players.get_mut(&id).unwrap();
+        p.pos = sp;
+        p.vel = V3::default();
+        p.hp = MAX_HP;
+        p.alive = true;
+        p.ammo = MAG;
+        p.blink = BLINK_MAX;
+        p.ult = 0.0;
+        p.respawn = 0.0;
+        p.self_hist.clear();
+    }
+}
+
 fn check_packs(m: &mut Match) {
     for c in m.pack_cd.iter_mut() {
         if *c > 0.0 {
@@ -720,18 +765,34 @@ fn bot_ai(m: &mut Match) {
         }
         match target {
             Some(&(_, tpos, _, _)) => {
-                let to = tpos.sub(bpos);
-                let dist = to.len().max(0.01);
-                b.yaw = (-to.x).atan2(-to.z);
-                b.pitch = (to.y + EYE * 0.4).atan2((to.x * to.x + to.z * to.z).sqrt()) * 0.5;
-                // strafe + approach/retreat to keep mid range
-                b.inf = dist > 12.0;
-                b.inb = dist < 6.0;
-                b.inl = b.ai_strafe > 0.0;
-                b.inr = b.ai_strafe < 0.0;
-                b.inj = false;
-                let aimed = dist < RANGE && !blocked(b.eye(), V3::new(tpos.x, tpos.y + 1.0, tpos.z));
-                b.firing = aimed;
+                if b.hp < 55.0 {
+                    // low HP: break off and run to the nearest health pack
+                    let pk = PACKS.iter().min_by(|a, c| {
+                        ((bpos.x - a.0).powi(2) + (bpos.z - a.1).powi(2))
+                            .total_cmp(&((bpos.x - c.0).powi(2) + (bpos.z - c.1).powi(2)))
+                    });
+                    if let Some(&(px, pz)) = pk {
+                        b.yaw = (-(px - bpos.x)).atan2(-(pz - bpos.z));
+                        b.pitch = 0.0;
+                        b.inf = true;
+                        b.inb = false;
+                        b.inl = false;
+                        b.inr = false;
+                        b.firing = false;
+                    }
+                } else {
+                    let to = tpos.sub(bpos);
+                    let dist = to.len().max(0.01);
+                    let horiz = (to.x * to.x + to.z * to.z).sqrt().max(0.01);
+                    b.yaw = (-to.x).atan2(-to.z);
+                    b.pitch = ((tpos.y + 1.0) - (bpos.y + EYE)).atan2(horiz); // aim at the chest
+                    b.inf = dist > 12.0;
+                    b.inb = dist < 6.0;
+                    b.inl = b.ai_strafe > 0.0;
+                    b.inr = b.ai_strafe < 0.0;
+                    b.inj = false;
+                    b.firing = dist < RANGE && !blocked(b.eye(), V3::new(tpos.x, tpos.y + 1.0, tpos.z));
+                }
             }
             None => {
                 b.inf = true;
@@ -746,7 +807,7 @@ fn bot_ai(m: &mut Match) {
 
 fn build_snapshot(m: &Match) -> String {
     let mut s = String::new();
-    s.push_str(&format!("g\t{:.2}\t{}\t{}\n", m.time, m.score[0], m.score[1]));
+    s.push_str(&format!("g\t{:.2}\t{}\t{}\t{}\t{}\t{:.1}\n", m.time, m.score[0], m.score[1], m.winner, SCORE_WIN, m.intermission));
     for (id, p) in &m.players {
         s.push_str(&format!(
             "p\t{id}\t{:.2}\t{:.2}\t{:.2}\t{:.3}\t{:.3}\t{:.0}\t{}\t{}\t{}\t{}\t{:.1}\t{:.1}\t{}\t{}\t{}\t{}\t{}\n",
@@ -1045,6 +1106,19 @@ mod tests {
         }
         assert!(m.bombs.is_empty(), "bomb detonated");
         assert!(m.players[&2].hp < MAX_HP, "pulse bomb damaged the enemy");
+    }
+
+    #[test]
+    fn reaching_score_target_declares_winner_then_resets() {
+        let mut m = m1();
+        m.players.insert(1, Player::new("a".into(), false, 0, V3::default()));
+        m.score[0] = SCORE_WIN;
+        check_match(&mut m);
+        assert_eq!(m.winner, 1, "team A declared the winner");
+        m.intermission = 0.0;
+        check_match(&mut m); // intermission elapses -> reset
+        assert_eq!(m.winner, 0, "winner cleared after reset");
+        assert_eq!(m.score, [0, 0], "scores reset for the next round");
     }
 
     #[test]
