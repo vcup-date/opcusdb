@@ -195,6 +195,7 @@ fn schedule(c: &Char, time: f32) -> usize {
 fn tick(t: &mut Town) {
     t.time += DT;
     let ids: Vec<u32> = t.chars.keys().copied().collect();
+    let mut arrivals: Vec<usize> = Vec::new();
     for id in ids {
         let human = t.chars[&id].human;
         // residents plan a route along the roads (through the plaza hub) toward
@@ -243,6 +244,7 @@ fn tick(t: &mut Town) {
             }
         }
         // which location am I standing in?
+        let old_here = c.here;
         let mut here = -1i32;
         for (li, _) in LOCS.iter().enumerate() {
             let (sx, sy) = loc_stand(li);
@@ -252,6 +254,14 @@ fn tick(t: &mut Town) {
             }
         }
         c.here = here;
+        // a visitor arriving at a spot nudges that group to speak, so residents
+        // notice you walking up instead of only reacting when you type
+        if human && here >= 0 && here != old_here {
+            arrivals.push(here as usize);
+        }
+    }
+    for li in arrivals {
+        t.pending[li] = true;
     }
 }
 
