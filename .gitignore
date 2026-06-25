@@ -15,3 +15,7 @@ run-chat.sh
 
 # Claude Code local runtime
 .claude/
+
+# Godot import cache
+.godot/
+*.import

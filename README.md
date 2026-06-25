@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-166%20passing-success)
+![tests](https://img.shields.io/badge/tests-170%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-166 tests · 36 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+170 tests · 37 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -180,6 +180,28 @@ cargo run -p opcusdb-server --bin opcusdb-survivors   # open http://localhost:90
 # WASD / arrows to move — bombs fire automatically; open more tabs for co-op
 ```
 
+## Townfall — a 3D MMO town in Godot 4 🏰🐺
+
+[`demos/godot-wow`](demos/godot-wow) is a tiny **3D MMO-style town built in Godot 4**
+that talks to the opcusdb authoritative server over WebSocket — proving the engine
+isn't browser-only. A small town with **NPC quest givers**, a pack of **wolves** to
+kill, a **quest** ("Cull the Wolves — slay 5"), and **chat**, where **multiple
+players see each other** move and fight in one shared world. The whole simulation
+(movement, wolf AI, combat, quests, chat) lives in
+[`demos/server/src/wow.rs`](demos/server/src/wow.rs); the Godot client just renders
+it and sends input.
+
+<div align="center">
+<img src="assets/godot-wow.png" width="760"/><br/>
+<b>opcusdb Townfall (Godot 4)</b> — two players (Hero + Thrain), Mayor Bram's quest, wolves in the wilds, and live chat over the shared server.
+</div>
+
+```sh
+cargo run -p opcusdb-server --bin opcusdb-wow         # server on :9007
+# then open demos/godot-wow in Godot 4.4+ and press Play (run 2+ copies for multiplayer)
+# WASD move · Space attack · E talk to NPC · Enter chat
+```
+
 ## Architecture
 
 <div align="center"><img src="assets/diagram-arch.png" width="560" alt="architecture"/></div>
@@ -208,7 +230,7 @@ cargo run -p opcusdb-server --bin opcusdb-survivors   # open http://localhost:90
 | `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
 | `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
 | `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
-| `demos/server` | six authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), and **Boomborn** (Vampire-Survivors-style horde survivor) — with rooms, leaderboards, physics, and AI |
+| `demos/server` | six authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), and **Townfall** (the authoritative server for a Godot 4 3D MMO town) — with rooms, leaderboards, physics, quests, and AI |
 
 ## The five game types → demos
 
@@ -225,6 +247,7 @@ cargo run -p opcusdb-server --bin opcusdb-survivors   # open http://localhost:90
 | **Gomoku (5-in-a-row)** | `server` (gomoku) | `cargo run -p opcusdb-server --bin opcusdb-gomoku` → :9004 | turn-based **five-in-a-row**; rooms; win detection; persistent win leaderboard |
 | **platform fighter** | `server` (smash) | `cargo run -p opcusdb-server --bin opcusdb-smash` → :9005 | Smash-style brawl; auto-join; arrows + Z/X; damage % + KOs; pixel fighters, parallax, particles, sound |
 | **survivor (Vampire-Survivors-like)** | `server` (survivors) | `cargo run -p opcusdb-server --bin opcusdb-survivors` → :9006 | co-op bomberman vs vampire hordes; auto-bombs, XP/levels, waves, kills leaderboard |
+| **3D MMO town (Godot)** | `server` (wow) + `demos/godot-wow` | `cargo run -p opcusdb-server --bin opcusdb-wow` → :9007, open the Godot project | NPC quests, wolves, chat; multiplayer 3D town in **Godot 4** |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start
@@ -277,6 +300,7 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 | Gomoku detects horizontal/diagonal five-in-a-row | `server … detects_horizontal_five`, `detects_diagonal_five` |
 | Fighter attack hits in front, knockback & KO credit | `server … attack_in_front_damages_and_knocks_back`, `falling_into_blast_zone_kos_and_credits_last_hitter` |
 | Survivor: explosion kills + xp drop, enemy AI, level-up | `server … explosion_kills_enemy_drops_gem_and_scores`, `enemy_moves_toward_player`, `level_up_grants_weapon_or_upgrade` |
+| Townfall: wolf kill advances quest, NPC interact, wolf bite | `server … attack_kills_wolf_and_advances_quest`, `interact_accepts_quest_near_npc`, `wolf_bites_player_when_adjacent` |
 | Snake eats/grows; wall-crash records score | `server … snake_moves_and_eats`, `wall_collision_kills_and_records_score` |
 
 ## Status
