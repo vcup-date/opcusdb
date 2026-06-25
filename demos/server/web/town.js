@@ -81,13 +81,14 @@ function makeChar(pal, isHuman, palIdx) {
 function makeSpriteChar(row) {
   const c = new PIXI.Container();
   const shadow = new PIXI.Graphics().beginFill(0x000000, 0.30).drawEllipse(0, 16, 12, 4.5).endFill(); c.addChild(shadow);
-  const frames = [0, 1, 2, 3].map(col => new PIXI.Texture(atlasBase, new PIXI.Rectangle(col * 96, row * 128, 96, 128)));
-  const spr = new PIXI.AnimatedSprite(frames); spr.anchor.set(0.5, 1); spr.animationSpeed = 0.13;
-  const sc = 50 / 128; spr.scale.set(sc); spr.position.set(0, 19); spr.gotoAndStop(0);
+  // one clean frame, animated procedurally (bob + sway + squash) — reads as a real
+  // walk and avoids the jitter of cycling four inconsistent generated frames
+  const spr = new PIXI.Sprite(new PIXI.Texture(atlasBase, new PIXI.Rectangle(0, row * 128, 96, 128)));
+  spr.anchor.set(0.5, 1); const sc = 50 / 128; spr.scale.set(sc); spr.position.set(0, 19);
   c.addChild(spr);
   const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
   nm.anchor.set(0.5, 0); nm.position.set(0, -56); c.addChild(nm); // name above the head
-  c._p = { spr, nm, sc, isSprite: true };
+  c._p = { spr, nm, sc, isSprite: true, bob: Math.random() * 6, shadow };
   charL.addChild(c);
   return c;
 }
@@ -155,9 +156,17 @@ app.ticker.add(() => {
     const p = v.view._p;
     v.view.position.set(v.dx, v.dy);
     if (p.isSprite) {
-      p.spr.scale.x = p.sc * v.face; p.spr.scale.y = p.sc;
-      if (moving) { if (!p.spr.playing) p.spr.play(); }
-      else if (p.spr.playing) { p.spr.stop(); p.spr.gotoAndStop(0); }
+      p.spr.scale.x = p.sc * v.face;
+      if (moving) {
+        p.bob += dt * 11;
+        const s = Math.sin(p.bob);
+        p.spr.y = 19 - Math.abs(s) * 4.5;                 // hop
+        p.spr.rotation = s * 0.07 * v.face;               // sway in travel direction
+        p.spr.scale.y = p.sc * (1 - Math.abs(s) * 0.05);  // squash
+        p.shadow.scale.set(1 + Math.abs(s) * 0.12, 1);
+      } else {
+        p.spr.y += (19 - p.spr.y) * 0.25; p.spr.rotation *= 0.8; p.spr.scale.y = p.sc; p.shadow.scale.set(1, 1);
+      }
     } else {
       p.body.scale.x = v.face;
       if (moving) { p.walk += dt * 12; p.legL.rotation = Math.sin(p.walk) * 0.6; p.legR.rotation = -Math.sin(p.walk) * 0.6; p.body.y = -Math.abs(Math.sin(p.walk)) * 1.5; }
