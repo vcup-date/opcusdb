@@ -87,7 +87,10 @@ function drawLoc(l) {
 })();
 
 // ---- characters -----------------------------------------------------------
-function makeChar(pal, isHuman) {
+let atlasBase = null; // generated sprite atlas (12 rows x 4 frames, 96x128)
+function makeChar(pal, isHuman, palIdx) {
+  // residents use the Qwen-generated animated sprite; the human "you" stays crafted (+ ring)
+  if (atlasBase && !isHuman && palIdx >= 0 && palIdx < 12) return makeSpriteChar(palIdx);
   const c = new PIXI.Container();
   const [shirt, hair, skin] = pal;
   const shadow = new PIXI.Graphics().beginFill(0x000000, 0.28).drawEllipse(0, 17, 11, 4.5).endFill(); c.addChild(shadow);
@@ -105,6 +108,19 @@ function makeChar(pal, isHuman) {
   const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: isHuman ? 0xffe07a : 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
   nm.anchor.set(0.5, 0); nm.position.set(0, 21); c.addChild(nm);
   c._p = { body, legL, legR, head, nm, ring, walk: Math.random() * 6 };
+  charL.addChild(c);
+  return c;
+}
+function makeSpriteChar(row) {
+  const c = new PIXI.Container();
+  const shadow = new PIXI.Graphics().beginFill(0x000000, 0.30).drawEllipse(0, 16, 12, 4.5).endFill(); c.addChild(shadow);
+  const frames = [0, 1, 2, 3].map(col => new PIXI.Texture(atlasBase, new PIXI.Rectangle(col * 96, row * 128, 96, 128)));
+  const spr = new PIXI.AnimatedSprite(frames); spr.anchor.set(0.5, 1); spr.animationSpeed = 0.13;
+  const sc = 50 / 128; spr.scale.set(sc); spr.position.set(0, 19); spr.gotoAndStop(0);
+  c.addChild(spr);
+  const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
+  nm.anchor.set(0.5, 0); nm.position.set(0, 22); c.addChild(nm);
+  c._p = { spr, nm, sc, isSprite: true };
   charL.addChild(c);
   return c;
 }
@@ -128,12 +144,13 @@ function connect() {
           if (!s) continue; const a = s.split(","); const id = +a[0], x = +a[1], y = +a[2], pal = +a[3], face = +a[4], you = +a[5];
           seen.add(id);
           let v = chars.get(id);
-          if (!v) { v = { dx: x, dy: y, tx: x, ty: y, face: 1, view: makeChar(pal === 99 ? humanPal : PAL[pal % 12], pal === 99 || you === 1) }; chars.set(id, v); }
+          if (!v) { v = { dx: x, dy: y, tx: x, ty: y, face: 1, view: makeChar(pal === 99 ? humanPal : PAL[pal % 12], pal === 99 || you === 1, pal) }; chars.set(id, v); }
           v.tx = x; v.ty = y; v.tface = face === 0 ? -1 : 1;
         }
         for (const [id, v] of chars) if (!seen.has(id)) { charL.removeChild(v.view); chars.delete(id); const b = bubbleL.getChildByName("b" + id); if (b) bubbleL.removeChild(b); }
       } else if (tag === "r") {
         roster = rest.split(";").filter(Boolean).map(s => { const a = s.split("|"); return { id: +a[0], name: a[1], kind: a[2], act: a[3] }; });
+        for (const e of roster) { const v = chars.get(e.id); if (v && v.view._p.nm) v.view._p.nm.text = e.name; }
         renderRoster();
       } else if (tag === "b") {
         const active = new Set();
@@ -170,10 +187,16 @@ app.ticker.add(() => {
     if (v.tface) v.face = v.tface;
     const p = v.view._p;
     v.view.position.set(v.dx, v.dy);
-    p.body.scale.x = v.face;
-    if (moving) { p.walk += dt * 12; p.legL.rotation = Math.sin(p.walk) * 0.6; p.legR.rotation = -Math.sin(p.walk) * 0.6; p.body.y = -Math.abs(Math.sin(p.walk)) * 1.5; }
-    else { p.legL.rotation *= 0.7; p.legR.rotation *= 0.7; p.body.y *= 0.7; }
-    if (p.ring) { p.ring.alpha = 0.5 + 0.4 * Math.sin(performance.now() / 300); }
+    if (p.isSprite) {
+      p.spr.scale.x = p.sc * v.face; p.spr.scale.y = p.sc;
+      if (moving) { if (!p.spr.playing) p.spr.play(); }
+      else if (p.spr.playing) { p.spr.stop(); p.spr.gotoAndStop(0); }
+    } else {
+      p.body.scale.x = v.face;
+      if (moving) { p.walk += dt * 12; p.legL.rotation = Math.sin(p.walk) * 0.6; p.legR.rotation = -Math.sin(p.walk) * 0.6; p.body.y = -Math.abs(Math.sin(p.walk)) * 1.5; }
+      else { p.legL.rotation *= 0.7; p.legR.rotation *= 0.7; p.body.y *= 0.7; }
+      if (p.ring) { p.ring.alpha = 0.5 + 0.4 * Math.sin(performance.now() / 300); }
+    }
     v.view.zIndex = v.dy;
   }
   charL.children.sort((a, b) => a.zIndex - b.zIndex);
@@ -216,11 +239,17 @@ app.view.addEventListener("click", (e) => {
 $("say").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.value.trim()) { ws && ws.readyState === 1 && ws.send("say " + e.target.value.trim()); e.target.value = ""; }
 });
+function afterAtlas(nick) {
+  connect();
+  const wait = setInterval(() => { if (ws && ws.readyState === 1) { if (nick) ws.send("name " + nick); clearInterval(wait); $("say").focus(); } }, 100);
+}
 function start() {
   const nick = $("nick").value.trim();
   started = true; $("join").style.display = "none";
-  connect();
-  const wait = setInterval(() => { if (ws && ws.readyState === 1) { if (nick) ws.send("name " + nick); clearInterval(wait); $("say").focus(); } }, 100);
+  const img = new Image();
+  img.onload = () => { atlasBase = PIXI.BaseTexture.from(img); atlasBase.scaleMode = PIXI.SCALE_MODES.NEAREST; afterAtlas(nick); };
+  img.onerror = () => afterAtlas(nick);
+  img.src = "/town-sprites.png?v=" + Date.now();
 }
 $("go").onclick = start;
 $("nick").addEventListener("keydown", (e) => { if (e.key === "Enter") start(); });

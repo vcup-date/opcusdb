@@ -617,6 +617,7 @@ fn serve_file(stream: &mut TcpStream, head: &str) {
         }
         "/town.js" => ("application/javascript; charset=utf-8", include_str!("../web/town.js").as_bytes().to_vec()),
         "/town-bg.png" => ("image/png", include_bytes!("../web/town-bg.png").to_vec()),
+        "/town-sprites.png" => ("image/png", include_bytes!("../web/town-sprites.png").to_vec()),
         _ => {
             let _ = stream.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n");
             return;
