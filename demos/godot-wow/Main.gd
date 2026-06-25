@@ -173,47 +173,63 @@ func _make_npc(idx: int, name: String, x: float, z: float, giver: bool) -> Node3
 
 # ---------- UI ----------
 func _build_ui() -> void:
-	var layer := CanvasLayer.new(); add_child(layer)
+	# A full-rect Control root so the UI scales with the window (stretch=canvas_items).
+	var ui := Control.new()
+	ui.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(ui)
+	var vp := Vector2(1280, 720) # base resolution; everything scales from here
+
 	var title := Label.new()
 	title.text = "opcusdb Townfall"
-	title.position = Vector2(16, 10)
-	title.add_theme_font_size_override("font_size", 20)
-	layer.add_child(title)
+	title.position = Vector2(20, 14)
+	title.add_theme_font_size_override("font_size", 32)
+	ui.add_child(title)
 
 	status_label = Label.new()
-	status_label.position = Vector2(16, 40)
+	status_label.position = Vector2(20, 56)
+	status_label.add_theme_font_size_override("font_size", 22)
 	status_label.add_theme_color_override("font_color", Color("9fe0ff"))
-	layer.add_child(status_label)
+	ui.add_child(status_label)
 
 	var qpanel := Panel.new()
-	qpanel.position = Vector2(16, 70); qpanel.size = Vector2(340, 56)
-	layer.add_child(qpanel)
+	qpanel.position = Vector2(20, 92); qpanel.size = Vector2(470, 76)
+	ui.add_child(qpanel)
 	quest_label = Label.new()
-	quest_label.position = Vector2(12, 8); quest_label.size = Vector2(320, 44)
+	quest_label.position = Vector2(16, 12); quest_label.size = Vector2(438, 56)
 	quest_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	quest_label.add_theme_font_size_override("font_size", 24)
 	quest_label.add_theme_color_override("font_color", Color("ffd24a"))
 	qpanel.add_child(quest_label)
 
+	# Controls panel (top-right) — clearly shows how to attack
+	var cpanel := Panel.new()
+	cpanel.size = Vector2(330, 152); cpanel.position = Vector2(vp.x - 350, 14)
+	ui.add_child(cpanel)
+	var chead := Label.new()
+	chead.text = "CONTROLS"; chead.position = Vector2(16, 10)
+	chead.add_theme_font_size_override("font_size", 18)
+	chead.add_theme_color_override("font_color", Color("8fa1c4"))
+	cpanel.add_child(chead)
+	var ctl := Label.new()
+	ctl.position = Vector2(16, 38); ctl.size = Vector2(300, 110)
+	ctl.add_theme_font_size_override("font_size", 22)
+	ctl.text = "WASD / arrows — move\n[SPACE] — Attack ⚔\n[E] — Talk to NPC\n[ENTER] — Chat"
+	cpanel.add_child(ctl)
+
 	chat_log = RichTextLabel.new()
-	chat_log.position = Vector2(16, 0); chat_log.size = Vector2(440, 150)
+	chat_log.bbcode_enabled = true
 	chat_log.scroll_following = true
-	layer.add_child(chat_log)
+	chat_log.size = Vector2(560, 200); chat_log.position = Vector2(20, vp.y - 250)
+	chat_log.add_theme_font_size_override("normal_font_size", 20)
+	chat_log.add_theme_font_size_override("bold_font_size", 20)
+	ui.add_child(chat_log)
 	chat_input = LineEdit.new()
 	chat_input.placeholder_text = "press Enter to chat…"
-	chat_input.size = Vector2(440, 30)
-	layer.add_child(chat_input)
+	chat_input.size = Vector2(560, 44); chat_input.position = Vector2(20, vp.y - 52)
+	chat_input.add_theme_font_size_override("font_size", 20)
+	ui.add_child(chat_input)
 	chat_input.text_submitted.connect(_on_chat_submit)
-
-	var hint := Label.new()
-	hint.text = "WASD move · Space attack · E talk · Enter chat"
-	hint.add_theme_color_override("font_color", Color("8fa1c4"))
-	layer.add_child(hint)
-
-	# place chat + hint relative to window size
-	var vp := get_viewport().get_visible_rect().size
-	chat_log.position = Vector2(16, vp.y - 200)
-	chat_input.position = Vector2(16, vp.y - 44)
-	hint.position = Vector2(vp.x - 430, vp.y - 30)
 
 func _on_chat_submit(t: String) -> void:
 	t = t.strip_edges()
