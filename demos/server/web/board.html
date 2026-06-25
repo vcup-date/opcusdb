@@ -3,63 +3,104 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>opcusdb Co-Board · CRDT whiteboard</title>
+    <title>opcusdb Co-Board · collaborative vector canvas</title>
     <style>
-      :root { color-scheme: dark; }
-      * { box-sizing: border-box; }
-      html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0e16; color: #e7ecf6;
-        font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; user-select: none; }
-      .accent { color: #7dcfff; }
-      #bar { position: fixed; top: 0; left: 0; right: 0; height: 52px; display: flex; align-items: center; gap: 12px;
-        padding: 0 14px; background: #0e1422; border-bottom: 1px solid #1d2740; z-index: 5; }
-      #bar h1 { font-size: 16px; margin: 0; font-weight: 800; }
-      #bar .sp { flex: 1; }
-      #bar label { color: #9fb0d0; font-size: 12px; }
-      #bar input[type=color] { width: 34px; height: 28px; border: 1px solid #2a3550; border-radius: 6px; background: #121a2c; padding: 0; }
-      #bar input[type=range] { width: 110px; vertical-align: middle; }
-      .btn { font: inherit; font-weight: 700; padding: 7px 12px; border: 1px solid #2a3550; border-radius: 8px; background: #14203a; color: #cfe0ff; cursor: pointer; }
-      .btn.on { background: #f7a23b; color: #1a1206; border-color: #f7a23b; }
-      .btn.off { background: #ff5d5d; color: #2a0a0a; border-color: #ff5d5d; }
-      #users { display: flex; gap: 8px; align-items: center; }
-      .u { display: flex; align-items: center; gap: 5px; font-size: 12px; }
-      .u .dot { width: 10px; height: 10px; border-radius: 50%; }
-      #board { position: fixed; top: 52px; left: 0; right: 0; bottom: 0; cursor: crosshair; background:
-        repeating-linear-gradient(0deg,#0e1320 0 1px,transparent 1px 28px),
-        repeating-linear-gradient(90deg,#0e1320 0 1px,transparent 1px 28px), #0b0f1a; }
-      #cursors { position: fixed; inset: 52px 0 0 0; z-index: 4; pointer-events: none; }
-      .cur { position: absolute; transform: translate(-2px,-2px); font-size: 12px; white-space: nowrap; }
-      .cur b { display: inline-block; width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 2px #0008; }
-      .cur span { background: #000a; padding: 1px 5px; border-radius: 5px; margin-left: 4px; }
-      #offbanner { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 6; display: none;
-        background: #ff5d5d; color: #2a0a0a; font-weight: 800; padding: 6px 16px; border-radius: 10px; box-shadow: 0 6px 20px #0008; }
-      #join { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: #06080f e6; }
-      .panel { text-align: center; background: #0e1422; border: 1px solid #233; border-radius: 16px; padding: 28px 32px; width: 380px; }
-      .panel h1 { margin: 0 0 4px; font-size: 26px; } .panel p { color: #9fb0d0; }
-      .panel input[type=text] { width: 100%; font: inherit; text-align: center; padding: 10px; margin: 12px 0 6px; border-radius: 10px; border: 1px solid #2a3550; background: #121a2c; color: #e6edff; }
-      .panel button { width: 100%; font: inherit; font-weight: 800; padding: 12px; border: 0; border-radius: 12px; cursor: pointer; background: linear-gradient(180deg,#3a86ff,#2f6feb); color: #fff; }
+      :root{ color-scheme:dark; --bg:#0d1017; --panel:#161b26; --panel2:#1c2230; --line:#272f3f; --ink:#e7ecf6; --mut:#8b97ac; --acc:#5b9dff; }
+      *{ box-sizing:border-box; } html,body{ margin:0; height:100%; overflow:hidden; background:var(--bg); color:var(--ink);
+        font:13px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; user-select:none; }
+      /* top bar */
+      #top{ position:fixed; top:0; left:0; right:0; height:48px; display:flex; align-items:center; gap:12px; padding:0 14px;
+        background:var(--panel); border-bottom:1px solid var(--line); z-index:6; }
+      #top .logo{ font-weight:800; font-size:15px; } #top .logo b{ color:var(--acc); }
+      #top .sp{ flex:1; }
+      #users{ display:flex; gap:6px; align-items:center; }
+      .av{ display:flex; align-items:center; gap:5px; background:var(--panel2); border:1px solid var(--line); border-radius:20px; padding:3px 9px 3px 4px; font-size:12px; }
+      .av .dot{ width:14px; height:14px; border-radius:50%; }
+      .tbtn{ font:inherit; font-weight:600; padding:7px 12px; border:1px solid var(--line); border-radius:9px; background:var(--panel2); color:var(--ink); cursor:pointer; }
+      .tbtn:hover{ border-color:#3a465e; } .tbtn.off{ background:#e15b5b; border-color:#e15b5b; color:#2a0a0a; } .tbtn.on{ background:var(--acc); border-color:var(--acc); color:#06101f; }
+      /* left tool palette */
+      #tools{ position:fixed; left:12px; top:60px; z-index:6; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:6px; display:flex; flex-direction:column; gap:4px; box-shadow:0 10px 30px #0006; }
+      .tool{ width:42px; height:42px; border:0; border-radius:10px; background:transparent; color:var(--ink); font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+      .tool:hover{ background:var(--panel2); } .tool.sel{ background:var(--acc); color:#06101f; }
+      .tool small{ font-size:9px; position:absolute; } .sep{ height:1px; background:var(--line); margin:3px 4px; }
+      /* right properties */
+      #props{ position:fixed; right:12px; top:60px; width:212px; z-index:6; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; box-shadow:0 10px 30px #0006; }
+      #props h4{ margin:2px 0 8px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); }
+      .row{ display:flex; align-items:center; gap:8px; margin:8px 0; }
+      .row label{ color:var(--mut); width:42px; }
+      .swatches{ display:flex; flex-wrap:wrap; gap:6px; }
+      .sw{ width:22px; height:22px; border-radius:6px; border:2px solid transparent; cursor:pointer; }
+      .sw.act{ border-color:#fff; } .sw.none{ background:repeating-conic-gradient(#444 0% 25%,#222 0% 50%) 50%/10px 10px; position:relative; }
+      .seg{ display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+      .seg button{ flex:1; font:inherit; padding:6px 0; border:0; background:var(--panel2); color:var(--ink); cursor:pointer; }
+      .seg button.on{ background:var(--acc); color:#06101f; }
+      input[type=color]{ width:30px; height:26px; border:1px solid var(--line); border-radius:6px; background:var(--panel2); padding:0; }
+      .act-btns{ display:flex; gap:6px; margin-top:8px; } .act-btns button{ flex:1; font:inherit; padding:7px; border:1px solid var(--line); border-radius:8px; background:var(--panel2); color:var(--ink); cursor:pointer; }
+      .act-btns button.del{ color:#ff7a7a; }
+      #selnote{ color:var(--mut); font-size:12px; }
+      #hint{ position:fixed; left:64px; bottom:12px; z-index:5; color:var(--mut); font-size:12px; }
+      canvas{ position:fixed; inset:48px 0 0 0; display:block; }
+      #cursors{ position:fixed; inset:48px 0 0 0; z-index:4; pointer-events:none; }
+      .cur{ position:absolute; transform:translate(-3px,-3px); }
+      .cur svg{ filter:drop-shadow(0 1px 2px #000a); } .cur span{ background:#000b; padding:1px 6px; border-radius:6px; font-size:11px; margin-left:2px; }
+      #txtedit{ position:fixed; z-index:7; display:none; background:#0b0f18; color:#fff; border:1px solid var(--acc); border-radius:6px; padding:4px 6px; font:inherit; resize:none; outline:none; }
+      #offbanner{ position:fixed; top:58px; left:50%; transform:translateX(-50%); z-index:6; display:none; background:#e15b5b; color:#2a0a0a; font-weight:800; padding:6px 16px; border-radius:10px; }
+      #join{ position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:#06080fe9; }
+      .panel{ text-align:center; background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:30px 34px; width:400px; }
+      .panel h1{ margin:0 0 4px; font-size:24px; } .panel h1 b{ color:var(--acc); } .panel p{ color:var(--mut); }
+      .panel input[type=text]{ width:100%; font:inherit; text-align:center; padding:11px; margin:14px 0 8px; border-radius:10px; border:1px solid var(--line); background:var(--panel2); color:var(--ink); }
+      .panel .go{ width:100%; font:inherit; font-weight:800; padding:12px; border:0; border-radius:12px; cursor:pointer; background:linear-gradient(180deg,#5b9dff,#3f7fe6); color:#fff; }
     </style>
   </head>
   <body>
-    <div id="bar">
-      <h1><span class="accent">opcusdb</span> Co-Board</h1>
-      <label>color <input type="color" id="color" value="#ff5d5d" /></label>
-      <label>size <input type="range" id="size" min="1" max="20" value="4" /></label>
-      <button class="btn" id="eraser">erase</button>
-      <button class="btn" id="clear">clear</button>
-      <button class="btn off" id="offline">go offline</button>
+    <div id="top">
+      <div class="logo"><b>opcusdb</b> Co-Board</div>
       <div class="sp"></div>
       <div id="users"></div>
+      <button class="tbtn off" id="offline">go offline</button>
     </div>
-    <canvas id="board"></canvas>
+
+    <div id="tools">
+      <button class="tool sel" data-tool="select" title="Select / move (V)">↖</button>
+      <div class="sep"></div>
+      <button class="tool" data-tool="pen" title="Pen (P)">✎</button>
+      <button class="tool" data-tool="rect" title="Rectangle (R)">▭</button>
+      <button class="tool" data-tool="ellipse" title="Ellipse (O)">◯</button>
+      <button class="tool" data-tool="line" title="Line (L)">╱</button>
+      <button class="tool" data-tool="arrow" title="Arrow (A)">↗</button>
+      <button class="tool" data-tool="text" title="Text (T)">T</button>
+      <button class="tool" data-tool="note" title="Sticky note (N)">▤</button>
+      <div class="sep"></div>
+      <button class="tool" data-tool="eraser" title="Delete (E)">⌫</button>
+    </div>
+
+    <div id="props">
+      <h4>Stroke</h4>
+      <div class="swatches" id="strokeSw"></div>
+      <div class="row"><label>custom</label><input type="color" id="strokeCustom" value="#5b9dff" /></div>
+      <h4 style="margin-top:14px">Fill</h4>
+      <div class="swatches" id="fillSw"></div>
+      <h4 style="margin-top:14px">Weight</h4>
+      <div class="seg" id="weights"><button data-w="2">S</button><button class="on" data-w="4">M</button><button data-w="8">L</button><button data-w="14">XL</button></div>
+      <div id="selbox" style="display:none">
+        <h4 style="margin-top:14px">Selection</h4>
+        <div id="selnote">—</div>
+        <div class="act-btns"><button id="toFront">front</button><button id="toBack">back</button><button class="del" id="del">delete</button></div>
+      </div>
+    </div>
+
+    <canvas id="cv"></canvas>
     <div id="cursors"></div>
-    <div id="offbanner">⚠ OFFLINE — your edits will sync &amp; merge on reconnect (CRDT)</div>
+    <textarea id="txtedit" rows="1"></textarea>
+    <div id="offbanner">⚠ OFFLINE — your edits buffer locally and merge on reconnect (CRDT)</div>
+    <div id="hint">drag to draw · click to select · drag handles to resize · double-click text/notes to edit</div>
 
     <div id="join"><div class="panel">
-      <h1><span class="accent">opcusdb</span> Co-Board</h1>
-      <p>A shared whiteboard whose document is a CRDT (`OrSet`). Draw together — and your work merges even after drawing offline.</p>
+      <h1><b>opcusdb</b> Co-Board</h1>
+      <p>A real-time collaborative vector canvas. The document is a CRDT (<code>OrSet</code>) — draw together, and your work merges even after editing offline.</p>
       <input type="text" id="nick" placeholder="your name" maxlength="14" />
-      <button id="go">start drawing ▶</button>
-      <p style="color:#6b7a99;font-size:12px">open more tabs to collaborate · try "go offline", draw, then come back</p>
+      <button class="go" id="go">open the canvas ▶</button>
+      <p style="color:#5f6b80;font-size:12px">open more tabs to collaborate</p>
     </div></div>
 
     <script src="/board.js"></script>

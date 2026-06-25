@@ -231,18 +231,21 @@ cargo run -p opcusdb-server --bin opcusdb-ow          # open http://localhost:90
 # WASD move · mouse aim · click fire · Shift Blink · E Recall · Q Ult · R reload · Tab scores
 ```
 
-## Co-Board — a collaborative whiteboard on a CRDT ✏️
+## Co-Board — a collaborative vector canvas on a CRDT ✏️
 
-`opcusdb-board` is a shared whiteboard whose document is an **`OrSet`** (add-wins
-observed-remove set) from [`opcusdb-algebra`](crates/opcusdb-algebra). Many people
-draw at once; because CRDT adds and removes **commute and are idempotent**, you can
-**keep drawing while offline** and your strokes **merge cleanly on reconnect** — no
-conflicts, no lost work. Live **presence cursors** show where everyone is — the
-engine's CRDT / offline-merge story made tangible (no game loop required).
+`opcusdb-board` is a real-time **collaborative vector editor** (Figma-style) whose
+document is an **`OrSet`** (add-wins observed-remove set) from
+[`opcusdb-algebra`](crates/opcusdb-algebra). Draw **rectangles, ellipses, lines,
+arrows, text, sticky notes, and freehand** — then **select, move, and resize with
+handles**, restyle (stroke/fill/weight), and reorder. Because CRDT adds and removes
+**commute and are idempotent**, every edit is an upsert that merges: many people
+edit at once, you can **keep working while offline**, and it **merges cleanly on
+reconnect** — no conflicts, no lost work. Live **presence cursors** show everyone.
+This is the engine's CRDT / offline-merge story made tangible (no game loop).
 
 <div align="center">
-<img src="assets/board.png" width="760"/><br/>
-<b>opcusdb Co-Board</b> — three people drawing on one shared canvas with live cursors; an <code>OrSet</code> CRDT merges everyone's strokes (and your offline edits on reconnect).
+<img src="assets/board.png" width="820"/><br/>
+<b>opcusdb Co-Board</b> — a collaborative vector canvas (shapes, text, sticky notes, arrows) with selection handles, a properties panel, live cursors; an <code>OrSet</code> CRDT merges everyone's edits, even offline ones.
 </div>
 
 ```sh
@@ -297,7 +300,7 @@ cargo run -p opcusdb-server --bin opcusdb-board   # open http://localhost:9009
 | **survivor (Vampire-Survivors-like)** | `server` (survivors) | `cargo run -p opcusdb-server --bin opcusdb-survivors` → :9006 | co-op bomberman vs vampire hordes; auto-bombs, XP/levels, waves, kills leaderboard |
 | **3D MMO town (Godot)** | `server` (wow) + `demos/godot-wow` | `cargo run -p opcusdb-server --bin opcusdb-wow` → :9007, open the Godot project | NPC quests, wolves, chat; multiplayer 3D town in **Godot 4** |
 | **FPS (Overwatch-like)** | `server` (ow) + Three.js | `cargo run -p opcusdb-server --bin opcusdb-ow` → :9008 | Tracer hero, lag-compensated hitscan, Blink/Recall, AI bots |
-| **collaborative whiteboard (CRDT)** | `server` (board) | `cargo run -p opcusdb-server --bin opcusdb-board` → :9009 | shared canvas; OrSet CRDT; offline-merge; presence cursors |
+| **collaborative whiteboard (CRDT)** | `server` (board) | `cargo run -p opcusdb-server --bin opcusdb-board` → :9009 | vector editor (shapes/text/notes, resize handles); OrSet CRDT; offline-merge; presence |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start

@@ -162,23 +162,31 @@ fn handle(mut stream: TcpStream, board: Arc<Mutex<Board>>) {
     loop {
         match ws::read_frame(&mut stream) {
             Ok(Some(ws::Msg::Text(t))) => {
-                let parts: Vec<&str> = t.splitn(5, ' ').collect();
-                match parts.as_slice() {
-                    ["join", name, col] => {
-                        let mut b = board.lock().unwrap();
-                        b.users.insert(id, (clean(name, 14), clean(col, 9)));
-                        cstate.lock().unwrap().joined = true;
-                        cstate.lock().unwrap().need_full = true;
+                // command + opaque rest (payloads may be JSON with spaces)
+                let (cmd, rest) = t.split_once(' ').unwrap_or((t.as_str(), ""));
+                match cmd {
+                    "join" => {
+                        if let Some((name, col)) = rest.split_once(' ') {
+                            let mut b = board.lock().unwrap();
+                            b.users.insert(id, (clean(name, 14), clean(col, 9)));
+                            let mut cs = cstate.lock().unwrap();
+                            cs.joined = true;
+                            cs.need_full = true;
+                        }
                     }
-                    ["draw", sid, color, width, pts] => {
-                        let payload = format!("{color} {width} {pts}");
-                        apply_draw(&mut board.lock().unwrap(), sid, &payload);
+                    "draw" => {
+                        // "draw <id> <opaque payload>"
+                        if let Some((sid, payload)) = rest.split_once(' ') {
+                            apply_draw(&mut board.lock().unwrap(), sid, payload);
+                        }
                     }
-                    ["erase", sid] => apply_erase(&mut board.lock().unwrap(), sid),
-                    ["clear"] => apply_clear(&mut board.lock().unwrap()),
-                    ["cursor", x, y] => {
-                        if let (Ok(x), Ok(y)) = (x.parse(), y.parse()) {
-                            board.lock().unwrap().cursors.insert(id, (x, y));
+                    "erase" => apply_erase(&mut board.lock().unwrap(), rest),
+                    "clear" => apply_clear(&mut board.lock().unwrap()),
+                    "cursor" => {
+                        if let Some((x, y)) = rest.split_once(' ') {
+                            if let (Ok(x), Ok(y)) = (x.parse(), y.parse()) {
+                                board.lock().unwrap().cursors.insert(id, (x, y));
+                            }
                         }
                     }
                     _ => {}
