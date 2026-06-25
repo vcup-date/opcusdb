@@ -898,7 +898,7 @@ fn build_snapshot(m: &Match) -> String {
     s.push_str(&format!("g\t{:.2}\t{}\t{}\t{}\t{}\t{:.1}\n", m.time, m.score[0], m.score[1], m.winner, SCORE_WIN, m.intermission));
     for (id, p) in &m.players {
         s.push_str(&format!(
-            "p\t{id}\t{:.2}\t{:.2}\t{:.2}\t{:.3}\t{:.3}\t{:.0}\t{}\t{}\t{}\t{}\t{:.1}\t{:.1}\t{}\t{}\t{}\t{}\t{}\n",
+            "p\t{id}\t{:.2}\t{:.2}\t{:.2}\t{:.3}\t{:.3}\t{:.0}\t{}\t{}\t{}\t{}\t{:.1}\t{:.1}\t{}\t{}\t{}\t{}\t{}\t{:.1}\n",
             p.pos.x,
             p.pos.y,
             p.pos.z,
@@ -916,6 +916,7 @@ fn build_snapshot(m: &Match) -> String {
             p.deaths,
             p.name,
             (p.ult / ULT_MAX * 100.0) as i32,
+            p.invuln.max(0.0),
         ));
     }
     let bombs = m.bombs.iter().map(|b| format!("{:.2}:{:.2}:{:.2}", b.pos.x, b.pos.y, b.pos.z)).collect::<Vec<_>>().join(";");
@@ -990,7 +991,9 @@ fn handle(mut stream: TcpStream, server: Arc<Mutex<Server>>) {
                         let seed = now_nanos();
                         let m = s.matches.entry("ARENA".to_string()).or_insert_with(|| new_match(seed));
                         let sp = spawn_point(&mut m.rng, 0);
-                        m.players.insert(id, Player::new(nick, false, 0, sp));
+                        let mut np = Player::new(nick, false, 0, sp);
+                        np.invuln = 2.0; // protect the first spawn too
+                        m.players.insert(id, np);
                         *mine.lock().unwrap() = Some("ARENA".to_string());
                         let _ = ws::write_text(&mut stream, &format!("w\t{id}"));
                     }

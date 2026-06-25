@@ -59,6 +59,12 @@ const vig=document.createElement("div");
 vig.style.cssText="position:fixed;inset:0;z-index:3;pointer-events:none;box-shadow:inset 0 0 200px 40px rgba(255,30,30,0);transition:box-shadow .12s";
 document.body.appendChild(vig);
 function flashDmg(){ vig.style.boxShadow="inset 0 0 150px 44px rgba(255,30,30,0.42)"; setTimeout(()=>vig.style.boxShadow="inset 0 0 150px 40px rgba(255,30,30,0)",100); }
+// spawn-protection HUD tag
+const protTag=document.createElement("div");
+protTag.textContent="🛡 SPAWN PROTECTED";
+protTag.style.cssText="position:fixed;top:92px;left:50%;transform:translateX(-50%);z-index:5;color:#7fe0ff;font-weight:800;text-shadow:0 2px 4px #000;display:none;pointer-events:none";
+document.body.appendChild(protTag);
+let sens=1;
 
 // ---- three.js setup -------------------------------------------------------
 const renderer = new THREE.WebGLRenderer({antialias:true});
@@ -176,7 +182,7 @@ function connect(nick) {
 function handlePlayer(p) {
   const id=+p[1];
   const o = { x:+p[2],y:+p[3],z:+p[4], yaw:+p[5], pitch:+p[6], hp:+p[7], team:+p[8], alive:p[9]==="1",
-    ammo:+p[10], blink:+p[11], blinkcd:+p[12], recallcd:+p[13], reload:p[14]==="1", elims:+p[15], deaths:+p[16], name:p[17], ult:+p[18] };
+    ammo:+p[10], blink:+p[11], blinkcd:+p[12], recallcd:+p[13], reload:p[14]==="1", elims:+p[15], deaths:+p[16], name:p[17], ult:+p[18], invuln:+p[19] };
   if (id===myId) {
     me = o;
     // soft reconciliation toward the authoritative position
@@ -191,6 +197,7 @@ function handlePlayer(p) {
   e.tx=o.x; e.ty=o.y; e.tz=o.z; e.tyaw=o.yaw; e.team=o.team; e.name=o.name;
   e.elims=o.elims; e.deaths=o.deaths;
   e.grp.visible = o.alive;
+  if(e.shield) e.shield.visible = o.alive && o.invuln>0;
 }
 let me=null;
 
@@ -202,8 +209,10 @@ function spawnAvatar(id, team, name) {
   visor.position.set(0,1.45,-0.34); grp.add(visor);
   const plate = makePlate(name, team);
   plate.position.y=2.25; grp.add(plate);
+  const shield = new THREE.Mesh(new THREE.SphereGeometry(1.15,16,12), new THREE.MeshBasicMaterial({color:0x5ad0ff,transparent:true,opacity:0.22}));
+  shield.position.y=1.0; shield.visible=false; grp.add(shield);
   scene.add(grp);
-  return { grp, plate, team, name, tx:0,ty:0,tz:0,tyaw:0, elims:0, deaths:0 };
+  return { grp, plate, shield, team, name, tx:0,ty:0,tz:0,tyaw:0, elims:0, deaths:0 };
 }
 function makePlate(name, team) {
   const c=document.createElement("canvas"); c.width=256; c.height=64;
@@ -277,7 +286,7 @@ addEventListener("mousedown",()=>{ if(started && ws){ ws.send("fire"); firing=tr
 addEventListener("mouseup",()=>{ if(ws){ ws.send("stop"); firing=false; } });
 let firing=false;
 addEventListener("mousemove",(e)=>{
-  if(document.pointerLockElement){ yaw -= e.movementX*0.0022; pitch -= e.movementY*0.0022; pitch=clamp(pitch,-1.5,1.5); }
+  if(document.pointerLockElement){ yaw -= e.movementX*0.0022*sens; pitch -= e.movementY*0.0022*sens; pitch=clamp(pitch,-1.5,1.5); }
 });
 function localBlink(){ // predict the dash locally for instant feel
   const sy=Math.sin(yaw),cy=Math.cos(yaw); const fwd={x:-sy,z:-cy},right={x:cy,z:-sy};
@@ -352,6 +361,7 @@ function updateHUD(){
   $("ultReady").textContent = u>=100 ? "ULT" : "";
   $("ultIcon").style.boxShadow = u>=100 ? "0 0 16px 3px #ffd24a" : "none";
   $("respawn").style.display = me.alive?"none":"flex";
+  protTag.style.display = (me.alive && me.invuln>0) ? "block" : "none";
 }
 function renderBoard(){
   const all=[...players.values()].map(e=>({name:e.name,team:e.team,elims:e.elims,deaths:e.deaths,me:false}));
@@ -432,6 +442,7 @@ function start(){
   connect(($("nick").value.trim())||("Tracer"+(Math.random()*900+100|0)));
   if(!shot) renderer.domElement.requestPointerLock();
 }
+const sensEl=$("sens"); if(sensEl){ sens=+sensEl.value; sensEl.oninput=()=>{ sens=+sensEl.value; $("sensVal").textContent=sens.toFixed(1)+"×"; }; }
 $("start").onclick=start;
 $("overlay").onclick=(e)=>{ if(e.target===$("overlay")) start(); };
 renderer.domElement.addEventListener("click",()=>{ if(started && !shot && !document.pointerLockElement) renderer.domElement.requestPointerLock(); });
