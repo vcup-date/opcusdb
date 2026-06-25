@@ -73,7 +73,7 @@ function connect() {
       } else if (tag === "p") {
         projs = rest.split(";").filter(Boolean).map(s => { const a = s.split(","); return { x:+a[0], y:+a[1], kind:+a[2] }; });
       } else if (tag === "n") {
-        players = +rest || 1; renderMp();
+        players = +rest || 1; updateMpCount();   // update count only — do NOT rebuild the button
       }
     }
   };
@@ -283,18 +283,24 @@ addEventListener("keydown", (e) => {
 });
 
 // ---- multiplayer (rooms) --------------------------------------------------
+// Built ONCE so the button node is never replaced mid-click (that broke it in Safari).
 function renderMp() {
   const el = $("mp"); if (!el) return;
   if (URLROOM) {
     el.innerHTML = `👥 <b style="color:#e9eef8">Co-op room ${URLROOM}</b><br>` +
-      `<span style="color:#3ec46a">${players} player${players === 1 ? "" : "s"} here</span> · ` +
+      `<span style="color:#3ec46a" id="mpcount">${players} player${players === 1 ? "" : "s"} here</span> · ` +
       `<a href="#" id="copylink" style="color:#5b9dff">copy invite link</a>`;
     const cl = $("copylink"); if (cl) cl.onclick = (e) => { e.preventDefault(); navigator.clipboard && navigator.clipboard.writeText(location.href); cl.textContent = "link copied!"; };
   } else {
-    el.innerHTML = `Playing solo. <button id="mkroom" style="margin-top:6px;font:inherit;font-weight:700;padding:7px 10px;border:1px solid #2a3550;border-radius:8px;background:#16203a;color:#cfe0ff;cursor:pointer">👥 Play with a friend</button>`;
-    const mk = $("mkroom"); if (mk) mk.onclick = () => { const code = Math.random().toString(36).slice(2, 8); location.search = "?room=" + code; };
+    el.innerHTML = `Playing solo. <button id="mkroom" style="margin-top:6px;font:inherit;font-weight:700;padding:8px 12px;border:1px solid #2a3550;border-radius:8px;background:#16203a;color:#cfe0ff;cursor:pointer">👥 Play with a friend</button>`;
+    const mk = $("mkroom");
+    if (mk) {
+      const go = () => { location.href = location.pathname + "?room=" + Math.random().toString(36).slice(2, 8); };
+      mk.addEventListener("click", go); mk.addEventListener("pointerup", go);
+    }
   }
 }
+function updateMpCount() { const c = $("mpcount"); if (c) c.textContent = `${players} player${players === 1 ? "" : "s"} here`; }
 renderMp();
 
 connect();
