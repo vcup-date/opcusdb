@@ -1,12 +1,13 @@
-//! opcusdb Warfront — a massive real-time-strategy battle: **thousands of units**
-//! clashing, with the engine's **`SpatialGrid`** doing both combat neighbour
-//! queries and **camera area-of-interest (AOI) streaming** — the server only sends
-//! each client the units inside its viewport, so a 2,000-unit war stays cheap on
-//! the wire. You command the blue army (drag-select, right-click to attack-move)
-//! against a red AI horde.
+//! opcusdb Warfront — a real-time-strategy battle of **hundreds of units**
+//! (infantry + archers) clashing, with the engine's **`SpatialGrid`** doing both
+//! combat neighbour queries and **camera area-of-interest (AOI) streaming** — the
+//! server only sends each client the units inside its viewport, so the war stays
+//! cheap on the wire no matter the army size. You command the blue army
+//! (drag-select, click the ground to attack-move — no right-click needed) against
+//! a red AI horde; raze the enemy keep to win.
 //!
 //! Run: `cargo run --release -p opcusdb-server --bin opcusdb-rts` then open
-//! http://localhost:9010  (release recommended for the full unit count).
+//! http://localhost:9010
 
 use opcusdb_core::{EntityId, Rng, SpatialGrid};
 use opcusdb_server::ws;
@@ -23,15 +24,16 @@ const H: i32 = 2600;
 const CELL: i32 = 90;
 const TICK_MS: u64 = 66; // ~15 Hz
 const DT: f32 = 0.066;
-const PER_TEAM: u32 = 1000;
+const PER_TEAM: u32 = 350;
 
-const SPEED: f32 = 78.0;
-const SIGHT: f32 = 170.0;
-const ATK_RANGE: f32 = 95.0;
-const ATK_DMG: f32 = 9.0;
-const ATK_CD: f32 = 0.8;
-const UNIT_HP: f32 = 30.0;
-const SEP: f32 = 15.0;
+// two unit kinds: 0 = infantry (melee), 1 = archer (ranged)
+const KSPEED: [f32; 2] = [96.0, 64.0];
+const KRANGE: [f32; 2] = [62.0, 250.0];
+const KDMG: [f32; 2] = [11.0, 7.0];
+const KCD: [f32; 2] = [0.55, 1.1];
+const KHP: [f32; 2] = [38.0, 20.0];
+const SIGHT: f32 = 320.0; // grid query radius (>= max attack range)
+const SEP: f32 = 17.0;
 const BASE_HP: f32 = 4000.0;
 const BASEX: [f32; 2] = [200.0, (W - 200) as f32];
 const BASEY: f32 = (H / 2) as f32;
@@ -41,6 +43,7 @@ struct Unit {
     y: f32,
     hp: f32,
     team: u8,
+    kind: u8,
     ox: f32,
     oy: f32,
     has_order: bool,
@@ -95,12 +98,13 @@ fn new_battle() -> Rts {
 }
 
 fn spawn_army(r: &mut Rts, rng: &mut Rng, team: u8, x0: f32, x1: f32) {
-    for _ in 0..PER_TEAM {
+    for i in 0..PER_TEAM {
         let x = x0 + (rng.below(((x1 - x0) as u32).max(1)) as f32);
         let y = 150.0 + rng.below((H as u32) - 300) as f32;
+        let kind: u8 = if i % 3 == 0 { 1 } else { 0 }; // ~1/3 archers
         let id = r.next_unit;
         r.next_unit += 1;
-        r.units.insert(id, Unit { x, y, hp: UNIT_HP, team, ox: 0.0, oy: 0.0, has_order: false, atk_cd: 0.0 });
+        r.units.insert(id, Unit { x, y, hp: KHP[kind as usize], team, kind, ox: 0.0, oy: 0.0, has_order: false, atk_cd: 0.0 });
     }
     r.count[team as usize] += PER_TEAM;
 }
@@ -122,10 +126,11 @@ fn tick(r: &mut Rts) {
     let mut base_dmg = [0.0f32, 0.0f32];
 
     for &id in &ids {
-        let (ux, uy, team, has_order, ox, oy, cd) = {
+        let (ux, uy, team, kind, has_order, ox, oy, cd) = {
             let u = &r.units[&id];
-            (u.x, u.y, u.team, u.has_order, u.ox, u.oy, u.atk_cd)
+            (u.x, u.y, u.team, u.kind as usize, u.has_order, u.ox, u.oy, u.atk_cd)
         };
+        let (krange, kdmg, kcd, kspeed) = (KRANGE[kind], KDMG[kind], KCD[kind], KSPEED[kind]);
         // nearest enemy in sight (grid radius query)
         let near = r.grid.query_radius(ux as i32, uy as i32, SIGHT as i32);
         let mut best: Option<(u32, f32)> = None;
@@ -163,42 +168,41 @@ fn tick(r: &mut Rts) {
         let ebase = 1 - team as usize;
         let (bx, by) = (BASEX[ebase], BASEY);
         match best {
-            Some((eid, d2)) if d2 <= ATK_RANGE * ATK_RANGE => {
-                // in range: shoot the enemy unit (+ a gunfire tracer)
+            Some((eid, d2)) if d2 <= krange * krange => {
+                // in range: strike the enemy unit (+ a tracer; long for archers)
                 if new_cd <= 0.0 {
                     let (tx, ty) = { let o = &r.units[&eid]; (o.x, o.y) };
-                    damage.push((eid, ATK_DMG));
+                    damage.push((eid, kdmg));
                     attack_cd_reset = true;
-                    if tracers.len() < 160 && (id & 3) == 0 {
+                    if tracers.len() < 220 && (kind == 1 || (id & 3) == 0) {
                         tracers.push((ux as i32, uy as i32, tx as i32, ty as i32, team));
                     }
                 }
             }
             Some((eid, _)) => {
                 let (tx, ty) = { let o = &r.units[&eid]; (o.x, o.y) };
-                step_toward(&mut nx, &mut ny, tx, ty, SPEED * DT);
+                step_toward(&mut nx, &mut ny, tx, ty, kspeed * DT);
             }
             None => {
                 let to_base = ((ux - bx).powi(2) + (uy - by).powi(2)).sqrt();
-                if to_base < ATK_RANGE + 80.0 {
+                if to_base < krange + 80.0 {
                     // reached the enemy keep: lay siege
                     if new_cd <= 0.0 {
-                        base_dmg[ebase] += ATK_DMG;
+                        base_dmg[ebase] += kdmg;
                         attack_cd_reset = true;
-                        if tracers.len() < 160 && (id & 3) == 0 {
+                        if tracers.len() < 220 && (id & 3) == 0 {
                             tracers.push((ux as i32, uy as i32, bx as i32, by as i32, team));
                         }
                     }
                 } else if has_order {
-                    step_toward(&mut nx, &mut ny, ox, oy, SPEED * DT);
+                    step_toward(&mut nx, &mut ny, ox, oy, kspeed * DT);
                 } else {
-                    // march straight across toward the enemy keep -> clash in the field
-                    step_toward(&mut nx, &mut ny, bx, uy, SPEED * 0.95 * DT);
+                    step_toward(&mut nx, &mut ny, bx, uy, kspeed * 0.95 * DT);
                 }
             }
         }
-        nx += sepx.clamp(-SPEED * DT, SPEED * DT);
-        ny += sepy.clamp(-SPEED * DT, SPEED * DT);
+        nx += sepx.clamp(-kspeed * DT, kspeed * DT);
+        ny += sepy.clamp(-kspeed * DT, kspeed * DT);
         nx = nx.clamp(4.0, W as f32 - 4.0);
         ny = ny.clamp(4.0, H as f32 - 4.0);
         // clear order on arrival
@@ -207,7 +211,7 @@ fn tick(r: &mut Rts) {
             let u = r.units.get_mut(&id).unwrap();
             u.x = nx;
             u.y = ny;
-            u.atk_cd = if attack_cd_reset { ATK_CD } else { new_cd };
+            u.atk_cd = if attack_cd_reset { kcd } else { new_cd };
             if cleared {
                 u.has_order = false;
             }
@@ -253,12 +257,13 @@ fn build_snapshot(r: &Rts, cx: f32, cy: f32, hw: f32, hh: f32) -> String {
     for eid in r.grid.query_aabb(x0, y0, x1, y1) {
         if let Some(unit) = r.units.get(&eid.index()) {
             u.push_str(&format!(
-                "{},{},{},{},{};",
+                "{},{},{},{},{},{};",
                 eid.index(),
                 unit.x as i32,
                 unit.y as i32,
                 unit.team,
-                (unit.hp / UNIT_HP * 9.0) as i32
+                (unit.hp / KHP[unit.kind as usize] * 9.0) as i32,
+                unit.kind
             ));
             n += 1;
             if n >= 3000 {
@@ -423,8 +428,8 @@ mod tests {
     #[test]
     fn enemies_in_range_take_damage_and_die() {
         let mut r = empty();
-        r.units.insert(1, Unit { x: 1000.0, y: 1000.0, hp: UNIT_HP, team: 0, ox: 0.0, oy: 0.0, has_order: false, atk_cd: 0.0 });
-        r.units.insert(2, Unit { x: 1030.0, y: 1000.0, hp: UNIT_HP, team: 1, ox: 0.0, oy: 0.0, has_order: false, atk_cd: 0.0 });
+        r.units.insert(1, Unit { x: 1000.0, y: 1000.0, hp: KHP[0], team: 0, kind: 0, ox: 0.0, oy: 0.0, has_order: false, atk_cd: 0.0 });
+        r.units.insert(2, Unit { x: 1030.0, y: 1000.0, hp: KHP[0], team: 1, kind: 0, ox: 0.0, oy: 0.0, has_order: false, atk_cd: 0.0 });
         r.count = [1, 1];
         for _ in 0..60 {
             tick(&mut r);
@@ -436,8 +441,8 @@ mod tests {
     #[test]
     fn aoi_only_returns_units_in_the_camera_box() {
         let mut r = empty();
-        r.units.insert(1, Unit { x: 500.0, y: 500.0, hp: UNIT_HP, team: 0, ox: 0.0, oy: 0.0, has_order: false, atk_cd: 0.0 });
-        r.units.insert(2, Unit { x: 3500.0, y: 2000.0, hp: UNIT_HP, team: 1, ox: 0.0, oy: 0.0, has_order: false, atk_cd: 0.0 });
+        r.units.insert(1, Unit { x: 500.0, y: 500.0, hp: KHP[0], team: 0, kind: 0, ox: 0.0, oy: 0.0, has_order: false, atk_cd: 0.0 });
+        r.units.insert(2, Unit { x: 3500.0, y: 2000.0, hp: KHP[0], team: 1, kind: 0, ox: 0.0, oy: 0.0, has_order: false, atk_cd: 0.0 });
         tick(&mut r); // builds the grid
         let snap = build_snapshot(&r, 500.0, 500.0, 300.0, 300.0);
         let uline = snap.lines().find(|l| l.starts_with("u\t")).unwrap();
@@ -448,7 +453,7 @@ mod tests {
     #[test]
     fn orders_set_a_unit_target() {
         let mut r = empty();
-        r.units.insert(1, Unit { x: 100.0, y: 100.0, hp: UNIT_HP, team: 0, ox: 0.0, oy: 0.0, has_order: false, atk_cd: 0.0 });
+        r.units.insert(1, Unit { x: 100.0, y: 100.0, hp: KHP[0], team: 0, kind: 0, ox: 0.0, oy: 0.0, has_order: false, atk_cd: 0.0 });
         let u = r.units.get_mut(&1).unwrap();
         u.ox = 800.0;
         u.oy = 600.0;

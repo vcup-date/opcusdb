@@ -253,25 +253,25 @@ cargo run -p opcusdb-server --bin opcusdb-board   # open http://localhost:9009
 # draw together · open more tabs · hit "go offline", draw, then come back to watch it merge
 ```
 
-## Warfront — a massive RTS with spatial AOI ⚔️
+## Warfront — an RTS with spatial AOI ⚔️
 
-`opcusdb-rts` is a **2,000-unit** real-time battle on the engine's
+`opcusdb-rts` is a real-time battle of **infantry & archers** on the engine's
 [`SpatialGrid`](crates/opcusdb-core/src/spatial.rs): the grid does both **combat
 neighbour queries** and **camera area-of-interest streaming** — the server only
-sends each client the units inside its viewport, so a huge war stays cheap on the
-wire. You command the **blue army** (drag-select, right-click to attack-move)
-against a **red AI horde**; armies clash on a battlefield with **keeps** (destroy
-the enemy's to win), soldier chevrons that face their march, gunfire tracers and
-death bursts.
+sends each client the units inside its viewport, so the war stays cheap on the wire
+no matter the army size. You command the **blue army** — **drag-select**, then
+**click the ground to attack-move** (no right-click, Mac-friendly) — against a
+**red AI horde**; armies clash on a battlefield with **keeps** (raze the enemy's to
+win), soldier figures that face their fight, flying arrows and death bursts.
 
 <div align="center">
 <img src="assets/rts.png" width="820"/><br/>
-<b>opcusdb Warfront</b> — two 1,000-strong armies clashing along a front line (gunfire tracers, terrain); only the units in your camera are streamed (spatial AOI).
+<b>opcusdb Warfront</b> — infantry (chevrons) and archers (diamonds) clashing with arrow fire on a battlefield; only the units in your camera are streamed (spatial AOI).
 </div>
 
 ```sh
 cargo run --release -p opcusdb-server --bin opcusdb-rts   # open http://localhost:9010
-# WASD pan · wheel zoom · drag-select your army · right-click attack-move
+# drag-select your army · click to move/attack · F select all · Esc deselect · WASD pan · wheel zoom
 ```
 
 ## Architecture
@@ -322,7 +322,7 @@ cargo run --release -p opcusdb-server --bin opcusdb-rts   # open http://localhos
 | **3D MMO town (Godot)** | `server` (wow) + `demos/godot-wow` | `cargo run -p opcusdb-server --bin opcusdb-wow` → :9007, open the Godot project | NPC quests, wolves, chat; multiplayer 3D town in **Godot 4** |
 | **FPS (Overwatch-like)** | `server` (ow) + Three.js | `cargo run -p opcusdb-server --bin opcusdb-ow` → :9008 | Tracer hero, lag-compensated hitscan, Blink/Recall, AI bots |
 | **collaborative whiteboard (CRDT)** | `server` (board) | `cargo run -p opcusdb-server --bin opcusdb-board` → :9009 | vector editor (shapes/text/notes, resize handles); OrSet CRDT; offline-merge; presence |
-| **massive RTS (2000 units)** | `server` (rts) | `cargo run --release -p opcusdb-server --bin opcusdb-rts` → :9010 | spatial-grid combat + camera AOI streaming; drag-select, attack-move; keeps |
+| **RTS (infantry + archers)** | `server` (rts) | `cargo run --release -p opcusdb-server --bin opcusdb-rts` → :9010 | spatial-grid combat + camera AOI; drag-select, click-to-command (Mac-friendly); keeps |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start

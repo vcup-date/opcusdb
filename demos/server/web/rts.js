@@ -9,7 +9,7 @@ const BASEX = [200, W - 200], BASEY = H / 2;
 const COL = ["#5b9dff", "#ff5d5d"], COLD = ["#1c3a6b", "#6b1f24"];
 
 let ws = null, myId = 0, started = false;
-let cam = { x: W/2, y: H/2, scale: 0.5 };
+let cam = { x: W/2, y: H/2, scale: 0.85 };
 let units = new Map();      // id -> {x,y,team,hp,fa}
 const face = new Map();     // id -> angle (persisted)
 let selected = new Set();
@@ -45,7 +45,7 @@ function connect(){
         for (const s of rest.split(";")) { if (!s) continue; const a = s.split(","); const id=+a[0], x=+a[1], y=+a[2];
           const pv = units.get(id); let fa = face.get(id) || (a[3]==="0"?0:Math.PI);
           if (pv){ const dx=x-pv.x, dy=y-pv.y; if (dx*dx+dy*dy>0.4){ fa=Math.atan2(dy,dx); face.set(id,fa);} }
-          next.set(id, { x, y, team:+a[3], hp:+a[4], fa }); }
+          next.set(id, { x, y, team:+a[3], hp:+a[4], kind:+(a[5]||0), fa }); }
         units = next;
       } else if (tag === "f") {
         for (const s of rest.split(";")) { if (!s) continue; const a=s.split(","); tracers.push({x1:+a[0],y1:+a[1],x2:+a[2],y2:+a[3],team:+a[4],life:1}); }
@@ -65,14 +65,26 @@ addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 cv.addEventListener("wheel", (e)=>{ e.preventDefault(); cam.scale=Math.min(1.8,Math.max(0.18,cam.scale*Math.exp(-e.deltaY*0.0011))); sendView(true); }, {passive:false});
 cv.addEventListener("mousedown", (e)=>{ if(started && e.button===0) box={x0:e.clientX,y0:e.clientY,x1:e.clientX,y1:e.clientY}; });
 cv.addEventListener("mousemove", (e)=>{ if(box){box.x1=e.clientX;box.y1=e.clientY;} });
-addEventListener("mouseup", ()=>{ if(!box) return;
-  const moved=Math.hypot(box.x1-box.x0,box.y1-box.y0)>5; selected.clear();
-  if(moved){ const [a0,b0]=toW(Math.min(box.x0,box.x1),Math.min(box.y0,box.y1)); const [a1,b1]=toW(Math.max(box.x0,box.x1),Math.max(box.y0,box.y1));
+function ownUnitAt(wx,wy){ let best=null,bd=1e9; for(const [id,u] of units) if(u.team===0){const d=(u.x-wx)**2+(u.y-wy)**2; if(d<bd&&d<(30/cam.scale)**2){bd=d;best=id;}} return best; }
+function order(wx,wy){ if(!selected.size)return; moveMark={x:wx,y:wy,life:1}; ws&&ws.readyState===1&&ws.send(`order ${wx.toFixed(0)} ${wy.toFixed(0)} ${[...selected].slice(0,1800).join(",")}`); }
+addEventListener("mouseup", (e)=>{ if(!box) return;
+  const moved=Math.hypot(box.x1-box.x0,box.y1-box.y0)>5;
+  if(moved){ // drag = box-select your army
+    selected.clear();
+    const [a0,b0]=toW(Math.min(box.x0,box.x1),Math.min(box.y0,box.y1)); const [a1,b1]=toW(Math.max(box.x0,box.x1),Math.max(box.y0,box.y1));
     for(const [id,u] of units) if(u.team===0&&u.x>=a0&&u.x<=a1&&u.y>=b0&&u.y<=b1) selected.add(id);
-  } else { const [wx,wy]=toW(box.x0,box.y0); let best=null,bd=1e9; for(const [id,u] of units) if(u.team===0){const d=(u.x-wx)**2+(u.y-wy)**2; if(d<bd&&d<(28/cam.scale)**2){bd=d;best=id;}} if(best!=null)selected.add(best); }
+  } else { // click: select a unit, OR (with a selection) command move/attack — Mac-friendly, no right-click
+    const [wx,wy]=toW(box.x0,box.y0); const u=ownUnitAt(wx,wy);
+    if(u!=null){ selected.clear(); selected.add(u); }
+    else if(selected.size){ order(wx,wy); }
+  }
   box=null; });
-cv.addEventListener("contextmenu", (e)=>{ e.preventDefault(); if(!started||!selected.size)return; const [wx,wy]=toW(e.clientX,e.clientY);
-  moveMark={x:wx,y:wy,life:1}; ws&&ws.readyState===1&&ws.send(`order ${wx.toFixed(0)} ${wy.toFixed(0)} ${[...selected].slice(0,1800).join(",")}`); });
+// right-click also commands (for mice that have it)
+cv.addEventListener("contextmenu", (e)=>{ e.preventDefault(); if(!started)return; const [wx,wy]=toW(e.clientX,e.clientY); order(wx,wy); });
+addEventListener("keydown",(e)=>{ if(!started)return;
+  if(e.key==="Escape") selected.clear();
+  if(e.key==="f"||e.key==="F"){ selected.clear(); for(const [id,u] of units) if(u.team===0) selected.add(id); } });
+cv.addEventListener("dblclick",()=>{ selected.clear(); for(const [id,u] of units) if(u.team===0) selected.add(id); });
 
 // ---- render ---------------------------------------------------------------
 let last = performance.now();
@@ -102,9 +114,13 @@ function loop(now){
   ctx.strokeStyle="#eafff6"; ctx.lineWidth=1.5;
   for(const id of selected){ const u=units.get(id); if(!u)continue; const [sx,sy]=toS(u.x,u.y); ctx.beginPath(); ctx.arc(sx,sy,Math.max(5,8*cam.scale),0,7); ctx.stroke(); }
 
-  // tracers
-  for(const t of tracers){ const [a,b]=toS(t.x1,t.y1),[c,d]=toS(t.x2,t.y2); ctx.strokeStyle=`rgba(255,225,140,${t.life*0.8})`; ctx.lineWidth=1.4;
-    ctx.beginPath(); ctx.moveTo(a,b); ctx.lineTo(c,d); ctx.stroke(); t.life-=dt*6; }
+  // tracers / arrows
+  for(const t of tracers){ const [a,b]=toS(t.x1,t.y1),[c,d]=toS(t.x2,t.y2);
+    ctx.strokeStyle = t.team===0?`rgba(190,225,255,${t.life})`:`rgba(255,205,175,${t.life})`; ctx.lineWidth=Math.max(1,1.6*cam.scale);
+    ctx.beginPath(); ctx.moveTo(a,b); ctx.lineTo(c,d); ctx.stroke();
+    const ang=Math.atan2(d-b,c-a), hl=Math.max(3,5*cam.scale);
+    ctx.beginPath(); ctx.moveTo(c,d); ctx.lineTo(c-hl*Math.cos(ang-0.5),d-hl*Math.sin(ang-0.5)); ctx.moveTo(c,d); ctx.lineTo(c-hl*Math.cos(ang+0.5),d-hl*Math.sin(ang+0.5)); ctx.stroke();
+    t.life-=dt*5; }
   tracers=tracers.filter(t=>t.life>0);
   // death bursts
   for(const dh of deaths){ const [sx,sy]=toS(dh.x,dh.y); const r=(1-dh.life)*10+2; ctx.fillStyle=`rgba(255,150,60,${dh.life})`; ctx.beginPath(); ctx.arc(sx,sy,r*cam.scale+1.5,0,7); ctx.fill(); dh.life-=dt*2.5; }
@@ -120,14 +136,22 @@ function loop(now){
   $("over").style.display = over?"flex":"none";
   if(over){ $("overtxt").textContent = baseHp[1]<=0?"VICTORY":"DEFEAT"; $("overtxt").style.color = baseHp[1]<=0?"#6fb0ff":"#ff7a7a"; }
 }
+const COLL = ["#9cc5ff", "#ffb0b0"]; // lighter tints for archers
 function drawTeam(team){
-  const r = Math.max(3.5, Math.min(16, 13*cam.scale));
+  const r = Math.max(5, Math.min(24, 18*cam.scale));
+  const lw = Math.max(0.8, cam.scale);
   for(const u of units.values()){ if(u.team!==team) continue; const [sx,sy]=toS(u.x,u.y);
-    if(sx<-8||sy<-8||sx>cv.width+8||sy>cv.height+8) continue;
-    ctx.save(); ctx.translate(sx,sy); ctx.rotate(u.fa);
-    ctx.globalAlpha=0.55+0.45*(u.hp/9);
-    ctx.beginPath(); ctx.moveTo(r,0); ctx.lineTo(-r*0.7,r*0.6); ctx.lineTo(-r*0.35,0); ctx.lineTo(-r*0.7,-r*0.6); ctx.closePath();
-    ctx.fillStyle=COL[team]; ctx.fill(); ctx.lineWidth=0.8; ctx.strokeStyle=COLD[team]; ctx.stroke();
+    if(sx<-14||sy<-14||sx>cv.width+14||sy>cv.height+14) continue;
+    ctx.save(); ctx.translate(sx,sy); ctx.rotate(u.fa); ctx.globalAlpha=0.6+0.4*(u.hp/9);
+    if(u.kind===1){ // archer — diamond + bow
+      ctx.beginPath(); ctx.moveTo(r*0.85,0); ctx.lineTo(0,r*0.62); ctx.lineTo(-r*0.85,0); ctx.lineTo(0,-r*0.62); ctx.closePath();
+      ctx.fillStyle=COLL[team]; ctx.fill(); ctx.lineWidth=lw; ctx.strokeStyle=COLD[team]; ctx.stroke();
+      ctx.strokeStyle="rgba(235,220,170,0.9)"; ctx.lineWidth=Math.max(0.8,1.2*cam.scale); ctx.beginPath(); ctx.arc(r*0.3,0,r*0.85,-1.0,1.0); ctx.stroke();
+    } else { // infantry — chevron + spear
+      ctx.beginPath(); ctx.moveTo(r,0); ctx.lineTo(-r*0.62,r*0.72); ctx.lineTo(-r*0.3,0); ctx.lineTo(-r*0.62,-r*0.72); ctx.closePath();
+      ctx.fillStyle=COL[team]; ctx.fill(); ctx.lineWidth=lw; ctx.strokeStyle=COLD[team]; ctx.stroke();
+      ctx.strokeStyle="rgba(220,214,180,0.85)"; ctx.lineWidth=Math.max(1,1.6*cam.scale); ctx.beginPath(); ctx.moveTo(r*0.5,0); ctx.lineTo(r*1.5,0); ctx.stroke();
+    }
     ctx.restore(); }
   ctx.globalAlpha=1;
 }
