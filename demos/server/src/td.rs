@@ -20,7 +20,8 @@ const PORT: u16 = 9010;
 const COLS: i32 = 20;
 const ROWS: i32 = 12;
 const TILE: f32 = 48.0;
-const TICK_MS: u64 = 33; // ~30 Hz
+const TICK_MS: u64 = 33; // sim ~30 Hz
+const SNAP_MS: u64 = 66; // broadcast ~15 Hz (client interpolates) — gentler on Safari's WebSocket
 const DT: f32 = 0.033;
 const MAX_WAVE: i32 = 12;
 
@@ -379,6 +380,7 @@ fn handle(mut stream: TcpStream, rooms: Rooms) {
     if stream.write_all(resp.as_bytes()).is_err() {
         return;
     }
+    let _ = stream.set_nodelay(true); // no Nagle batching — commands/snapshots go out immediately
 
     // shared room if a ?room=CODE was given, otherwise a fresh private room
     let rkey = match room_code(&head) {
@@ -390,6 +392,7 @@ fn handle(mut stream: TcpStream, rooms: Rooms) {
         let new_room = !rs.contains_key(&rkey);
         let room = rs.entry(rkey.clone()).or_insert_with(|| Room { game: Arc::new(Mutex::new(new_game())), clients: 0 });
         room.clients += 1;
+        eprintln!("[conn] room={rkey} clients={}", room.clients);
         let game = room.game.clone();
         if new_room {
             // one ticker per room; it removes the room (and stops) once empty
@@ -426,7 +429,7 @@ fn handle(mut stream: TcpStream, rooms: Rooms) {
             return;
         }
         loop {
-            thread::sleep(Duration::from_millis(TICK_MS));
+            thread::sleep(Duration::from_millis(SNAP_MS));
             let players = wrooms.lock().unwrap().get(&wkey).map_or(1, |r| r.clients);
             let snap = format!("{}n\t{players}\n", snapshot(&wgame.lock().unwrap()));
             if ws::write_text(&mut writer, &snap).is_err() {
@@ -446,7 +449,11 @@ fn handle(mut stream: TcpStream, rooms: Rooms) {
                             place_tower(&mut game.lock().unwrap(), v[0] as u8, v[1], v[2]);
                         }
                     }
-                    "wave" => start_wave(&mut game.lock().unwrap()),
+                    "wave" => {
+                        let mut g = game.lock().unwrap();
+                        start_wave(&mut g);
+                        eprintln!("[wave] room={rkey} -> wave {} state {}", g.wave, g.state);
+                    }
                     "reset" => *game.lock().unwrap() = new_game(),
                     _ => {}
                 }
@@ -458,6 +465,7 @@ fn handle(mut stream: TcpStream, rooms: Rooms) {
     // leave the room
     if let Some(r) = rooms.lock().unwrap().get_mut(&rkey) {
         r.clients = r.clients.saturating_sub(1);
+        eprintln!("[left] room={rkey} clients={}", r.clients);
     }
     drop(stream);
     let _ = writer_handle.join();

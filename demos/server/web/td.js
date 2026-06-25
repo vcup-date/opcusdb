@@ -21,7 +21,10 @@ let gold = 0, lives = 0, wave = 0, maxWave = 12, state = 0, players = 1;
 let pick = 0, hover = null;
 let decor = [];                 // {x,y,type}
 let lastWaveShown = 0, lastWaveClick = 0;
-const ROOM = new URLSearchParams(location.search).get("room");
+// Use the URL's room for explicit co-op; otherwise a stable per-tab id so a dropped
+// socket RESUMES the same game on reconnect (instead of resetting to wave 0).
+const URLROOM = new URLSearchParams(location.search).get("room");
+const ROOM = URLROOM || ("solo" + Math.random().toString(36).slice(2, 9));
 
 const COST = [50, 110, 75], RANGE = [120, 135, 105];
 // kind-specific creep look: [body, dark, radius, bobSpeed]
@@ -49,6 +52,7 @@ function connect() {
         way = (p[5] || "").split(";").filter(Boolean).map(s => s.split(",").map(Number));
         cv.width = COLS * TILE; cv.height = ROWS * TILE;
         buildDecor();
+        buildBg();
       } else if (tag === "s") {
         const p = rest.split("\t"); gold = +p[0]; lives = +p[1]; wave = +p[2]; maxWave = +p[3]; state = +p[4]; updateHud();
       } else if (tag === "e") {
@@ -106,37 +110,44 @@ function buildDecor() {
 }
 
 // ---- drawing helpers ------------------------------------------------------
-function drawRoad() {
+function drawRoad(g = ctx) {
   if (way.length < 2) return;
-  ctx.lineCap = "round"; ctx.lineJoin = "round";
-  ctx.strokeStyle = "#3a2c1c"; ctx.lineWidth = 40; stroke();
-  ctx.strokeStyle = "#7a6038"; ctx.lineWidth = 32; stroke();
-  ctx.strokeStyle = "#8c7044"; ctx.lineWidth = 22; stroke();
-  ctx.setLineDash([2, 16]); ctx.strokeStyle = "#6a522f"; ctx.lineWidth = 3; stroke(); ctx.setLineDash([]);
-  function stroke() { ctx.beginPath(); ctx.moveTo(way[0][0], way[0][1]); for (let i = 1; i < way.length; i++) ctx.lineTo(way[i][0], way[i][1]); ctx.stroke(); }
+  g.lineCap = "round"; g.lineJoin = "round";
+  g.strokeStyle = "#3a2c1c"; g.lineWidth = 40; stroke();
+  g.strokeStyle = "#7a6038"; g.lineWidth = 32; stroke();
+  g.strokeStyle = "#8c7044"; g.lineWidth = 22; stroke();
+  g.setLineDash([2, 16]); g.strokeStyle = "#6a522f"; g.lineWidth = 3; stroke(); g.setLineDash([]);
+  function stroke() { g.beginPath(); g.moveTo(way[0][0], way[0][1]); for (let i = 1; i < way.length; i++) g.lineTo(way[i][0], way[i][1]); g.stroke(); }
 }
 function drawPortal(t) {
   const [x, y] = way[0]; const pr = 17 + Math.sin(t * 3) * 2;
   for (let i = 0; i < 3; i++) { ctx.strokeStyle = `rgba(150,90,255,${0.5 - i * 0.13})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, pr - i * 4, t * 2 + i, t * 2 + i + 4.5); ctx.stroke(); }
   ctx.fillStyle = "rgba(120,60,220,0.35)"; ctx.beginPath(); ctx.arc(x, y, 9, 0, 7); ctx.fill();
 }
-function drawKeep(t) {
+function drawKeep(g = ctx) {
   const x = (base[0] + 0.5) * TILE, y = (base[1] + 0.5) * TILE, s = TILE * 0.5;
-  ctx.fillStyle = "rgba(0,0,0,0.28)"; ctx.beginPath(); ctx.ellipse(x, y + s * 0.7, s, s * 0.4, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = "#9aa1ae"; ctx.fillRect(x - s * 0.75, y - s * 0.4, s * 1.5, s * 1.2);
-  ctx.fillStyle = "#c2c8d2"; for (let i = 0; i < 4; i++) ctx.fillRect(x - s * 0.75 + i * s * 0.42, y - s * 0.65, s * 0.28, s * 0.32);
-  ctx.fillStyle = "#7d828f"; ctx.fillRect(x - s * 0.2, y - s * 0.1, s * 0.4, s * 0.7); // door
-  ctx.strokeStyle = "#ffc24a"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - s * 0.65); ctx.lineTo(x, y - s * 1.15); ctx.stroke();
-  ctx.fillStyle = "#ffc24a"; ctx.beginPath(); ctx.moveTo(x, y - s * 1.15); ctx.lineTo(x + s * 0.4, y - s * 1.02); ctx.lineTo(x, y - s * 0.9); ctx.closePath(); ctx.fill();
+  g.fillStyle = "rgba(0,0,0,0.28)"; g.beginPath(); g.ellipse(x, y + s * 0.7, s, s * 0.4, 0, 0, 7); g.fill();
+  g.fillStyle = "#9aa1ae"; g.fillRect(x - s * 0.75, y - s * 0.4, s * 1.5, s * 1.2);
+  g.fillStyle = "#c2c8d2"; for (let i = 0; i < 4; i++) g.fillRect(x - s * 0.75 + i * s * 0.42, y - s * 0.65, s * 0.28, s * 0.32);
+  g.fillStyle = "#7d828f"; g.fillRect(x - s * 0.2, y - s * 0.1, s * 0.4, s * 0.7); // door
+  g.strokeStyle = "#ffc24a"; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y - s * 0.65); g.lineTo(x, y - s * 1.15); g.stroke();
+  g.fillStyle = "#ffc24a"; g.beginPath(); g.moveTo(x, y - s * 1.15); g.lineTo(x + s * 0.4, y - s * 1.02); g.lineTo(x, y - s * 0.9); g.closePath(); g.fill();
 }
-function drawDecor() {
+function drawDecor(g = ctx) {
   for (const d of decor) {
-    if (d.type === "rock") { ctx.fillStyle = "#6b7280"; ctx.beginPath(); ctx.ellipse(d.x, d.y, 9 * d.s, 7 * d.s, 0, 0, 7); ctx.fill(); ctx.fillStyle = "#878e99"; ctx.beginPath(); ctx.ellipse(d.x - 2, d.y - 2, 4 * d.s, 3 * d.s, 0, 0, 7); ctx.fill(); }
-    else { ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(d.x, d.y + 9 * d.s, 9 * d.s, 3.5 * d.s, 0, 0, 7); ctx.fill();
-      ctx.fillStyle = "#5a3a22"; ctx.fillRect(d.x - 2 * d.s, d.y, 4 * d.s, 10 * d.s);
-      ctx.fillStyle = "#2f7d3a"; ctx.beginPath(); ctx.arc(d.x, d.y - 4 * d.s, 11 * d.s, 0, 7); ctx.fill();
-      ctx.fillStyle = "#3a9a49"; ctx.beginPath(); ctx.arc(d.x - 3 * d.s, d.y - 7 * d.s, 6 * d.s, 0, 7); ctx.fill(); }
+    if (d.type === "rock") { g.fillStyle = "#6b7280"; g.beginPath(); g.ellipse(d.x, d.y, 9 * d.s, 7 * d.s, 0, 0, 7); g.fill(); g.fillStyle = "#878e99"; g.beginPath(); g.ellipse(d.x - 2, d.y - 2, 4 * d.s, 3 * d.s, 0, 0, 7); g.fill(); }
+    else { g.fillStyle = "rgba(0,0,0,0.22)"; g.beginPath(); g.ellipse(d.x, d.y + 9 * d.s, 9 * d.s, 3.5 * d.s, 0, 0, 7); g.fill();
+      g.fillStyle = "#5a3a22"; g.fillRect(d.x - 2 * d.s, d.y, 4 * d.s, 10 * d.s);
+      g.fillStyle = "#2f7d3a"; g.beginPath(); g.arc(d.x, d.y - 4 * d.s, 11 * d.s, 0, 7); g.fill();
+      g.fillStyle = "#3a9a49"; g.beginPath(); g.arc(d.x - 3 * d.s, d.y - 7 * d.s, 6 * d.s, 0, 7); g.fill(); }
   }
+}
+// pre-render the static scene (grass + road + decor + keep) once, then blit each frame
+const bg = document.createElement("canvas"); const bgx = bg.getContext("2d"); let bgReady = false;
+function buildBg() {
+  bg.width = cv.width; bg.height = cv.height;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { bgx.fillStyle = (c + r) % 2 ? "#2c6b34" : "#327239"; bgx.fillRect(c * TILE, r * TILE, TILE, TILE); }
+  drawRoad(bgx); drawDecor(bgx); drawKeep(bgx); bgReady = true;
 }
 function drawCreep(c, t) {
   const k = CREEP[c.kind] || CREEP[0], r = k.r;
@@ -225,11 +236,9 @@ function loop(now) {
     tw.recoil = Math.max(0, tw.recoil - dt * 5); tw.flash = Math.max(0, tw.flash - dt * 6);
   }
 
-  // grass
-  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { ctx.fillStyle = (c + r) % 2 ? "#2c6b34" : "#327239"; ctx.fillRect(c * TILE, r * TILE, TILE, TILE); }
-  drawRoad();
+  // static scene (pre-rendered) + animated portal
+  if (bgReady) ctx.drawImage(bg, 0, 0); else ctx.clearRect(0, 0, cv.width, cv.height);
   drawPortal(t);
-  drawDecor();
   // hover build preview
   if (hover && state < 2) {
     const [c, r] = hover, key = c + "," + r;
@@ -238,7 +247,6 @@ function loop(now) {
     ctx.strokeStyle = ok ? "rgba(170,255,190,0.7)" : "rgba(255,120,120,0.7)"; ctx.lineWidth = 2; ctx.strokeRect(c * TILE + 1, r * TILE + 1, TILE - 2, TILE - 2);
     ctx.beginPath(); ctx.arc(c * TILE + TILE / 2, r * TILE + TILE / 2, RANGE[pick], 0, 7); ctx.strokeStyle = "rgba(255,255,255,0.16)"; ctx.lineWidth = 1.5; ctx.stroke();
   }
-  drawKeep(t);
   for (const tw of towers) drawTower(tw, t);
   for (const p of projs) drawProj(p);
   // creeps sorted by y for depth
@@ -272,8 +280,8 @@ addEventListener("keydown", (e) => {
 // ---- multiplayer (rooms) --------------------------------------------------
 function renderMp() {
   const el = $("mp"); if (!el) return;
-  if (ROOM) {
-    el.innerHTML = `👥 <b style="color:#e9eef8">Co-op room ${ROOM}</b><br>` +
+  if (URLROOM) {
+    el.innerHTML = `👥 <b style="color:#e9eef8">Co-op room ${URLROOM}</b><br>` +
       `<span style="color:#3ec46a">${players} player${players === 1 ? "" : "s"} here</span> · ` +
       `<a href="#" id="copylink" style="color:#5b9dff">copy invite link</a>`;
     const cl = $("copylink"); if (cl) cl.onclick = (e) => { e.preventDefault(); navigator.clipboard && navigator.clipboard.writeText(location.href); cl.textContent = "link copied!"; };
