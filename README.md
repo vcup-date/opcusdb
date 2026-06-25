@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-170%20passing-success)
+![tests](https://img.shields.io/badge/tests-171%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-170 tests · 37 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+171 tests · 37 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -185,21 +185,23 @@ cargo run -p opcusdb-server --bin opcusdb-survivors   # open http://localhost:90
 [`demos/godot-wow`](demos/godot-wow) is a tiny **3D MMO-style town built in Godot 4**
 that talks to the opcusdb authoritative server over WebSocket — proving the engine
 isn't browser-only. A small town with **NPC quest givers**, a pack of **wolves** to
-kill, a **quest** ("Cull the Wolves — slay 5"), and **chat**, where **multiple
-players see each other** move and fight in one shared world. The whole simulation
-(movement, wolf AI, combat, quests, chat) lives in
+kill, a **quest** ("Cull the Wolves — slay 5"), **chat**, and a **WoW-style action
+bar** — 3 skills on keys **1 Cleave** (AoE) / **2 Fireball** (nuke) / **3 Heal**,
+each with a **radial cooldown sweep + countdown number**. **Multiple players see
+each other** move, cast, and fight in one shared world. The whole simulation
+(movement, wolf AI, combat, skills/cooldowns, quests, chat) lives in
 [`demos/server/src/wow.rs`](demos/server/src/wow.rs); the Godot client just renders
-it and sends input.
+it (swing/spark/ring/fireball effects, wolf HP bars) and sends input.
 
 <div align="center">
 <img src="assets/godot-wow.png" width="760"/><br/>
-<b>opcusdb Townfall (Godot 4)</b> — two players (Hero + Thrain), Mayor Bram's quest, wolves in the wilds, and live chat over the shared server.
+<b>opcusdb Townfall (Godot 4)</b> — players, Mayor Bram's quest, wolves, live chat, and a WoW-style action bar (Cleave / Fireball / Heal) with cooldown countdowns, all over the shared server.
 </div>
 
 ```sh
 cargo run -p opcusdb-server --bin opcusdb-wow         # server on :9007
 # then open demos/godot-wow in Godot 4.4+ and press Play (run 2+ copies for multiplayer)
-# WASD move · Space attack · E talk to NPC · Enter chat
+# WASD move · Space attack · E talk to NPC · 1/2/3 skills · Enter chat
 ```
 
 ## Architecture

@@ -42,6 +42,14 @@ const WOLF_ATK_CD: f32 = 1.0;
 const WOLF_RESPAWN: f32 = 6.0;
 const QUEST_GOAL: u32 = 5;
 
+// action-bar skills (keys 1/2/3): Cleave (AoE), Fireball (ranged nuke), Heal
+const SKILL_CD: [f32; 3] = [3.0, 7.0, 12.0];
+const CLEAVE_R: f32 = 4.6;
+const CLEAVE_DMG: f32 = 42.0;
+const FIRE_RANGE: f32 = 16.0;
+const FIRE_DMG: f32 = 85.0;
+const HEAL_AMT: f32 = 55.0;
+
 /// (name, x, z, is_quest_giver)
 const NPCS: [(&str, f32, f32, bool); 2] = [("Mayor Bram", 0.0, -3.0, true), ("Scout Lyra", 8.0, 1.0, false)];
 
@@ -55,6 +63,7 @@ struct Player {
     prog: u32,
     kills: u32,
     atk_cd: f32,
+    skill_cd: [f32; 3],
     w: bool,
     s: bool,
     a: bool,
@@ -72,6 +81,7 @@ impl Player {
             prog: 0,
             kills: 0,
             atk_cd: 0.0,
+            skill_cd: [0.0; 3],
             w: false,
             s: false,
             a: false,
@@ -179,6 +189,11 @@ fn move_players(room: &mut Room) {
         if p.atk_cd > 0.0 {
             p.atk_cd -= DT;
         }
+        for c in p.skill_cd.iter_mut() {
+            if *c > 0.0 {
+                *c = (*c - DT).max(0.0);
+            }
+        }
         let dx = (p.d as i32 - p.a as i32) as f32;
         let dz = (p.s as i32 - p.w as i32) as f32; // w = north = -z
         let len = (dx * dx + dz * dz).sqrt();
@@ -276,28 +291,97 @@ fn player_attack(room: &mut Room, id: u32) {
         .min_by(|a, b| d2(px, pz, a.1.x, a.1.z).total_cmp(&d2(px, pz, b.1.x, b.1.z)))
         .map(|(wid, _)| *wid);
     if let Some(wid) = target {
-        let (wx, wz, dead) = {
+        hurt_wolf(room, wid, PLAYER_DMG, id);
+    }
+}
+
+/// Apply damage to a wolf; emits hit/death events and credits the caster's quest.
+fn hurt_wolf(room: &mut Room, wid: u32, dmg: f32, caster: u32) {
+    if room.wolves.get(&wid).map_or(true, |w| w.state == 2) {
+        return;
+    }
+    let (wx, wz, dead) = {
+        let w = room.wolves.get_mut(&wid).unwrap();
+        w.hp -= dmg;
+        (w.x, w.z, w.hp <= 0.0)
+    };
+    room.events.push(('h', wid, wx, wz));
+    if dead {
+        {
             let w = room.wolves.get_mut(&wid).unwrap();
-            w.hp -= PLAYER_DMG;
-            (w.x, w.z, w.hp <= 0.0)
-        };
-        room.events.push(('h', wid, wx, wz)); // wolf hit -> flinch + spark
-        if dead {
-            {
-                let w = room.wolves.get_mut(&wid).unwrap();
-                w.state = 2;
-                w.respawn = WOLF_RESPAWN;
-            }
-            room.events.push(('k', wid, wx, wz)); // death poof
-            if let Some(p) = room.players.get_mut(&id) {
-                p.kills += 1;
-                if p.quest == 1 {
-                    p.prog += 1;
-                    if p.prog >= QUEST_GOAL {
-                        p.quest = 2; // ready to turn in
-                    }
+            w.state = 2;
+            w.respawn = WOLF_RESPAWN;
+        }
+        room.events.push(('k', wid, wx, wz));
+        if let Some(p) = room.players.get_mut(&caster) {
+            p.kills += 1;
+            if p.quest == 1 {
+                p.prog += 1;
+                if p.prog >= QUEST_GOAL {
+                    p.quest = 2;
                 }
             }
+        }
+    }
+}
+
+/// Cast action-bar skill `n` (0 Cleave, 1 Fireball, 2 Heal) if off cooldown.
+fn player_skill(room: &mut Room, id: u32, n: usize) {
+    if n >= 3 {
+        return;
+    }
+    let (px, pz, facing, ready) = match room.players.get(&id) {
+        Some(p) => (p.x, p.z, p.facing, p.skill_cd[n] <= 0.0),
+        None => return,
+    };
+    if !ready {
+        return;
+    }
+    if let Some(p) = room.players.get_mut(&id) {
+        p.skill_cd[n] = SKILL_CD[n];
+    }
+    match n {
+        0 => {
+            // Cleave — AoE around the player
+            room.events.push(('C', id, px, pz));
+            let hits: Vec<u32> = room
+                .wolves
+                .iter()
+                .filter(|(_, w)| w.state != 2 && d2(px, pz, w.x, w.z) < CLEAVE_R * CLEAVE_R)
+                .map(|(wid, _)| *wid)
+                .collect();
+            for wid in hits {
+                hurt_wolf(room, wid, CLEAVE_DMG, id);
+            }
+        }
+        1 => {
+            // Fireball — nuke the nearest wolf in range
+            let target = room
+                .wolves
+                .iter()
+                .filter(|(_, w)| w.state != 2 && d2(px, pz, w.x, w.z) < FIRE_RANGE * FIRE_RANGE)
+                .min_by(|a, b| d2(px, pz, a.1.x, a.1.z).total_cmp(&d2(px, pz, b.1.x, b.1.z)))
+                .map(|(wid, _)| *wid);
+            match target {
+                Some(wid) => {
+                    let (wx, wz) = {
+                        let w = &room.wolves[&wid];
+                        (w.x, w.z)
+                    };
+                    room.events.push(('F', id, wx, wz));
+                    hurt_wolf(room, wid, FIRE_DMG, id);
+                }
+                None => {
+                    room.events.push(('F', id, px + facing.sin() * 8.0, pz - facing.cos() * 8.0));
+                }
+            }
+        }
+        _ => {
+            // Heal — restore HP
+            if let Some(p) = room.players.get_mut(&id) {
+                p.hp = (p.hp + HEAL_AMT).min(PLAYER_HP);
+            }
+            room.events.push(('L', id, px, pz));
         }
     }
 }
@@ -338,8 +422,8 @@ fn build_snapshot(room: &Room) -> String {
     }
     for (id, p) in &room.players {
         s.push_str(&format!(
-            "p\t{id}\t{:.2}\t{:.2}\t{:.2}\t{:.0}\t{:.0}\t{}\t{}\t{}\t{}\n",
-            p.x, p.z, p.facing, p.hp, PLAYER_HP, p.quest, p.prog, p.kills, p.name
+            "p\t{id}\t{:.2}\t{:.2}\t{:.2}\t{:.0}\t{:.0}\t{}\t{}\t{}\t{}\t{:.1}\t{:.1}\t{:.1}\n",
+            p.x, p.z, p.facing, p.hp, PLAYER_HP, p.quest, p.prog, p.kills, p.name, p.skill_cd[0], p.skill_cd[1], p.skill_cd[2]
         ));
     }
     for (id, w) in &room.wolves {
@@ -460,6 +544,16 @@ fn handle(mut stream: TcpStream, world: Arc<Mutex<World>>) {
                             let mut w = world.lock().unwrap();
                             if let Some(r) = w.rooms.get_mut(&code) {
                                 player_interact(r, id);
+                            }
+                        }
+                    }
+                    "skill" => {
+                        if let Ok(n) = arg.trim().parse::<usize>() {
+                            if let Some(code) = my_room.lock().unwrap().clone() {
+                                let mut w = world.lock().unwrap();
+                                if let Some(r) = w.rooms.get_mut(&code) {
+                                    player_skill(r, id, n);
+                                }
                             }
                         }
                     }
@@ -586,6 +680,25 @@ mod tests {
         }
         player_interact(&mut r, 1);
         assert_eq!(r.players[&1].quest, 1, "accepted the quest from the giver");
+    }
+
+    #[test]
+    fn cleave_skill_hits_nearby_wolves_and_sets_cooldown() {
+        let mut r = room1();
+        r.players.get_mut(&1).unwrap().quest = 1;
+        for i in 0..3u32 {
+            r.wolves.insert(
+                10 + i,
+                Wolf { x: SPAWN.0 + i as f32 * 0.6, z: SPAWN.1, facing: 0.0, hp: 12.0, state: 0, home: (0.0, 0.0), wander: (0.0, 0.0), wander_cd: 0.0, atk_cd: 0.0, respawn: 0.0 },
+            );
+        }
+        player_skill(&mut r, 1, 0); // Cleave
+        assert_eq!(r.wolves.values().filter(|w| w.state != 2).count(), 0, "cleave killed all nearby wolves");
+        assert!(r.players[&1].skill_cd[0] > 0.0, "cleave went on cooldown");
+        // recasting while on cooldown does nothing
+        r.wolves.insert(99, Wolf { x: SPAWN.0, z: SPAWN.1, facing: 0.0, hp: 12.0, state: 0, home: (0.0, 0.0), wander: (0.0, 0.0), wander_cd: 0.0, atk_cd: 0.0, respawn: 0.0 });
+        player_skill(&mut r, 1, 0);
+        assert_eq!(r.wolves[&99].state, 0, "on cooldown: cleave did not fire");
     }
 
     #[test]

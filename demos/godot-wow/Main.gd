@@ -36,10 +36,20 @@ var capture_path := ""
 var captured := false
 var elapsed := 0.0
 var did_interact := false
+var _s0 := false
+var _s1 := false
+var _s2 := false
 var _msg_time := 0.0
 var _last_evt_time := -1.0
 
 const PCOLORS := [Color("4f8cff"), Color("ff5d5d"), Color("57d977"), Color("ffd24a"), Color("c07dff"), Color("ff9f5a"), Color("4de1e6"), Color("f75fb4")]
+
+const SKILL_MAX := [3.0, 7.0, 12.0]
+const SKILL_NAMES := ["Cleave", "Fireball", "Heal"]
+const SKILL_ICON := ["🪓", "🔥", "✚"]
+const SKILL_COL := [Color("e07b39"), Color("d83a3a"), Color("3aa657")]
+var skill_cd := [0.0, 0.0, 0.0]
+var skill_ui: Array = []   # [{mat, cdl}]
 
 func _ready() -> void:
 	capture_path = OS.get_environment("WOW_SHOT")
@@ -239,6 +249,29 @@ func _build_ui() -> void:
 	ui.add_child(chat_input)
 	chat_input.text_submitted.connect(_on_chat_submit)
 
+	# --- WoW-style action bar (skills 1 / 2 / 3) with radial cooldown sweep ---
+	var cd_shader := Shader.new()
+	cd_shader.code = "shader_type canvas_item;\nuniform float frac : hint_range(0.0, 1.0) = 0.0;\nvoid fragment() {\n\tvec2 c = UV - vec2(0.5, 0.5);\n\tfloat ang = atan(c.x, -c.y);\n\tif (ang < 0.0) { ang += 6.28318530718; }\n\tfloat a = ang / 6.28318530718;\n\tif (a < frac) { COLOR = vec4(0.0, 0.0, 0.0, 0.62); } else { COLOR = vec4(0.0, 0.0, 0.0, 0.0); }\n}"
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 14)
+	bar.position = Vector2(vp.x / 2.0 - 145, vp.y - 124)
+	ui.add_child(bar)
+	skill_ui.clear()
+	for i in 3:
+		var b := Control.new(); b.custom_minimum_size = Vector2(86, 86)
+		bar.add_child(b)
+		var frame := ColorRect.new(); frame.color = Color(0, 0, 0, 0.6); frame.size = Vector2(86, 86); b.add_child(frame)
+		var bg := ColorRect.new(); bg.color = SKILL_COL[i]; bg.position = Vector2(3, 3); bg.size = Vector2(80, 80); b.add_child(bg)
+		var icon := Label.new(); icon.text = SKILL_ICON[i]; icon.add_theme_font_size_override("font_size", 40); icon.position = Vector2(22, 12); b.add_child(icon)
+		var ov := ColorRect.new(); ov.color = Color.WHITE; ov.position = Vector2(3, 3); ov.size = Vector2(80, 80)
+		ov.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var mat := ShaderMaterial.new(); mat.shader = cd_shader; mat.set_shader_parameter("frac", 0.0); ov.material = mat
+		b.add_child(ov)
+		var keyl := Label.new(); keyl.text = str(i + 1); keyl.add_theme_font_size_override("font_size", 18); keyl.position = Vector2(7, 2); b.add_child(keyl)
+		var namel := Label.new(); namel.text = SKILL_NAMES[i]; namel.add_theme_font_size_override("font_size", 13); namel.position = Vector2(7, 66); b.add_child(namel)
+		var cdl := Label.new(); cdl.add_theme_font_size_override("font_size", 36); cdl.position = Vector2(28, 20); cdl.add_theme_color_override("font_color", Color.WHITE); b.add_child(cdl)
+		skill_ui.append({"mat": mat, "cdl": cdl})
+
 func _on_chat_submit(t: String) -> void:
 	t = t.strip_edges()
 	if t != "" and ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
@@ -289,6 +322,12 @@ func _input(event: InputEvent) -> void:
 				if ws.get_ready_state() == WebSocketPeer.STATE_OPEN: ws.send_text("attack")
 			KEY_E:
 				if ws.get_ready_state() == WebSocketPeer.STATE_OPEN: ws.send_text("interact")
+			KEY_1:
+				if ws.get_ready_state() == WebSocketPeer.STATE_OPEN: ws.send_text("skill 0")
+			KEY_2:
+				if ws.get_ready_state() == WebSocketPeer.STATE_OPEN: ws.send_text("skill 1")
+			KEY_3:
+				if ws.get_ready_state() == WebSocketPeer.STATE_OPEN: ws.send_text("skill 2")
 			KEY_ENTER, KEY_KP_ENTER:
 				chat_input.grab_focus()
 
@@ -308,6 +347,8 @@ func _handle(msg: String) -> void:
 				e.tx = float(p[2]); e.tz = float(p[3]); e.tyaw = float(p[4])
 				if id == my_id:
 					hp = float(p[5]); quest = int(p[7]); prog = int(p[8]); kills = int(p[9])
+					if p.size() >= 14:
+						skill_cd = [float(p[11]), float(p[12]), float(p[13])]
 			"m":
 				var id := int(p[1])
 				if not wolves.has(id):
@@ -349,6 +390,38 @@ func _play_event(kind: String, id: int, x: float, z: float) -> void:
 				create_tween().tween_property(r, "scale", Vector3.ONE, 0.16)
 		"k":
 			_spark(Vector3(x, 0.7, z), Color(0.7, 0.25, 0.2), 16)
+		"C": # Cleave — expanding ground ring
+			_ring(Vector3(x, 0.25, z), Color(1, 0.6, 0.15), 4.6)
+		"F": # Fireball — bolt flies from caster to target, then bursts
+			var from := Vector3(x, 1.0, z)
+			if players.has(id):
+				from = players[id].root.position + Vector3(0, 1.0, 0)
+			_fireball(from, Vector3(x, 1.0, z))
+		"L": # Heal — green sparkle on the caster
+			_spark(Vector3(x, 1.2, z), Color(0.3, 1.0, 0.45), 16)
+
+func _ring(pos: Vector3, color: Color, r: float) -> void:
+	var ring := MeshInstance3D.new()
+	var tm := TorusMesh.new(); tm.inner_radius = 0.5; tm.outer_radius = 0.8; ring.mesh = tm
+	var m := _mat(color); m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.emission_enabled = true; m.emission = color
+	ring.material_override = m; ring.position = pos; add_child(ring)
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(ring, "scale", Vector3(r, 1.0, r), 0.35)
+	tw.tween_property(m, "albedo_color:a", 0.0, 0.35)
+	tw.set_parallel(false); tw.tween_callback(ring.queue_free)
+
+func _fireball(from: Vector3, to: Vector3) -> void:
+	var fb := MeshInstance3D.new()
+	var sm := SphereMesh.new(); sm.radius = 0.35; sm.height = 0.7; fb.mesh = sm
+	var m := _mat(Color(1, 0.5, 0.12)); m.emission_enabled = true; m.emission = Color(1, 0.5, 0.12)
+	fb.material_override = m; fb.position = from; add_child(fb)
+	var tw := create_tween()
+	tw.tween_property(fb, "position", to, 0.22)
+	tw.tween_callback(fb.queue_free)
+	var tw2 := create_tween()
+	tw2.tween_interval(0.22)
+	tw2.tween_callback(_spark.bind(to, Color(1, 0.6, 0.2), 12))
 
 func _spark(pos: Vector3, color: Color, n: int) -> void:
 	for i in n:
@@ -398,6 +471,10 @@ func _update_ui() -> void:
 			quest_label.text = "Quest — Cull the Wolves: %d/5 slain" % prog
 		2:
 			quest_label.text = "Quest: return to Mayor Bram (press E) to turn in!"
+	for i in skill_ui.size():
+		var rem: float = skill_cd[i]
+		skill_ui[i].mat.set_shader_parameter("frac", clampf(rem / SKILL_MAX[i], 0.0, 1.0))
+		skill_ui[i].cdl.text = str(int(ceil(rem))) if rem > 0.05 else ""
 
 # auto-drive a quick scene for the headless screenshot
 func _drive_capture() -> void:
@@ -410,6 +487,9 @@ func _drive_capture() -> void:
 		ws.send_text("keys 0 0 0 0")
 		ws.send_text("interact")     # accept the quest
 		ws.send_text("attack")
+	if elapsed > 2.3 and not _s2: _s2 = true; ws.send_text("skill 2") # Heal (long cd)
+	if elapsed > 2.7 and not _s1: _s1 = true; ws.send_text("skill 1") # Fireball
+	if elapsed > 5.05 and not _s0: _s0 = true; ws.send_text("skill 0") # Cleave (ring shows in shot)
 	if elapsed > 5.5 and not captured:
 		captured = true
 		_capture()
