@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>opcusdb Gomoku · five in a row</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; color: #d7e0f5; font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: radial-gradient(1000px 500px at 50% -10%, #15233f, #070b14 70%); }
+      header { display: flex; align-items: baseline; gap: 14px; padding: 14px 20px; }
+      h1 { font-size: 20px; margin: 0; } .accent { color: #7dcfff; }
+      #wrap { display: flex; gap: 20px; justify-content: center; padding: 0 16px 28px; flex-wrap: wrap; }
+      #board { border-radius: 10px; box-shadow: 0 14px 50px #000a; cursor: pointer; }
+      #side { width: 240px; }
+      .card { background: #0c1322cc; border: 1px solid #1c2742; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+      .card h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #6b7a99; }
+      .row { display: flex; justify-content: space-between; padding: 3px 0; }
+      .stone { display:inline-block; width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:middle; }
+      .b { background:#111; box-shadow:0 0 0 1px #000; } .w { background:#eee; }
+      #status { font-size: 16px; padding: 8px 12px; border-radius: 10px; background:#0c1322; border:1px solid #1c2742; margin-bottom:14px; text-align:center; }
+      .turn { color:#6ee7b7; } .wait { color:#ffd24a; } .win { color:#7dcfff; font-weight:700; } .lose { color:#ff7eb6; }
+      button { width:100%; font:inherit; font-weight:700; padding:10px; border:0; border-radius:10px; cursor:pointer; }
+      .primary { background: linear-gradient(180deg,#3a86ff,#2f6feb); color:#fff; } .ghost { background:#14203a; color:#bcd; }
+      #lobby { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background:#04060ce6; backdrop-filter: blur(4px); z-index:10; }
+      .panel { background:#0c1322; border:1px solid #233; border-radius:16px; padding:28px 30px; width:360px; text-align:center; }
+      .panel input { width:100%; font:inherit; padding:10px 12px; margin:6px 0; border-radius:10px; border:1px solid #2a3550; background:#121a2c; color:#e6edff; text-align:center; }
+      .hint { color:#6b7a99; font-size:12px; }
+    </style>
+  </head>
+  <body>
+    <header><h1><span class="accent">opcusdb</span> Gomoku</h1><div>five in a row · room <span id="roomTag" style="color:#ffd24a">—</span></div></header>
+    <div id="wrap">
+      <canvas id="board" width="600" height="600"></canvas>
+      <div id="side">
+        <div id="status">connecting…</div>
+        <div class="card"><h3>players</h3>
+          <div class="row"><span><span class="stone b"></span><span id="blackName">—</span></span><span id="blackWins">0</span></div>
+          <div class="row"><span><span class="stone w"></span><span id="whiteName">—</span></span><span id="whiteWins">0</span></div>
+        </div>
+        <button class="primary" id="rematch" style="display:none">rematch</button>
+        <div class="card"><h3>🏆 all-time wins</h3><div id="leaderboard"></div></div>
+      </div>
+    </div>
+    <div id="lobby"><div class="panel">
+      <h1><span class="accent">opcusdb</span> Gomoku</h1>
+      <p class="hint">online five-in-a-row · authoritative Rust server</p>
+      <input id="nick" placeholder="nickname" maxlength="14" />
+      <input id="code" placeholder="room code (e.g. GO)" maxlength="6" />
+      <button class="primary" id="join">join room</button>
+      <button class="ghost" id="create" style="margin-top:8px">create new room</button>
+      <p class="hint">first player is black (moves first); share the code for white.</p>
+    </div></div>
+    <script src="/gomoku.js"></script>
+  </body>
+</html>

@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-155%20passing-success)
+![tests](https://img.shields.io/badge/tests-158%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-155 tests · 33 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+158 tests · 34 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -99,6 +99,24 @@ The key is read from **`OPENROUTER_API_KEY`** and is **never stored in the repo*
 (`.env` and `run-chat.sh` are gitignored; see [`.env.example`](.env.example)). To
 save credits, the bots only chat while at least one human is connected.
 
+## Gomoku — online Five-in-a-Row (五子棋) with rooms & a win leaderboard
+
+`opcusdb-gomoku` is turn-based online **five-in-a-row** on a 15×15 Go board:
+**create/join a room by code**, black moves first, place stones, and the first to
+get **5 in a row** (any direction) wins. The Rust server is authoritative — it
+validates every move and detects the win — and **win counts persist to a local DB
+file** (`gomoku.db`, gitignored) as an all-time leaderboard.
+
+<div align="center">
+<img src="assets/gomoku.png" width="520"/><br/>
+<b>opcusdb Gomoku</b> — wooden goban, the winning line highlighted, per-player wins + leaderboard.
+</div>
+
+```sh
+cargo run -p opcusdb-server --bin opcusdb-gomoku     # open http://localhost:9004
+# create a room, share the code (or ?room=CODE); 2nd player is white
+```
+
 ## Arena — a multiplayer game with rooms, rules & a persistent leaderboard
 
 `opcusdb-arena` is a real-time multiplayer **snake** game: **create or join a room
@@ -145,7 +163,7 @@ cargo run -p opcusdb-server --bin opcusdb-arena      # open http://localhost:900
 | `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
 | `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
 | `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
-| `demos/server` | three authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), and **Arena** — multiplayer snake with rooms + a persistent leaderboard |
+| `demos/server` | four authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku** (5-in-a-row), and **Arena** (snake) — both with rooms + persistent leaderboards |
 
 ## The five game types → demos
 
@@ -159,6 +177,7 @@ cargo run -p opcusdb-server --bin opcusdb-arena      # open http://localhost:900
 | *(bonus)* | `particles` | browser | interactive fixed-point particle galaxy |
 | **real multiplayer** | `server` (game) | `cargo run -p opcusdb-server` → open :9001 in 2+ tabs | **authoritative ECS server + WebSocket**; many browsers share one live world |
 | **live human + AI chat** | `server` (chat) | `OPENROUTER_API_KEY=… cargo run -p opcusdb-server --bin opcusdb-chat` → :9002 | IRC-style channel; anyone logs in; **10 AI chatters via OpenRouter** |
+| **Gomoku (5-in-a-row)** | `server` (gomoku) | `cargo run -p opcusdb-server --bin opcusdb-gomoku` → :9004 | turn-based **five-in-a-row**; rooms; win detection; persistent win leaderboard |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start
@@ -185,7 +204,7 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 
 ## Test cases — what's actually proven
 
-`cargo test --workspace` → **155 passing across 33 binaries**, clippy-clean. A selection:
+`cargo test --workspace` → **158 passing across 34 binaries**, clippy-clean. A selection:
 
 | Property proven | Test |
 |---|---|
@@ -208,6 +227,7 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 | Two lockstep peers stay byte-identical | `lockstep … two_peers_stay_in_perfect_sync` |
 | Shared world holds every connected player + spawns | `server … shared_world_holds_all_players_and_spawns` |
 | WebSocket handshake (SHA-1/base64) per RFC 6455 | `server … rfc6455_accept_example` |
+| Gomoku detects horizontal/diagonal five-in-a-row | `server … detects_horizontal_five`, `detects_diagonal_five` |
 | Snake eats/grows; wall-crash records score | `server … snake_moves_and_eats`, `wall_collision_kills_and_records_score` |
 
 ## Status
