@@ -421,9 +421,15 @@ fn header_value(head: &str, name: &str) -> Option<String> {
 fn serve_file(stream: &mut TcpStream, head: &str) {
     let raw = head.lines().next().and_then(|l| l.split_whitespace().nth(1)).unwrap_or("/");
     let path = raw.split('?').next().unwrap_or("/");
-    let (ctype, body): (&str, &[u8]) = match path {
-        "/" | "/index.html" => ("text/html; charset=utf-8", include_str!("../web/td.html").as_bytes()),
-        "/td.js" => ("application/javascript; charset=utf-8", include_str!("../web/td.js").as_bytes()),
+    // Serve ONE self-contained document: the JS is inlined into the HTML so a
+    // browser can never end up with a mismatched cached html+js pair.
+    let (ctype, body): (&str, Vec<u8>) = match path {
+        "/" | "/index.html" => {
+            let html = include_str!("../web/td.html")
+                .replace("<script src=\"/td.js\"></script>", &format!("<script>\n{}\n</script>", include_str!("../web/td.js")));
+            ("text/html; charset=utf-8", html.into_bytes())
+        }
+        "/td.js" => ("application/javascript; charset=utf-8", include_str!("../web/td.js").as_bytes().to_vec()),
         _ => {
             let _ = stream.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n");
             return;
@@ -434,7 +440,7 @@ fn serve_file(stream: &mut TcpStream, head: &str) {
         body.len()
     );
     let _ = stream.write_all(resp.as_bytes());
-    let _ = stream.write_all(body);
+    let _ = stream.write_all(&body);
 }
 
 #[cfg(test)]

@@ -26,9 +26,11 @@ const CREEP = [
 ];
 
 // ---- networking (auto-reconnect) ------------------------------------------
+function setConn(ok) { const c = $("conn"); if (!c) return; c.textContent = ok ? "● online" : "● offline"; c.style.color = ok ? "#3ec46a" : "#ff6b6b"; }
 function connect() {
   ws = new WebSocket(`ws://${location.host}/ws`);
-  ws.onclose = () => { const w = $("wave"); w.className = ""; w.textContent = "⟳ reconnecting…"; w.disabled = true; setTimeout(connect, 1000); };
+  ws.onopen = () => setConn(true);
+  ws.onclose = () => { setConn(false); const w = $("wave"); w.className = ""; w.textContent = "⟳ reconnecting…"; w.disabled = true; setTimeout(connect, 1000); };
   ws.onerror = () => {};
   ws.onmessage = (e) => {
     for (const line of e.data.split("\n")) {
