@@ -84,6 +84,8 @@ struct Char {
     bubble_t: f32,
     last_spoke: f32,
     facing: f32,
+    goal: usize,
+    path: Vec<(f32, f32)>,
     human: bool,
     mem: Vec<String>,
 }
@@ -100,6 +102,32 @@ struct Town {
 
 fn loc_stand(i: usize) -> (f32, f32) {
     (LOCS[i].1, LOCS[i].2)
+}
+
+/// The location node nearest to a point (the start of a route).
+fn nearest_node(x: f32, y: f32) -> usize {
+    let mut best = 0;
+    let mut bd = f32::MAX;
+    for i in 0..LOCS.len() {
+        let (sx, sy) = loc_stand(i);
+        let d = (x - sx).powi(2) + (y - sy).powi(2);
+        if d < bd {
+            bd = d;
+            best = i;
+        }
+    }
+    best
+}
+
+/// Waypoints from node `from` to node `to`. The plaza (index 0) is the hub, so a
+/// trip between two outer nodes goes through it, keeping residents on the roads
+/// (cardinal-ish moves) instead of sliding diagonally across grass and roofs.
+fn route(from: usize, to: usize) -> Vec<(f32, f32)> {
+    if from == to || from == 0 || to == 0 {
+        vec![loc_stand(to)]
+    } else {
+        vec![loc_stand(0), loc_stand(to)]
+    }
 }
 
 fn new_town() -> Town {
@@ -126,6 +154,8 @@ fn new_town() -> Town {
                 bubble_t: 0.0,
                 last_spoke: 0.0,
                 facing: 0.0,
+                goal: work,
+                path: Vec::new(),
                 human: false,
                 mem: Vec::new(),
             },
@@ -166,21 +196,29 @@ fn tick(t: &mut Town) {
     t.time += DT;
     let ids: Vec<u32> = t.chars.keys().copied().collect();
     for id in ids {
-        let (target_loc, human) = {
-            let c = &t.chars[&id];
-            (if c.human { usize::MAX } else { schedule(c, t.time) }, c.human)
-        };
-        // residents retarget toward their scheduled spot (with a stable per-id offset)
-        if !human && target_loc != usize::MAX {
-            let (sx, sy) = loc_stand(target_loc);
-            let a = id as f32 * 2.39996;
-            let r = 16.0 + (id % 4) as f32 * 10.0;
-            let (gx, gy) = (sx + a.cos() * r, sy + a.sin() * r);
+        let human = t.chars[&id].human;
+        // residents plan a route along the roads (through the plaza hub) toward
+        // their scheduled goal; the human visitor steers itself with click targets.
+        if !human {
+            let desired = schedule(&t.chars[&id], t.time);
             let c = t.chars.get_mut(&id).unwrap();
-            c.tx = gx;
-            c.ty = gy;
+            if desired != c.goal || c.path.is_empty() {
+                c.goal = desired;
+                c.path = route(nearest_node(c.x, c.y), desired);
+            }
+            let last_hop = c.path.len() <= 1;
+            let (wx, wy) = *c.path.first().unwrap_or(&(c.x, c.y));
+            let (tx, ty) = if last_hop {
+                let a = id as f32 * 2.39996;
+                let r = 14.0 + (id % 4) as f32 * 9.0; // small stable offset so they don't stack
+                (wx + a.cos() * r, wy + a.sin() * r)
+            } else {
+                (wx, wy)
+            };
+            c.tx = tx;
+            c.ty = ty;
         }
-        // move toward target
+        // move toward the current target
         let c = t.chars.get_mut(&id).unwrap();
         let (dx, dy) = (c.tx - c.x, c.ty - c.y);
         let d = (dx * dx + dy * dy).sqrt();
@@ -191,6 +229,10 @@ fn tick(t: &mut Town) {
             if dx.abs() > 0.4 {
                 c.facing = if dx < 0.0 { -1.0 } else { 1.0 };
             }
+        }
+        // reached a waypoint with more to go: advance along the route
+        if !human && d < 9.0 && c.path.len() > 1 {
+            c.path.remove(0);
         }
         c.x = c.x.clamp(24.0, 936.0); // stay on-screen
         c.y = c.y.clamp(24.0, 584.0);
@@ -515,7 +557,7 @@ fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>) {
                 x: sx, y: sy, tx: sx, ty: sy,
                 name: vname,
                 persona: "", role: "visitor", pal: 99, work: 0, fav: 0, here: 0,
-                bubble: String::new(), bubble_t: 0.0, last_spoke: 0.0, facing: 1.0, human: true, mem: Vec::new(),
+                bubble: String::new(), bubble_t: 0.0, last_spoke: 0.0, facing: 1.0, goal: 0, path: Vec::new(), human: true, mem: Vec::new(),
             },
         );
         id
