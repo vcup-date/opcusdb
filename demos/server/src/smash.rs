@@ -20,7 +20,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const PORT: u16 = 9005;
 const TICK_MS: u64 = 33; // ~30 Hz
-const MAX_PLAYERS: usize = 8;
+const MAX_PLAYERS: usize = 12;
+/// spawn x positions, spread across the stage
+const SPAWNS: [f32; 10] =
+    [350.0, 2050.0, 650.0, 1750.0, 900.0, 1500.0, 1050.0, 1350.0, 1150.0, 1250.0];
 
 // stage geometry (logical units; the client scales/scrolls)
 const STAGE_W: f32 = 2400.0;
@@ -57,7 +60,7 @@ const HITSTUN_F: f32 = 2.4;
 const RESPAWN_TICKS: i32 = 70;
 const LAST_HIT_MEMORY: i32 = 90;
 
-const FIGHTERS: usize = 8; // palette count, client-side colours
+const FIGHTERS: usize = 10; // palette count, client-side colours
 
 struct Player {
     name: String,
@@ -139,8 +142,7 @@ impl Room {
         Self { players: BTreeMap::new(), events: Vec::new(), snapshot: String::new(), spawn_i: 0 }
     }
     fn next_spawn(&mut self) -> f32 {
-        let spots = [600.0, 1200.0, 1800.0, 900.0, 1500.0];
-        let s = spots[self.spawn_i % spots.len()];
+        let s = SPAWNS[self.spawn_i % SPAWNS.len()];
         self.spawn_i += 1;
         s
     }

@@ -15,6 +15,8 @@ const PAL = [
   { s: 0xff9f5a, a: 0xffdbb8, k: 0xf1c27d, h: 0x3a2106 },
   { s: 0x4de1e6, a: 0xc8f8fa, k: 0xf1c27d, h: 0x06363a },
   { s: 0xf75fb4, a: 0xffccdf, k: 0xf1c27d, h: 0x3a1430 },
+  { s: 0xa0e85a, a: 0xdcf7b3, k: 0xf1c27d, h: 0x2a3a10 },
+  { s: 0xe2e8f0, a: 0xffffff, k: 0xf1c27d, h: 0x3a3f4a },
 ];
 
 let ws = null, myId = 0;
@@ -236,13 +238,21 @@ app.ticker.add(() => {
   world.x = -camX + sh; world.y = shy;
   farLayer.x = -camX * 0.3; nearLayer.x = -camX * 0.55;
 
-  // platforms (foreground)
+  // platforms: index 0 is the solid ground slab; the rest are thin pass-through
+  // ledges (you land on top, jump up through from below — no side wall to clip).
   gPlat.clear();
-  for (const [x0, x1, top] of stage.plats) {
-    gPlat.beginFill(0x2a3550).drawRoundedRect(x0, top, x1 - x0, stage.h - top + 80, 6).endFill();
-    gPlat.beginFill(0x3f5a8c).drawRect(x0, top, x1 - x0, 6).endFill();
-    gPlat.beginFill(0x4de1e6, 0.5).drawRect(x0, top, x1 - x0, 2).endFill();
-  }
+  stage.plats.forEach(([x0, x1, top], i) => {
+    if (i === 0) {
+      gPlat.beginFill(0x222c45).drawRect(x0, top, x1 - x0, stage.h - top + 80).endFill();
+      gPlat.beginFill(0x35502f).drawRect(x0, top, x1 - x0, 9).endFill();        // earth/grass
+      gPlat.beginFill(0x6ee27a, 0.7).drawRect(x0, top, x1 - x0, 2).endFill();   // grass edge
+    } else {
+      const h = 16;
+      gPlat.beginFill(0x000000, 0.22).drawRoundedRect(x0 + 5, top + 6, x1 - x0 - 10, h, 7).endFill(); // drop shadow
+      gPlat.beginFill(0x2a3550).drawRoundedRect(x0, top, x1 - x0, h, 7).endFill();
+      gPlat.beginFill(0x4de1e6, 0.8).drawRect(x0 + 4, top, x1 - x0 - 8, 2).endFill();                 // neon lip
+    }
+  });
 
   // fighters
   gFighters.clear();
