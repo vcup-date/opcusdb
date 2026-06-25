@@ -182,7 +182,7 @@ function addEmote(x, y, txt) {
 // ---- loop -----------------------------------------------------------------
 app.ticker.add(() => {
   const dt = app.ticker.deltaMS / 1000;
-  for (const v of chars.values()) {
+  for (const [id, v] of chars) {
     const k = Math.min(1, dt * 9), ox = v.dx, oy = v.dy;
     v.dx += (v.tx - v.dx) * k; v.dy += (v.ty - v.dy) * k;
     const vx = v.dx - ox, vy = v.dy - oy;
@@ -190,6 +190,14 @@ app.ticker.add(() => {
     if (moving && Math.abs(vx) > 0.05) v.face = vx < 0 ? -1 : 1; // face the way you travel
     const leanT = moving ? Math.max(-0.14, Math.min(0.14, vx * 0.05)) : 0;
     v.lean = (v.lean || 0) + (leanT - (v.lean || 0)) * Math.min(1, dt * 8); // ease a lean into the motion
+    // while speaking, turn to face the nearest neighbour and do a little bounce
+    const talking = bubbleL.getChildByName("b" + id) != null;
+    if (talking && !moving) {
+      let bx = null, bd = 1e9;
+      for (const ov of chars.values()) { if (ov === v) continue; const d = (ov.dx - v.dx) ** 2 + (ov.dy - v.dy) ** 2; if (d < bd) { bd = d; bx = ov.dx; } }
+      if (bx != null && Math.abs(bx - v.dx) > 4) v.face = bx < v.dx ? -1 : 1;
+      v.talk = (v.talk || 0) + dt * 9;
+    } else v.talk = 0;
     const p = v.view._p;
     v.view.position.set(v.dx, v.dy);
     // idle actions: when standing around, occasionally hop and puff an emote
@@ -209,9 +217,10 @@ app.ticker.add(() => {
         p.spr.scale.y = p.sc * (1 - Math.abs(s) * 0.05);  // squash
         p.shadow.scale.set(1 + Math.abs(s) * 0.12, 1);
       } else {
-        const lift = Math.max(0, v.hop) * 9;                                  // idle hop
+        const talkb = v.talk ? Math.abs(Math.sin(v.talk)) * 3 : 0;            // bounce while speaking
+        const lift = Math.max(0, v.hop) * 9 + talkb;
         const breathe = Math.sin(performance.now() / 700 + p.bob) * 0.02;     // gentle breathing
-        p.spr.y += (19 - lift - p.spr.y) * 0.3; p.spr.rotation *= 0.8; p.spr.scale.y = p.sc * (1 + breathe); p.shadow.scale.set(1, 1);
+        p.spr.y += (19 - lift - p.spr.y) * 0.3; p.spr.rotation *= 0.8; p.spr.scale.y = p.sc * (1 + breathe + (v.talk ? Math.sin(v.talk * 1.3) * 0.03 : 0)); p.shadow.scale.set(1, 1);
       }
       if (p.ring) p.ring.alpha = 0.5 + 0.4 * Math.sin(performance.now() / 300);
     } else {
