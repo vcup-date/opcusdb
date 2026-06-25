@@ -56,8 +56,9 @@ function buildScenery() {
 // ---- characters -----------------------------------------------------------
 let atlasBase = null; // generated sprite atlas (12 rows x 4 frames, 96x128)
 function makeChar(pal, isHuman, palIdx) {
-  // residents use the Qwen-generated animated sprite; the human "you" stays crafted (+ ring)
-  if (atlasBase && !isHuman && palIdx >= 0 && palIdx < 12) return makeSpriteChar(palIdx);
+  // everyone uses a generated sprite when the atlas is loaded; the human "you" is
+  // the traveler in row 12 with a gold ring. Crafted shapes are only a fallback.
+  if (atlasBase) return makeSpriteChar(isHuman ? 12 : (palIdx % 12), isHuman);
   const c = new PIXI.Container();
   const [shirt, hair, skin] = pal;
   const shadow = new PIXI.Graphics().beginFill(0x000000, 0.28).drawEllipse(0, 17, 11, 4.5).endFill(); c.addChild(shadow);
@@ -78,17 +79,19 @@ function makeChar(pal, isHuman, palIdx) {
   charL.addChild(c);
   return c;
 }
-function makeSpriteChar(row) {
+function makeSpriteChar(row, isHuman) {
   const c = new PIXI.Container();
   const shadow = new PIXI.Graphics().beginFill(0x000000, 0.30).drawEllipse(0, 16, 12, 4.5).endFill(); c.addChild(shadow);
-  // one clean frame, animated procedurally (bob + sway + squash) — reads as a real
+  let ring = null;
+  if (isHuman) { ring = new PIXI.Graphics().lineStyle(2.5, 0xffe07a, 0.9).drawEllipse(0, 16, 15, 6); c.addChild(ring); }
+  // one clean frame, animated procedurally (bob + sway + squash): reads as a real
   // walk and avoids the jitter of cycling four inconsistent generated frames
   const spr = new PIXI.Sprite(new PIXI.Texture(atlasBase, new PIXI.Rectangle(0, row * 128, 96, 128)));
   spr.anchor.set(0.5, 1); const sc = 50 / 128; spr.scale.set(sc); spr.position.set(0, 19);
   c.addChild(spr);
-  const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
+  const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: isHuman ? 0xffe07a : 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
   nm.anchor.set(0.5, 0); nm.position.set(0, -56); c.addChild(nm); // name above the head
-  c._p = { spr, nm, sc, isSprite: true, bob: Math.random() * 6, shadow };
+  c._p = { spr, nm, sc, isSprite: true, bob: Math.random() * 6, shadow, ring };
   charL.addChild(c);
   return c;
 }
@@ -167,6 +170,7 @@ app.ticker.add(() => {
       } else {
         p.spr.y += (19 - p.spr.y) * 0.25; p.spr.rotation *= 0.8; p.spr.scale.y = p.sc; p.shadow.scale.set(1, 1);
       }
+      if (p.ring) p.ring.alpha = 0.5 + 0.4 * Math.sin(performance.now() / 300);
     } else {
       p.body.scale.x = v.face;
       if (moving) { p.walk += dt * 12; p.legL.rotation = Math.sin(p.walk) * 0.6; p.legR.rotation = -Math.sin(p.walk) * 0.6; p.body.y = -Math.abs(Math.sin(p.walk)) * 1.5; }
