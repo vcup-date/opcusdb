@@ -825,44 +825,56 @@ fn bot_ai(m: &mut Match) {
             b.ai_t = 1.0 + (id % 5) as f32 * 0.3;
             b.ai_strafe = if (id % 2) == 0 { 1.0 } else { -1.0 };
         }
-        match target {
-            Some(&(_, tpos, _, _)) => {
-                if b.hp < 55.0 {
-                    // low HP: break off and run to the nearest health pack
-                    let pk = PACKS.iter().min_by(|a, c| {
-                        ((bpos.x - a.0).powi(2) + (bpos.z - a.1).powi(2))
-                            .total_cmp(&((bpos.x - c.0).powi(2) + (bpos.z - c.1).powi(2)))
-                    });
-                    if let Some(&(px, pz)) = pk {
-                        b.yaw = (-(px - bpos.x)).atan2(-(pz - bpos.z));
-                        b.pitch = 0.0;
-                        b.inf = true;
-                        b.inb = false;
-                        b.inl = false;
-                        b.inr = false;
-                        b.firing = false;
-                    }
-                } else {
-                    let to = tpos.sub(bpos);
-                    let dist = to.len().max(0.01);
-                    let horiz = (to.x * to.x + to.z * to.z).sqrt().max(0.01);
-                    b.yaw = (-to.x).atan2(-to.z);
-                    b.pitch = ((tpos.y + 1.0) - (bpos.y + EYE)).atan2(horiz); // aim at the chest
-                    b.inf = dist > 12.0;
-                    b.inb = dist < 6.0;
-                    b.inl = b.ai_strafe > 0.0;
-                    b.inr = b.ai_strafe < 0.0;
-                    b.inj = false;
-                    b.firing = dist < RANGE && !blocked(b.eye(), V3::new(tpos.x, tpos.y + 1.0, tpos.z));
-                }
-            }
-            None => {
+        b.inj = false;
+        if b.hp < 55.0 {
+            // low HP: break off and run to the nearest health pack
+            if let Some(&(px, pz)) = PACKS.iter().min_by(|a, c| {
+                ((bpos.x - a.0).powi(2) + (bpos.z - a.1).powi(2)).total_cmp(&((bpos.x - c.0).powi(2) + (bpos.z - c.1).powi(2)))
+            }) {
+                b.yaw = (-(px - bpos.x)).atan2(-(pz - bpos.z));
+                b.pitch = 0.0;
                 b.inf = true;
+                b.inb = false;
                 b.inl = false;
                 b.inr = false;
                 b.firing = false;
-                b.yaw += DT; // idle spin to wander
             }
+            continue;
+        }
+        // face the enemy and shoot if we have one; otherwise face the objective
+        match target {
+            Some(&(_, tpos, _, _)) => {
+                let to = tpos.sub(bpos);
+                let horiz = (to.x * to.x + to.z * to.z).sqrt().max(0.01);
+                b.yaw = (-to.x).atan2(-to.z);
+                b.pitch = ((tpos.y + 1.0) - (bpos.y + EYE)).atan2(horiz);
+                b.firing = to.len() < RANGE && !blocked(b.eye(), V3::new(tpos.x, tpos.y + 1.0, tpos.z));
+            }
+            None => {
+                b.yaw = (-(POINT.0 - bpos.x)).atan2(-(POINT.1 - bpos.z));
+                b.pitch = 0.0;
+                b.firing = false;
+            }
+        }
+        // objective movement: stream to the capture point; strafe once holding it
+        let on_point = ((bpos.x - POINT.0).powi(2) + (bpos.z - POINT.1).powi(2)).sqrt() < POINT_R * 0.85;
+        if on_point {
+            b.inf = false;
+            b.inb = false;
+            b.inl = b.ai_strafe > 0.0;
+            b.inr = b.ai_strafe < 0.0;
+        } else {
+            let (sy, cy) = (b.yaw.sin(), b.yaw.cos());
+            let (mut dx, mut dz) = (POINT.0 - bpos.x, POINT.1 - bpos.z);
+            let l = (dx * dx + dz * dz).sqrt().max(0.01);
+            dx /= l;
+            dz /= l;
+            let fa = dx * -sy + dz * -cy; // toward-point projected on facing-forward
+            let ra = dx * cy + dz * -sy;  // ...and on facing-right
+            b.inf = fa > 0.3;
+            b.inb = fa < -0.3;
+            b.inr = ra > 0.3;
+            b.inl = ra < -0.3;
         }
     }
 }
