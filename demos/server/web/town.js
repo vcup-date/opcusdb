@@ -238,8 +238,16 @@ app.ticker.add(() => {
   // animate emote puffs: rise and fade
   for (const e of [...fxL.children]) { e.y -= dt * 24; e.life -= dt; e.alpha = Math.max(0, Math.min(1, e.life * 1.6)); e.scale.set(1 + (1.2 - e.life) * 0.25); if (e.life <= 0) fxL.removeChild(e); }
   charL.children.sort((a, b) => a.zIndex - b.zIndex);
-  // bubbles follow their character
-  for (const b of bubbleL.children) { const v = chars.get(+b.name.slice(1)); if (v) b.position.set(v.dx - (b._w || 80) / 2, v.dy - 40 - (b._h || 24)); }
+  // bubbles follow their character, stacked upward so a group stays readable
+  const placed = [];
+  const bs = bubbleL.children.map(b => ({ b, v: chars.get(+b.name.slice(1)) })).filter(x => x.v).sort((a, z) => a.v.dy - z.v.dy);
+  for (const { b, v } of bs) {
+    const w = b._w || 80, h = b._h || 24;
+    const bx = v.dx - w / 2; let by = v.dy - 40 - h;
+    let n = 0;
+    while (n++ < 8 && placed.some(p => bx < p.x + p.w && bx + w > p.x && by < p.y + p.h && by + h > p.y)) by -= h + 4;
+    b.position.set(bx, by); placed.push({ x: bx, y: by, w, h });
+  }
   // day/night
   const [col, a] = skyTint(phase); night.tint = col; night.alpha = a;
   // lamp glow + fireflies fade in as it gets dark
