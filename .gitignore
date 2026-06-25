@@ -12,3 +12,6 @@ run-chat.sh
 
 # local leaderboard DB
 *.db
+
+# Claude Code local runtime
+.claude/
