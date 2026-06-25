@@ -18,8 +18,12 @@ const COST = [50, 110, 75], RANGE = [120, 135, 105];
 const TCOL = ["#6fb0ff", "#9a6bff", "#49d6ff"];
 const ECOL = ["#ff5d5d", "#ffd24a", "#b87bff"]; // normal, fast, tank
 
+let connected = false;
 function connect() {
   ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen = () => { connected = true; };
+  ws.onclose = () => { connected = false; const w = $("wave"); w.className = ""; w.textContent = "⟳ reconnecting…"; w.disabled = true; setTimeout(connect, 1000); }; // survive server restarts
+  ws.onerror = () => {};
   ws.onmessage = (e) => {
     for (const line of e.data.split("\n")) {
       if (!line) continue;
