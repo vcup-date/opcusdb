@@ -315,6 +315,13 @@ app.view.addEventListener("click", (e) => {
 $("say").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.value.trim()) { ws && ws.readyState === 1 && ws.send("say " + e.target.value.trim()); e.target.value = ""; }
 });
+// name who is within earshot so it is clear walking up to someone starts a chat
+setInterval(() => {
+  const me = chars.get(myId), say = $("say"); if (!started || !me || !say || document.activeElement === say) return;
+  const near = [];
+  for (const [id, v] of chars) { if (id === myId) continue; if ((v.dx - me.dx) ** 2 + (v.dy - me.dy) ** 2 < 92 * 92) near.push(nameOf(id)); }
+  say.placeholder = near.length ? ("talk to " + near.slice(0, 3).join(", ") + (near.length > 3 ? " and others nearby" : " nearby")) : "walk up to someone, then type to talk to them";
+}, 600);
 function afterAtlas(nick) {
   connect();
   const wait = setInterval(() => { if (ws && ws.readyState === 1) { if (nick) ws.send("name " + nick); clearInterval(wait); $("say").focus(); } }, 100);
