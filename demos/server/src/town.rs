@@ -22,7 +22,12 @@ use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::process::Command;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
+
+/// Number of model calls currently in flight, so the async upgrade threads cannot
+/// pile up curl subprocesses under load. Capped in `converse`.
+static INFLIGHT: AtomicUsize = AtomicUsize::new(0);
 use std::thread;
 use std::time::Duration;
 
@@ -378,22 +383,29 @@ fn converse(town: Arc<Mutex<Town>>) {
             c.bubble_t = 6.0;
             c.last_spoke = now;
         }
-        let town2 = town.clone();
-        let name2 = name.clone();
-        thread::spawn(move || {
-            if let Some(real) = ai_say(&system, &user) {
-                let mut t = town2.lock().unwrap();
-                let here = match t.chars.get(&speaker) {
-                    Some(c) if c.here >= 0 => c.here as usize,
-                    _ => return,
-                };
-                record_line(&mut t, here, &name2, &real); // only real replies enter the history
-                if let Some(c) = t.chars.get_mut(&speaker) {
-                    c.bubble = real;
-                    c.bubble_t = 6.0;
+        // fetch the real reply off the loop, but only if we are not already saturated
+        // with calls (keeps concurrent curl subprocesses bounded under load)
+        if INFLIGHT.load(Ordering::Relaxed) < 4 {
+            INFLIGHT.fetch_add(1, Ordering::Relaxed);
+            let town2 = town.clone();
+            let name2 = name.clone();
+            thread::spawn(move || {
+                let reply = ai_say(&system, &user);
+                INFLIGHT.fetch_sub(1, Ordering::Relaxed);
+                if let Some(real) = reply {
+                    let mut t = town2.lock().unwrap();
+                    let here = match t.chars.get(&speaker) {
+                        Some(c) if c.here >= 0 => c.here as usize,
+                        _ => return,
+                    };
+                    record_line(&mut t, here, &name2, &real); // only real replies enter the history
+                    if let Some(c) = t.chars.get_mut(&speaker) {
+                        c.bubble = real;
+                        c.bubble_t = 6.0;
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 }
 
