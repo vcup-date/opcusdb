@@ -369,26 +369,28 @@ fn converse(town: Arc<Mutex<Town>>) {
             if li < 0 {
                 continue;
             }
-            let li = li as usize;
             let now = t.time;
-            t.pending[li] = false;
-            {
-                let c = t.chars.get_mut(&speaker).unwrap();
-                c.bubble = stub.clone();
-                c.bubble_t = 6.0;
-                c.last_spoke = now;
-            }
-            record_line(&mut t, li, &name, &stub);
+            t.pending[li as usize] = false;
+            // the stub is shown as a bubble but NOT written to the transcript, so the
+            // model builds on the real conversation, not on filler
+            let c = t.chars.get_mut(&speaker).unwrap();
+            c.bubble = stub;
+            c.bubble_t = 6.0;
+            c.last_spoke = now;
         }
         let town2 = town.clone();
+        let name2 = name.clone();
         thread::spawn(move || {
             if let Some(real) = ai_say(&system, &user) {
                 let mut t = town2.lock().unwrap();
+                let here = match t.chars.get(&speaker) {
+                    Some(c) if c.here >= 0 => c.here as usize,
+                    _ => return,
+                };
+                record_line(&mut t, here, &name2, &real); // only real replies enter the history
                 if let Some(c) = t.chars.get_mut(&speaker) {
-                    if c.here >= 0 {
-                        c.bubble = real;
-                        c.bubble_t = 6.0;
-                    }
+                    c.bubble = real;
+                    c.bubble_t = 6.0;
                 }
             }
         });
