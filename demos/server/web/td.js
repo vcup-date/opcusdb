@@ -13,9 +13,10 @@ let base = [19, 10];
 const creeps = new Map();       // id -> {dx,dy,tx,ty,kind,hp,slow,fa,phase}
 let towers = [];                // {c,r,kind,aim,recoil,flash}
 let projs = [];                 // {x,y,kind}
-let gold = 0, lives = 0, wave = 0, maxWave = 12, state = 0;
+let gold = 0, lives = 0, wave = 0, maxWave = 12, state = 0, players = 1;
 let pick = 0, hover = null;
 let decor = [];                 // {x,y,type}
+const ROOM = new URLSearchParams(location.search).get("room");
 
 const COST = [50, 110, 75], RANGE = [120, 135, 105];
 // kind-specific creep look: [body, dark, radius, bobSpeed]
@@ -28,7 +29,7 @@ const CREEP = [
 // ---- networking (auto-reconnect) ------------------------------------------
 function setConn(ok) { const c = $("conn"); if (!c) return; c.textContent = ok ? "● online" : "● offline"; c.style.color = ok ? "#3ec46a" : "#ff6b6b"; }
 function connect() {
-  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws = new WebSocket(`ws://${location.host}/ws${ROOM ? "?room=" + encodeURIComponent(ROOM) : ""}`);
   ws.onopen = () => setConn(true);
   ws.onclose = () => { setConn(false); const w = $("wave"); w.className = ""; w.textContent = "⟳ reconnecting…"; w.disabled = true; setTimeout(connect, 1000); };
   ws.onerror = () => {};
@@ -62,6 +63,8 @@ function connect() {
         towers = next.map(n => { const o = towers.find(t => t.c === n.c && t.r === n.r); return Object.assign({ aim: -1.57, recoil: 0, flash: 0 }, o, n); });
       } else if (tag === "p") {
         projs = rest.split(";").filter(Boolean).map(s => { const a = s.split(","); return { x:+a[0], y:+a[1], kind:+a[2] }; });
+      } else if (tag === "n") {
+        players = +rest || 1; renderMp();
       }
     }
   };
@@ -72,9 +75,9 @@ function updateHud() {
   $("lives").innerHTML = lives + '<small>LIVES</small>';
   $("wavn").innerHTML = wave + '/' + maxWave + '<small>WAVE</small>';
   const wb = $("wave");
-  if (state === 0 && wave < maxWave) { wb.className = "ready"; wb.textContent = "▶ Start Wave " + (wave + 1); wb.disabled = false; }
-  else if (state === 1) { wb.className = ""; wb.textContent = "Wave " + wave + " in progress…"; wb.disabled = true; }
-  else { wb.className = ""; wb.textContent = "—"; wb.disabled = true; }
+  if (state < 2 && wave < maxWave) { wb.className = "ready"; wb.disabled = false; wb.textContent = (state === 1 ? "▶ Call Wave " : "▶ Start Wave ") + (wave + 1); }
+  else if (state === 1) { wb.className = ""; wb.disabled = true; wb.textContent = "Final wave…"; }
+  else { wb.className = ""; wb.disabled = true; wb.textContent = "—"; }
   $("over").style.display = (state >= 2) ? "flex" : "none";
   if (state >= 2) { $("otxt").textContent = state === 2 ? "VICTORY 🏆" : "DEFEAT"; $("otxt").style.color = state === 2 ? "#3ec46a" : "#ff5d5d"; }
   document.querySelectorAll(".tw").forEach(el => el.classList.toggle("poor", gold < COST[+el.dataset.k]));
@@ -244,5 +247,20 @@ addEventListener("keydown", (e) => {
   if (e.key >= "1" && e.key <= "3") { pick = +e.key - 1; document.querySelectorAll(".tw").forEach(x => x.classList.toggle("sel", +x.dataset.k === pick)); }
   if (e.key === " ") { e.preventDefault(); ws && ws.readyState === 1 && ws.send("wave"); }
 });
+
+// ---- multiplayer (rooms) --------------------------------------------------
+function renderMp() {
+  const el = $("mp"); if (!el) return;
+  if (ROOM) {
+    el.innerHTML = `👥 <b style="color:#e9eef8">Co-op room ${ROOM}</b><br>` +
+      `<span style="color:#3ec46a">${players} player${players === 1 ? "" : "s"} here</span> · ` +
+      `<a href="#" id="copylink" style="color:#5b9dff">copy invite link</a>`;
+    const cl = $("copylink"); if (cl) cl.onclick = (e) => { e.preventDefault(); navigator.clipboard && navigator.clipboard.writeText(location.href); cl.textContent = "link copied!"; };
+  } else {
+    el.innerHTML = `Playing solo. <button id="mkroom" style="margin-top:6px;font:inherit;font-weight:700;padding:7px 10px;border:1px solid #2a3550;border-radius:8px;background:#16203a;color:#cfe0ff;cursor:pointer">👥 Play with a friend</button>`;
+    const mk = $("mkroom"); if (mk) mk.onclick = () => { const code = Math.random().toString(36).slice(2, 8); location.search = "?room=" + code; };
+  }
+}
+renderMp();
 
 connect();

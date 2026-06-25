@@ -8,9 +8,10 @@
 //! Run: `cargo run -p opcusdb-server --bin opcusdb-td` then open http://localhost:9010
 
 use opcusdb_server::ws;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -123,7 +124,9 @@ fn new_game() -> Game {
 }
 
 fn start_wave(g: &mut Game) {
-    if g.state != 0 || g.wave >= MAX_WAVE {
+    // can start the next wave whenever the game is live and not all waves are out —
+    // including DURING a wave (call the next one early), so the button is never stuck.
+    if g.state >= 2 || g.wave >= MAX_WAVE {
         return;
     }
     g.wave += 1;
@@ -141,8 +144,10 @@ fn start_wave(g: &mut Game) {
         };
         q.push((kind, hp, speed, 5 + w));
     }
-    g.to_spawn = q;
-    g.spawn_cd = 0.3;
+    if g.to_spawn.is_empty() {
+        g.spawn_cd = 0.3;
+    }
+    g.to_spawn.extend(q);
     g.state = 1;
 }
 
@@ -326,16 +331,41 @@ fn snapshot(g: &Game) -> String {
     s
 }
 
+/// A room is one shared game plus a live client count.
+struct Room {
+    game: Arc<Mutex<Game>>,
+    clients: usize,
+}
+type Rooms = Arc<Mutex<HashMap<String, Room>>>;
+static PRIV: AtomicU64 = AtomicU64::new(1);
+
 fn main() {
+    let rooms: Rooms = Arc::new(Mutex::new(HashMap::new()));
     let listener = TcpListener::bind(("0.0.0.0", PORT)).expect("bind");
     println!("opcusdb Rampart (tower defense) on http://localhost:{PORT}");
-    // each connection gets its own private game — no shared state between players
     for stream in listener.incoming().flatten() {
-        thread::spawn(move || handle(stream));
+        let rooms = rooms.clone();
+        thread::spawn(move || handle(stream, rooms));
     }
 }
 
-fn handle(mut stream: TcpStream) {
+/// Pull a `?room=CODE` out of the request line, sanitised.
+fn room_code(head: &str) -> Option<String> {
+    let path = head.lines().next()?.split_whitespace().nth(1)?;
+    let code: String = path
+        .split_once("room=")?
+        .1
+        .split('&')
+        .next()
+        .unwrap_or("")
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .take(12)
+        .collect();
+    (!code.is_empty()).then_some(code)
+}
+
+fn handle(mut stream: TcpStream, rooms: Rooms) {
     let Some(head) = read_http_head(&mut stream) else { return };
     if !head.to_ascii_lowercase().contains("upgrade: websocket") {
         serve_file(&mut stream, &head);
@@ -349,19 +379,56 @@ fn handle(mut stream: TcpStream) {
     if stream.write_all(resp.as_bytes()).is_err() {
         return;
     }
-    // a fresh game for this player (wave 0, empty board)
-    let game = Arc::new(Mutex::new(new_game()));
-    // writer thread: advance the sim and broadcast it (map once, then state each tick)
+
+    // shared room if a ?room=CODE was given, otherwise a fresh private room
+    let rkey = match room_code(&head) {
+        Some(c) => format!("r_{c}"),
+        None => format!("_p{}", PRIV.fetch_add(1, Ordering::Relaxed)),
+    };
+    let game = {
+        let mut rs = rooms.lock().unwrap();
+        let new_room = !rs.contains_key(&rkey);
+        let room = rs.entry(rkey.clone()).or_insert_with(|| Room { game: Arc::new(Mutex::new(new_game())), clients: 0 });
+        room.clients += 1;
+        let game = room.game.clone();
+        if new_room {
+            // one ticker per room; it removes the room (and stops) once empty
+            let rooms = rooms.clone();
+            let key = rkey.clone();
+            thread::spawn(move || loop {
+                thread::sleep(Duration::from_millis(TICK_MS));
+                let g = {
+                    let mut rs = rooms.lock().unwrap();
+                    match rs.get(&key) {
+                        Some(r) if r.clients > 0 => Some(r.game.clone()),
+                        _ => {
+                            rs.remove(&key);
+                            None
+                        }
+                    }
+                };
+                match g {
+                    Some(g) => tick(&mut g.lock().unwrap()),
+                    None => break,
+                }
+            });
+        }
+        game
+    };
+
+    // writer thread: map once, then state + player-count each tick (does NOT tick the sim)
     let mut writer = stream.try_clone().expect("clone");
     let wgame = game.clone();
+    let wrooms = rooms.clone();
+    let wkey = rkey.clone();
     let writer_handle = thread::spawn(move || {
         if ws::write_text(&mut writer, &map_line(&wgame.lock().unwrap())).is_err() {
             return;
         }
         loop {
             thread::sleep(Duration::from_millis(TICK_MS));
-            tick(&mut wgame.lock().unwrap());
-            let snap = snapshot(&wgame.lock().unwrap());
+            let players = wrooms.lock().unwrap().get(&wkey).map_or(1, |r| r.clients);
+            let snap = format!("{}n\t{players}\n", snapshot(&wgame.lock().unwrap()));
             if ws::write_text(&mut writer, &snap).is_err() {
                 return;
             }
@@ -387,6 +454,10 @@ fn handle(mut stream: TcpStream) {
             Ok(Some(ws::Msg::Other)) => {}
             _ => break,
         }
+    }
+    // leave the room
+    if let Some(r) = rooms.lock().unwrap().get_mut(&rkey) {
+        r.clients = r.clients.saturating_sub(1);
     }
     drop(stream);
     let _ = writer_handle.join();

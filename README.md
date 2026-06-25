@@ -259,9 +259,11 @@ cargo run -p opcusdb-server --bin opcusdb-board   # open http://localhost:9009
 escalating waves** and you spend gold to build towers — **Arrow** (fast, single
 target), **Cannon** (slow, splash), **Frost** (slows) — that auto-target and fire.
 Kill creeps for gold; let one reach your keep and you lose a life; clear every wave
-to win. The Rust server is the **authoritative** simulation (fixed tick, broadcast
-over WebSocket); **each browser gets its own private game**, so you always start
-clean at wave 0. All mouse, Mac-friendly: click a tower, click a tile.
+to win — and you can **call the next wave early** at any time. The Rust server is
+the **authoritative** simulation (fixed tick, broadcast over WebSocket). Solo play
+is a **private game**; click **Play with a friend** to spin up a **co-op room** and
+share the `?room=CODE` link so others join the *same* board. All mouse, Mac-friendly:
+click a tower, click a tile.
 
 <div align="center">
 <img src="assets/td.png" width="820"/><br/>
@@ -321,7 +323,7 @@ cargo run -p opcusdb-server --bin opcusdb-td   # open http://localhost:9010
 | **3D MMO town (Godot)** | `server` (wow) + `demos/godot-wow` | `cargo run -p opcusdb-server --bin opcusdb-wow` → :9007, open the Godot project | NPC quests, wolves, chat; multiplayer 3D town in **Godot 4** |
 | **FPS (Overwatch-like)** | `server` (ow) + Three.js | `cargo run -p opcusdb-server --bin opcusdb-ow` → :9008 | Tracer hero, lag-compensated hitscan, Blink/Recall, AI bots |
 | **collaborative whiteboard (CRDT)** | `server` (board) | `cargo run -p opcusdb-server --bin opcusdb-board` → :9009 | vector editor (shapes/text/notes, resize handles); OrSet CRDT; offline-merge; presence |
-| **tower defense** | `server` (td) | `cargo run -p opcusdb-server --bin opcusdb-td` → :9010 | waves of creeps on a path; build Arrow/Cannon/Frost towers; gold/lives; click-only (Mac-friendly) |
+| **tower defense** | `server` (td) | `cargo run -p opcusdb-server --bin opcusdb-td` → :9010 | path waves, Arrow/Cannon/Frost towers, call-wave-early, co-op rooms (?room=CODE); click-only |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start
