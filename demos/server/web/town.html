@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <title>opcusdb Hearth · a living AI town</title>
+    <style>
+      :root{ color-scheme:dark; --panel:#13182400; --ink:#eef2fb; --mut:#9fb0cc; }
+      *{ box-sizing:border-box; } html,body{ margin:0; height:100%; overflow:hidden; background:#0a0d14; color:var(--ink);
+        font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; user-select:none; }
+      #stage{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+      #app{ box-shadow:0 24px 80px #000a; border-radius:14px; overflow:hidden; }
+      #top{ position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:5; display:flex; gap:16px; align-items:center;
+        background:#0e1422cc; backdrop-filter:blur(6px); border:1px solid #26314a; border-radius:14px; padding:8px 16px; }
+      #top .logo{ font-weight:800; } #top .logo b{ color:#ffcf6b; }
+      #clock{ font-variant-numeric:tabular-nums; color:#cfe0ff; font-weight:700; }
+      #phase{ color:var(--mut); font-size:12px; }
+      #roster{ position:fixed; top:14px; right:14px; width:210px; max-height:78vh; overflow:auto; z-index:5;
+        background:#0e1422d8; backdrop-filter:blur(6px); border:1px solid #26314a; border-radius:14px; padding:10px 12px; }
+      #roster h4{ margin:2px 0 8px; font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--mut); }
+      .rrow{ display:flex; align-items:center; gap:8px; padding:4px 0; font-size:12.5px; }
+      .rrow .dot{ width:12px; height:12px; border-radius:50%; flex:none; box-shadow:0 0 0 2px #0006; }
+      .rrow .nm{ font-weight:700; } .rrow .ac{ color:var(--mut); margin-left:auto; font-size:11px; }
+      #chatbar{ position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:5; width:min(560px,80vw); display:flex; gap:8px; }
+      #say{ flex:1; font:inherit; padding:11px 14px; border-radius:12px; border:1px solid #2b3956; background:#0e1422e8; color:var(--ink); outline:none; }
+      #say:focus{ border-color:#5b9dff; }
+      #hint{ position:fixed; bottom:58px; left:50%; transform:translateX(-50%); z-index:5; color:var(--mut); font-size:12px; background:#0a0d14aa; padding:3px 10px; border-radius:8px; }
+      #join{ position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:#06080fe8; }
+      .panel{ text-align:center; background:#0e1422; border:1px solid #26314a; border-radius:18px; padding:30px 34px; width:430px; }
+      .panel h1{ margin:0 0 6px; font-size:26px; } .panel h1 b{ color:#ffcf6b; } .panel p{ color:var(--mut); }
+      .panel input{ width:100%; font:inherit; text-align:center; padding:11px; margin:14px 0 8px; border-radius:10px; border:1px solid #2b3956; background:#121a2c; color:var(--ink); }
+      .panel button{ width:100%; font:inherit; font-weight:800; padding:12px; border:0; border-radius:12px; cursor:pointer; background:linear-gradient(180deg,#ffcf6b,#f0a93a); color:#241600; }
+    </style>
+  </head>
+  <body>
+    <div id="stage"><div id="app"></div></div>
+    <div id="top">
+      <div class="logo"><b>opcusdb</b> Hearth</div>
+      <div id="clock">06:00</div><div id="phase">morning</div>
+    </div>
+    <div id="roster"><h4>Townsfolk</h4><div id="rlist"></div></div>
+    <div id="hint">click to walk · type to talk to whoever's nearby · open another tab to wander together</div>
+    <div id="chatbar"><input id="say" maxlength="160" placeholder="say something to the people near you…" /></div>
+    <div id="join"><div class="panel">
+      <h1><b>opcusdb</b> Hearth</h1>
+      <p>A living town of AI residents (deepseek). You're not watching — you <b>walk in</b>. Stand near someone and they'll talk to you. Open more tabs to share the town with friends.</p>
+      <input id="nick" maxlength="14" placeholder="your name" />
+      <button id="go">walk into town ▶</button>
+    </div></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js"></script>
+    <script src="/town.js"></script>
+  </body>
+</html>

@@ -56,3 +56,7 @@ path = "src/board.rs"
 [[bin]]
 name = "opcusdb-td"
 path = "src/td.rs"
+
+[[bin]]
+name = "opcusdb-town"
+path = "src/town.rs"
