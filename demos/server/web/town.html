@@ -31,6 +31,9 @@
       .panel h1{ margin:0 0 6px; font-size:26px; } .panel h1 b{ color:#ffcf6b; } .panel p{ color:var(--mut); }
       .panel input{ width:100%; font:inherit; text-align:center; padding:11px; margin:14px 0 8px; border-radius:10px; border:1px solid #2b3956; background:#121a2c; color:var(--ink); }
       .panel button{ width:100%; font:inherit; font-weight:800; padding:12px; border:0; border-radius:12px; cursor:pointer; background:linear-gradient(180deg,#ffcf6b,#f0a93a); color:#241600; }
+      #chatter{ position:fixed; left:14px; bottom:14px; width:286px; max-height:34vh; overflow:hidden; z-index:5; background:#0e1422cc; backdrop-filter:blur(6px); border:1px solid #26314a; border-radius:12px; padding:8px 11px; font-size:12px; color:#cdd8ee; }
+      #chatter .cl{ margin:3px 0; line-height:1.35; } #chatter .cl b{ color:#ffcf6b; }
+      #chatter:empty{ display:none; }
     </style>
   </head>
   <body>
@@ -41,6 +44,7 @@
       <button id="mute" title="ambient music" style="background:none;border:0;color:#cfe0ff;font-size:16px;cursor:pointer;padding:0 2px">🔈</button>
     </div>
     <div id="roster"><h4>Townsfolk</h4><div id="rlist"></div></div>
+    <div id="chatter"></div>
     <div id="hint">click to walk · type to talk to whoever's nearby · open another tab to wander together</div>
     <div id="chatbar"><input id="say" maxlength="160" placeholder="say something to the people near you…" /></div>
     <div id="join"><div class="panel">

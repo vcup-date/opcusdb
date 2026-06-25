@@ -139,7 +139,7 @@ function connect() {
         renderRoster();
       } else if (tag === "b") {
         const active = new Set();
-        for (const s of rest.split(";")) { if (!s) continue; const j = s.indexOf("|"); const id = +s.slice(0, j), text = s.slice(j + 1); active.add(id); setBubble(id, text); }
+        for (const s of rest.split(";")) { if (!s) continue; const j = s.indexOf("|"); const id = +s.slice(0, j), text = s.slice(j + 1); active.add(id); setBubble(id, text); logChatter(id, text); }
         for (const ch of [...bubbleL.children]) { const id = +ch.name.slice(1); if (!active.has(id)) bubbleL.removeChild(ch); }
       }
     }
@@ -276,6 +276,19 @@ function renderRoster() {
   }).join("");
 }
 const esc = (s) => (s || "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+// live town chatter feed: log each new line a resident says so you can follow the
+// town's conversations without standing next to everyone.
+const lastLine = new Map();
+let chatter = [];
+function nameOf(id) { const r = roster.find(r => r.id === id); return r ? r.name : "someone"; }
+function logChatter(id, text) {
+  if (!text || lastLine.get(id) === text) return;
+  lastLine.set(id, text);
+  chatter.push({ name: nameOf(id), text });
+  if (chatter.length > 9) chatter.shift();
+  const el = $("chatter"); if (el) el.innerHTML = chatter.map(c => `<div class="cl"><b>${esc(c.name)}</b> ${esc(c.text)}</div>`).join("");
+}
 
 // ---- input ----------------------------------------------------------------
 app.view.addEventListener("click", (e) => {
