@@ -358,21 +358,33 @@ fn converse(town: Arc<Mutex<Town>>) {
             let hf = here >= 0 && t.pending[here as usize];
             (t.chars[&speaker].name.clone(), t.chars[&speaker].persona, hf)
         };
-        // if the model is rate-limited, a visitor still gets a real greeting, not filler
-        let line = ai_say(&system, &user).unwrap_or_else(|| if human_facing { canned_greet(&name) } else { canned(&name, persona) });
+        // Show an instant line so the scene is never silent while the (often slow or
+        // rate-limited) model is queried, then upgrade it to the real reply if it
+        // arrives. This keeps the town chatty even when the free tier is sluggish.
+        let stub = if human_facing { canned_greet(&name) } else { canned(&name, persona) };
+        {
+            let mut t = town.lock().unwrap();
+            let li = t.chars[&speaker].here;
+            if li >= 0 {
+                let now = t.time;
+                t.pending[li as usize] = false;
+                let c = t.chars.get_mut(&speaker).unwrap();
+                c.bubble = stub.clone();
+                c.bubble_t = 6.0;
+                c.last_spoke = now;
+            }
+        }
+        let line = ai_say(&system, &user).unwrap_or_else(|| stub.clone());
         let mut t = town.lock().unwrap();
         let li = t.chars[&speaker].here;
         if li < 0 {
             continue;
         }
         let li = li as usize;
-        let now = t.time;
-        t.pending[li] = false;
         {
             let c = t.chars.get_mut(&speaker).unwrap();
             c.bubble = line.clone();
             c.bubble_t = 6.0;
-            c.last_spoke = now;
         }
         record_line(&mut t, li, &name, &line);
     }
@@ -390,7 +402,7 @@ fn ai_say(system: &str, user: &str) -> Option<String> {
     );
     let out = Command::new("curl")
         .args([
-            "-s", "-m", "20", "--connect-timeout", "8", "-X", "POST", "https://openrouter.ai/api/v1/chat/completions",
+            "-s", "-m", "9", "--connect-timeout", "5", "-X", "POST", "https://openrouter.ai/api/v1/chat/completions",
             "-H", &format!("Authorization: Bearer {key}"), "-H", "Content-Type: application/json", "-d", &body,
         ])
         .output()
