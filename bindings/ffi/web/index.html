@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>opcusdb · swarm (WASM + PixiJS)</title>
+    <style>
+      body { margin: 0; background: #0b0e14; color: #c8d3f5; font: 14px/1.5 system-ui, sans-serif; }
+      header { padding: 12px 16px; }
+      #stage { display: block; margin: 0 auto; box-shadow: 0 0 0 1px #1c2333; }
+      code { color: #7dcfff; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>opcusdb swarm</strong> — the Rust ECS core compiled to WASM, rendered with PixiJS.
+      <span id="stats"></span>
+    </header>
+    <!-- PixiJS v7 UMD (global PIXI). -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
+    <script type="module" src="./main.mjs"></script>
+  </body>
+</html>

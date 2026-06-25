@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>opcusdb · netcode (prediction vs authority)</title>
+    <style>
+      body { margin: 0; background: #04060c; color: #9fb3d9;
+        font: 13px/1.6 system-ui, sans-serif; }
+      header { padding: 12px 16px; }
+      strong { color: #7dcfff; }
+      .legend b { font-weight: 600; }
+      .cyan { color: #3aa0ff; } .orange { color: #ffa057; }
+      #controls { display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+        margin: 8px 0; }
+      label { display: inline-flex; gap: 6px; align-items: center; }
+      input[type=range] { width: 130px; }
+      #stage { display: block; margin: 0 auto; box-shadow: 0 0 0 1px #16213a; }
+      #stats { color: #cdd9f5; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>opcusdb netcode</strong> — move your mouse over the field. The
+      <span class="legend cyan"><b>●</b> bright dot</span> is the client's
+      <b>predicted</b> position (instant, lag-free); the
+      <span class="legend orange"><b>●</b> ghost</span> is the
+      <b>authoritative server</b>, lagging behind and catching up via reconciliation.
+      <div id="controls">
+        <label>up latency <input id="up" type="range" min="0" max="30" value="8" /><span id="upv">8</span></label>
+        <label>down latency <input id="down" type="range" min="0" max="30" value="8" /><span id="downv">8</span></label>
+        <label>snapshot loss % <input id="drop" type="range" min="0" max="80" value="0" /><span id="dropv">0</span></label>
+      </div>
+      <div id="stats"></div>
+    </header>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
+    <script type="module" src="./netcode.mjs"></script>
+  </body>
+</html>

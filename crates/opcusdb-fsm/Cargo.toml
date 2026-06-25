@@ -1,0 +1,12 @@
+[package]
+name = "opcusdb-fsm"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "opcusdb hierarchical + parallel statechart engine (SCXML-class)"
+
+[lints]
+workspace = true
+
+[dependencies]

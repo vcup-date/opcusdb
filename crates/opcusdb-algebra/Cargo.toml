@@ -1,0 +1,12 @@
+[package]
+name = "opcusdb-algebra"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "opcusdb functional sync algebra: reduce/fold + CRDT lattices"
+
+[lints]
+workspace = true
+
+[dependencies]

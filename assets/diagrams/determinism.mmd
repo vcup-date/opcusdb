@@ -1,0 +1,13 @@
+flowchart LR
+    subgraph toolkit["Determinism toolkit"]
+        a["fixed execution order"]
+        b["ascending-iteration queries"]
+        c["seeded PRNG"]
+        d["fixed-point Fx (no float drift)"]
+    end
+    toolkit ==> pure["pure sim: state = f(inputs)"]
+    pure --> replay["byte-exact replay"]
+    pure --> rollback["rollback / prediction / reconcile"]
+    pure --> lockstep["lockstep (inputs-only sync)"]
+    pure --> wal["WAL crash recovery"]
+    pure --> gate["native == WASM (byte-identical)"]

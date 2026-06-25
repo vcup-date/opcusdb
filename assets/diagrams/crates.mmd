@@ -1,0 +1,16 @@
+flowchart LR
+    core["opcusdb-core"]
+    algebra["opcusdb-algebra"]
+    time["opcusdb-time"]
+    fsm["opcusdb-fsm"]
+    ecs["opcusdb-ecs"]
+    ffi["bindings/ffi"]
+    demos1["demos/*"]
+    ecs --> core
+    ecs --> time
+    ffi --> core
+    demos1 --> core
+    demos1 --> time
+    demos1 --> algebra
+    demos1 --> fsm
+    demos1 --> ecs

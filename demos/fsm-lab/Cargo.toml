@@ -1,0 +1,23 @@
+[package]
+name = "opcusdb-fsm-lab"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "opcusdb fsm-lab demo: a deterministic, replayable traffic intersection statechart"
+
+[lints]
+workspace = true
+
+[lib]
+name = "opcusdb_fsm_lab"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fsm-lab"
+path = "src/main.rs"
+
+[dependencies]
+opcusdb-core = { path = "../../crates/opcusdb-core" }
+opcusdb-fsm = { path = "../../crates/opcusdb-fsm" }
+opcusdb-time = { path = "../../crates/opcusdb-time" }

@@ -1,0 +1,29 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/opcusdb-core",
+    "crates/opcusdb-algebra",
+    "crates/opcusdb-time",
+    "crates/opcusdb-fsm",
+    "crates/opcusdb-ecs",
+    "demos/fsm-lab",
+    "demos/chatroom",
+    "demos/load-test",
+    "demos/particles",
+    "demos/netcode",
+    "demos/lockstep",
+    "bindings/ffi",
+]
+
+[workspace.package]
+edition = "2021"
+version = "0.0.1"
+license = "MIT"
+rust-version = "1.80"
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

@@ -1,0 +1,21 @@
+[package]
+name = "opcusdb-chatroom"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "opcusdb chatroom demo: a serverless CRDT mesh with human + AI peers"
+
+[lints]
+workspace = true
+
+[lib]
+name = "opcusdb_chatroom"
+path = "src/lib.rs"
+
+[[bin]]
+name = "chatroom"
+path = "src/main.rs"
+
+[dependencies]
+opcusdb-algebra = { path = "../../crates/opcusdb-algebra" }

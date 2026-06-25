@@ -1,0 +1,22 @@
+[package]
+name = "opcusdb-netcode"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "opcusdb netcode demo: WoW-style cooldowns + lag handling via Timeline rollback"
+
+[lints]
+workspace = true
+
+[lib]
+name = "opcusdb_netcode"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cooldown"
+path = "src/main.rs"
+
+[dependencies]
+opcusdb-core = { path = "../../crates/opcusdb-core" }
+opcusdb-time = { path = "../../crates/opcusdb-time" }

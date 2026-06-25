@@ -1,0 +1,22 @@
+[package]
+name = "opcusdb-lockstep"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "opcusdb lockstep MOBA demo: deterministic inputs-only sim (fixed-point) that stays in perfect sync across peers"
+
+[lints]
+workspace = true
+
+[lib]
+name = "opcusdb_lockstep"
+path = "src/lib.rs"
+
+[[bin]]
+name = "lockstep"
+path = "src/main.rs"
+
+[dependencies]
+opcusdb-core = { path = "../../crates/opcusdb-core" }
+opcusdb-time = { path = "../../crates/opcusdb-time" }

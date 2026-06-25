@@ -1,0 +1,156 @@
+<div align="center">
+
+# opcusdb
+
+**A deterministic, time-aware, policy-driven replicated ECS** for real-time
+multiplayer games and AI-agent worlds — written in Rust, dependency-free.
+
+![license](https://img.shields.io/badge/license-MIT-blue)
+![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
+![tests](https://img.shields.io/badge/tests-142%20passing-success)
+![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
+![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
+
+*One deterministic core → a persistent MMO, a 60 Hz room shooter, a lockstep MOBA,
+embedded state machines, and a serverless human + AI chatroom.*
+
+</div>
+
+---
+
+## What it is
+
+opcusdb is a small engine that treats a game/world as a **pure, deterministic
+function of its inputs**. That single property is the spine of everything:
+
+- **Replay** — re-run the input log and get byte-identical state.
+- **Rollback** — rewind and re-simulate (client prediction, server reconciliation, lag compensation).
+- **Lockstep** — every peer stays in sync exchanging only inputs.
+- **Durability** — recover after a crash by replaying the log (no serializer needed).
+
+The thesis (see [`DESIGN.md`](DESIGN.md)): **consistency / authority / topology is a
+_policy_ layered over a common core, not a hard-coded choice** — so the *same*
+engine serves wildly different netcode models. Every one of the five below is
+demonstrated with running, tested code.
+
+```
+142 tests · 28 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+native + WASM proven byte-identical (cross-target determinism gate passes)
+```
+
+## See it run
+
+The simulations run entirely in the **Rust core compiled to WASM**; the browser
+only renders. (Screenshots are captured headlessly from the live demos.)
+
+| | |
+|:--:|:--:|
+| <img src="assets/swarm-aoi.png" width="420"/> | <img src="assets/netcode-lag.png" width="420"/> |
+| **Spatial AOI** — 4,000 entities; the **interest set** near the cursor is highlighted (MMO interest management) | **Netcode under lag** — the blue **predicted** client leads; the orange **authoritative server** ghost trails and reconciles |
+| <img src="assets/netcode-sync.png" width="420"/> | <img src="assets/particles-attract.png" width="420"/> |
+| **Same netcode, low latency** — client & server overlap (one loop, different lag) | **Particle galaxy (attract)** — fixed-point physics in the ECS, drawn with PixiJS |
+
+<div align="center"><img src="assets/particles-repel.png" width="420"/><br/><b>Particle galaxy (repel)</b> — hold the mouse to blast particles outward</div>
+
+## Architecture
+
+<div align="center"><img src="assets/diagram-arch.png" width="560" alt="architecture"/></div>
+
+### Crate dependency graph
+
+<div align="center"><img src="assets/diagram-crates.png" width="720" alt="crate dependency graph"/></div>
+
+## How determinism powers everything
+
+<div align="center"><img src="assets/diagram-determinism.png" width="760" alt="determinism enables replay, rollback, lockstep, WAL, cross-target"/></div>
+
+### Mechanism: client prediction & server reconciliation
+
+<div align="center"><img src="assets/diagram-sequence.png" width="720" alt="client prediction and server reconciliation sequence"/></div>
+
+> Diagram sources live in [`assets/diagrams/`](assets/diagrams/) (`*.mmd`).
+
+## Crate map
+
+| Crate | What it is |
+|---|---|
+| `opcusdb-core` | ECS: generational entities, sparse-set storage, **snapshot-able `World`**, deterministic queries (joins / exclusion / pick-smallest / `for_each_mut`), command buffer, **system scheduler**, **spatial grid (AOI)**, change-detection + memoized **`select`**, **PRNG**, **fixed-point `Fx`** |
+| `opcusdb-algebra` | the functional sync algebra — `reduce` · `merge` · `select` · `query` · `fold` — and CRDTs (`LwwReg`, `GCounter`, `PNCounter`, `OrSet`, `Rga`) with law-checkers |
+| `opcusdb-time` | the **Timeline**: fixed-timestep loop, keyframe ring, **rollback / scrub / replay**, deterministic timers |
+| `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
+| `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
+| `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
+
+## The five game types → demos
+
+| DESIGN target | Demo | Run | Shows |
+|---|---|---|---|
+| **WoW** (persistent + AOI) | `load-test` | `cargo run --release -p opcusdb-loadtest --bin loadtest` | many-entity ECS swarm + spatial-grid **interest sets** |
+| **Overwatch** (room, predict/reconcile) | `netcode` | `cargo run -p opcusdb-netcode --bin cooldown` | **prediction / reconciliation** over a simulated laggy link + **WAL recovery** |
+| **LoL** (lockstep) | `lockstep` | `cargo run -p opcusdb-lockstep --bin lockstep` | deterministic **inputs-only** fixed-point sim; peers stay byte-identical |
+| **state machines** | `fsm-lab` | `cargo run -p opcusdb-fsm-lab --bin fsm-lab` | traffic intersection + quest graph; `run`/`record`/`replay`/`scrub` |
+| **human + AI chat** | `chatroom` | `cargo run -p opcusdb-chatroom --bin chatroom` | serverless **CRDT mesh** (`Rga` + `OrSet`), offline-merge, **AI agent as a peer** |
+| *(bonus)* | `particles` | browser | interactive fixed-point particle galaxy |
+
+## Quick start
+
+```sh
+# build + test everything
+cargo test --workspace
+
+# browser demos (WASM core + PixiJS): swarm/AOI, particle galaxy, netcode
+bash bindings/ffi/build.sh
+cd bindings/ffi/web && python3 -m http.server 8080   # open http://localhost:8080
+
+# prove the native and WASM builds are byte-identical
+bash bindings/ffi/determinism_gate.sh
+# native (Rust): 0xcd8d89b3520fccd1
+# wasm   (node): 0xcd8d89b3520fccd1
+# DETERMINISM GATE: PASS (byte-identical across targets)
+```
+
+Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bindings/ffi/native/).
+
+## Test cases — what's actually proven
+
+`cargo test --workspace` → **142 passing across 28 binaries**, clippy-clean. A selection:
+
+| Property proven | Test |
+|---|---|
+| `World` snapshot is a deep, independent copy | `core … snapshot_is_a_deep_independent_copy` |
+| Joins pick the smallest store and stay correct | `core … pick_smallest_store_join_is_correct` |
+| Independent systems commute (parallel-safe) | `core … reordering_independent_systems_is_equivalent` |
+| Spatial AOI matches brute force (1000s of entities) | `core … aabb_matches_brute_force` / `radius_matches_brute_force` |
+| `select` recomputes only when a dependency changes | `core … memoizes_until_a_dependency_changes` |
+| Fixed-point bits are identical everywhere | `core … deterministic_known_bits` |
+| CRDTs obey the lattice laws + converge | `algebra … *_laws_*`, `orset_add_wins_and_converges`, `concurrent_inserts_converge` |
+| Rollback + re-sim reproduces state exactly | `time … rollback_then_resim_reproduces` |
+| Seek works after keyframe eviction | `time … seek_to_zero_works_after_keyframe_eviction` |
+| Parallel statechart regions transition together | `fsm … parallel_regions_transition_simultaneously` |
+| ECS sim gets rollback/replay (3000 entities) | `load-test … swarm_replay_and_rollback_at_scale` |
+| Intersection never shows crossing greens | `fsm-lab … safety_invariant_never_two_go_axes` |
+| Chat peers converge after an offline partition | `chatroom … all_peers_converge_after_partition` |
+| Late input rolled back == on-time | `netcode … reconcile_late_input_matches_on_time` |
+| Converges despite 60% snapshot loss | `netcode … converges_despite_snapshot_loss` |
+| State survives a crash (WAL replay) | `netcode … recovers_exact_state_after_crash` |
+| Two lockstep peers stay byte-identical | `lockstep … two_peers_stay_in_perfect_sync` |
+
+## Status
+
+The core and the five-game-types thesis are **complete and verified**. Intentionally
+left as explicit, dependency-affecting choices: a real network transport
+(QUIC / WebRTC, dropping into the simulated `Link` seam), multi-threaded
+scheduler-stage execution (needs encapsulated `unsafe` World-splitting), and an
+on-disk serializer (`rkyv`/`bitcode`). The workspace is `unsafe`-free outside the
+FFI shim and has **zero external dependencies**.
+
+## Documentation
+
+- [`DESIGN.md`](DESIGN.md) — vision/architecture (the policy model, Timeline, sync algebra, topologies).
+- [`CORE_SPEC.md`](CORE_SPEC.md) — buildable engineering spec for the core.
+- [`PLAN.md`](PLAN.md) — original research survey (open-source real-time DBs) + language rationale.
+- Each demo has its own README.
+
+## License
+
+[MIT](LICENSE).

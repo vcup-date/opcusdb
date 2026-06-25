@@ -1,0 +1,13 @@
+[package]
+name = "opcusdb-particles"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "opcusdb interactive particle field: fixed-point attractor/swirl sim on the ECS"
+
+[lints]
+workspace = true
+
+[dependencies]
+opcusdb-core = { path = "../../crates/opcusdb-core" }

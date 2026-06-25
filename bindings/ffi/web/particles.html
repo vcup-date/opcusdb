@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>opcusdb · particle galaxy (WASM + PixiJS)</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #04060c; color: #9fb3d9;
+        font: 13px/1.5 system-ui, sans-serif; overflow: hidden; }
+      header { position: fixed; top: 0; left: 0; right: 0; padding: 10px 14px;
+        pointer-events: none; text-shadow: 0 1px 3px #000; z-index: 2; }
+      strong { color: #7dcfff; }
+      #stage { display: block; }
+      kbd { background:#13203a; border-radius:4px; padding:1px 6px; color:#bcd; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>opcusdb particle galaxy</strong> — physics in the Rust/WASM ECS core, rendered by PixiJS.
+      Move the mouse to <strong>attract</strong>, hold <kbd>mouse</kbd> to <strong>repel</strong>.
+      <span id="stats"></span>
+    </header>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
+    <script type="module" src="./particles.mjs"></script>
+  </body>
+</html>

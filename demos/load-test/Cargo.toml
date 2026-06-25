@@ -1,0 +1,25 @@
+[package]
+name = "opcusdb-loadtest"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "opcusdb load test: many-entity swarm exercising the ECS World at scale"
+
+[lints]
+workspace = true
+
+[lib]
+name = "opcusdb_loadtest"
+path = "src/lib.rs"
+
+[[bin]]
+name = "loadtest"
+path = "src/main.rs"
+
+[dependencies]
+opcusdb-core = { path = "../../crates/opcusdb-core" }
+
+[dev-dependencies]
+opcusdb-ecs = { path = "../../crates/opcusdb-ecs" }
+opcusdb-time = { path = "../../crates/opcusdb-time" }

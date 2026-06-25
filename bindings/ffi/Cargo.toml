@@ -1,0 +1,15 @@
+[package]
+name = "opcusdb-ffi"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "opcusdb FFI binding: a minimal C-ABI (WASM + native) over the sims"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+opcusdb-loadtest = { path = "../../demos/load-test" }
+opcusdb-particles = { path = "../../demos/particles" }
+opcusdb-netcode = { path = "../../demos/netcode" }

@@ -1,0 +1,12 @@
+sequenceDiagram
+    participant C as Client (predicts)
+    participant L as Link (lossy/laggy)
+    participant S as Server (authoritative)
+    C->>C: apply input instantly (predicted, lag-free)
+    C->>L: send input seq N
+    L-->>S: deliver after up-latency
+    S->>S: apply, advance authoritative state
+    S->>L: snapshot (state + ack=N)
+    L-->>C: deliver after down-latency (may drop)
+    C->>C: set confirmed, replay un-acked inputs
+    Note over C,S: under latency the client leads, both converge

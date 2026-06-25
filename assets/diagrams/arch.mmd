@@ -1,0 +1,26 @@
+flowchart TB
+    subgraph bind["Bindings — one C-ABI, two targets"]
+        wasm["WASM → browser (PixiJS / Three)"]
+        native["native cdylib → Unity / Godot / C"]
+    end
+    subgraph demos["Demos (the five game types + extras)"]
+        d1["fsm-lab"]:::d
+        d2["netcode"]:::d
+        d3["lockstep"]:::d
+        d4["chatroom"]:::d
+        d5["load-test"]:::d
+        d6["particles"]:::d
+    end
+    subgraph engine["Engine"]
+        time["opcusdb-time — Timeline: rollback · replay · timers"]
+        fsm["opcusdb-fsm — hierarchical + parallel statecharts"]
+        algebra["opcusdb-algebra — reduce · merge · query · fold + CRDTs"]
+        ecs["opcusdb-ecs — World &lt;-&gt; Timeline bridge"]
+        core["opcusdb-core — ECS · queries · scheduler · spatial AOI · select · RNG · Fx"]
+    end
+    bind --> demos --> engine
+    time --> core
+    fsm --> core
+    ecs --> core & time
+    algebra -.-> core
+    classDef d fill:#16304f,stroke:#3a4a66,color:#cdd9f5;
