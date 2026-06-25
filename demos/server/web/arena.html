@@ -39,12 +39,12 @@
   <body>
     <header>
       <h1><span class="accent">opcusdb</span> Arena</h1>
-      <div>multiplayer snake · room <span id="roomTag">—</span> · <span id="hud">—</span></div>
+      <div>multiplayer snake · room <span id="roomTag">, </span> · <span id="hud">, </span></div>
     </header>
     <div id="wrap">
       <div style="position:relative">
         <canvas id="stage"></canvas>
-        <div id="over"><span>you crashed — respawning…</span></div>
+        <div id="over"><span>you crashed, respawning…</span></div>
       </div>
       <div id="side">
         <div class="card"><h3>this room</h3><div id="players"></div></div>
@@ -56,7 +56,7 @@
     <div id="lobby">
       <div class="panel">
         <h1><span class="accent">opcusdb</span> Arena</h1>
-        <p class="hint">real-time multiplayer snake — authoritative Rust server</p>
+        <p class="hint">real-time multiplayer snake, authoritative Rust server</p>
         <input id="nick" placeholder="nickname" maxlength="14" />
         <input id="code" placeholder="room code (e.g. ABCD)" maxlength="6" />
         <button class="primary" id="join">join room</button>

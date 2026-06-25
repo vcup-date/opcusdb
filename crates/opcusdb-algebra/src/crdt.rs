@@ -5,7 +5,7 @@
 //! back the `Crdt<…>` component policy and the serverless P2P mesh (DESIGN §6).
 //!
 //! Implemented this iteration: [`LwwReg`], [`GCounter`], [`PNCounter`], [`OrSet`].
-//! Deferred: `Rga` (ordered sequence for text/chat) — see TODO.
+//! Deferred: `Rga` (ordered sequence for text/chat), see TODO.
 
 use crate::lattice::Lattice;
 use std::collections::{BTreeMap, BTreeSet};
@@ -18,7 +18,7 @@ pub type PeerId = u64;
 // ---------------------------------------------------------------------------
 
 /// A register holding a single value; concurrent writes resolve by the highest
-/// `(timestamp, peer)` — a total order, so the result is deterministic. The peer
+/// `(timestamp, peer)`, a total order, so the result is deterministic. The peer
 /// id breaks equal-timestamp ties, guaranteeing convergence.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LwwReg<T> {
@@ -34,7 +34,7 @@ impl<T: Clone> LwwReg<T> {
     }
 
     /// Record a local write. Applies only if `(ts, peer)` beats the current stamp,
-    /// so out-of-order or stale writes are ignored — keeping LWW well-defined.
+    /// so out-of-order or stale writes are ignored, keeping LWW well-defined.
     pub fn set(&mut self, value: T, ts: u64, peer: PeerId) {
         if (ts, peer) > (self.ts, self.peer) {
             self.value = value;
@@ -143,7 +143,7 @@ pub type Tag = (PeerId, u64);
 
 /// An add-wins observed-remove set. Each add attaches a unique [`Tag`]; a remove
 /// tombstones the tags it has observed for that element. An element is present
-/// iff it has at least one add-tag that is not tombstoned — so a concurrent
+/// iff it has at least one add-tag that is not tombstoned, so a concurrent
 /// add-vs-remove resolves in favor of the add. Both `adds` and `tombstones`
 /// only grow, so merge is a union: commutative, associative, idempotent.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -286,7 +286,7 @@ mod tests {
         assert_lattice_laws(&[OrSet::new(), a.clone(), b.clone()]);
 
         let m = join(a, &b);
-        // 1 present; 2 present (a's tag survived b's remove — add-wins); 3 present.
+        // 1 present; 2 present (a's tag survived b's remove, add-wins); 3 present.
         let mut members: Vec<_> = m.iter().copied().collect();
         members.sort_unstable();
         assert_eq!(members, vec![1, 2, 3]);

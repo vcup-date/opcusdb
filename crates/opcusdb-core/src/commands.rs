@@ -1,7 +1,7 @@
 //! Deferred structural changes (the command buffer).
 //!
 //! See `CORE_SPEC.md` §8. Systems must not spawn/despawn/insert/remove while they
-//! iterate — that would invalidate the storage they are walking. Instead they
+//! iterate, that would invalidate the storage they are walking. Instead they
 //! record intentions into a [`Commands`] buffer, which the caller (later: the
 //! scheduler) [`apply`](Commands::apply)s at a deterministic barrier after the
 //! system runs.
@@ -114,7 +114,7 @@ pub struct EntityCommands<'a> {
 impl EntityCommands<'_> {
     /// Attach `value` to the entity that will be spawned. Chainable. The spawn is
     /// enqueued on drop, so discarding the return value (ending the chain) is the
-    /// intended way to finish — hence no `#[must_use]`.
+    /// intended way to finish, hence no `#[must_use]`.
     pub fn insert<T: Clone + 'static>(mut self, value: T) -> Self {
         self.inserters.push(Box::new(move |w, id| {
             w.insert(id, value);

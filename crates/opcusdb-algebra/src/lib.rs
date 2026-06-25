@@ -1,12 +1,12 @@
-//! `opcusdb-algebra` — the functional sync algebra (`CORE_SPEC.md` §7).
+//! `opcusdb-algebra`, the functional sync algebra (`CORE_SPEC.md` §7).
 //!
 //! Pure, `World`-independent primitives the rest of opcusdb builds on:
-//! - [`reduce`]: `Reduce` + `fold` — event-sourced state transitions (a
+//! - [`reduce`]: `Reduce` + `fold`, event-sourced state transitions (a
 //!   statechart transition is a `Reduce`; the Timeline rebuilds state via `fold`).
 //! - [`lattice`]: the `Lattice` trait + law-checkers for conflict-free merge.
 //! - [`crdt`]: convergent replicated data types (`LwwReg`, `GCounter`,
 //!   `PNCounter`, `OrSet`) backing the `Crdt<…>` component policy and P2P mesh.
-//! - [`rga`]: a Replicated Growable Array — the ordered-sequence CRDT for
+//! - [`rga`]: a Replicated Growable Array, the ordered-sequence CRDT for
 //!   text/chat (the chatroom substrate).
 //!
 //! The fifth primitive, `select` (a memoized derived view), is `World`-coupled and

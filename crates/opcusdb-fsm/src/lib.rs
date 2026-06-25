@@ -1,4 +1,4 @@
-//! `opcusdb-fsm` — hierarchical + parallel statechart engine (`CORE_SPEC.md` §11).
+//! `opcusdb-fsm`, hierarchical + parallel statechart engine (`CORE_SPEC.md` §11).
 //!
 //! See [`statechart`] for the model. This is the engine behind `fsm-lab`; it is
 //! also what MMO gameplay states and chat moderation reuse. The engine is pure

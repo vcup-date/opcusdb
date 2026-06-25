@@ -1,5 +1,5 @@
 //! Run an ECS [`World`] as a [`Timeline`](opcusdb_time::Timeline)-driven
-//! simulation — so ECS games get rollback, scrubbing, and replay for free
+//! simulation, so ECS games get rollback, scrubbing, and replay for free
 //! (`CORE_SPEC.md` §9), exactly like the hand-written sims.
 //!
 //! The trick is keeping state and logic separate so the *state* can be cloned:
@@ -69,7 +69,7 @@ impl<G: EcsLogic> Default for EcsWorld<G> {
 impl<G: EcsLogic> Clone for EcsWorld<G> {
     fn clone(&self) -> Self {
         Self {
-            world: self.world.clone(), // deep copy — the snapshot
+            world: self.world.clone(), // deep copy, the snapshot
             _logic: PhantomData,
         }
     }

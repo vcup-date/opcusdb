@@ -5,7 +5,7 @@
 // The simulation runs in the Rust core via P/Invoke; Godot only draws the
 // positions it reads from the library buffer each frame.
 //
-// (GDScript cannot P/Invoke directly — for a pure-GDScript binding wrap this same
+// (GDScript cannot P/Invoke directly, for a pure-GDScript binding wrap this same
 // C-ABI in a GDExtension. The C-ABI is ready for that; this C# path is simplest.)
 
 using Godot;

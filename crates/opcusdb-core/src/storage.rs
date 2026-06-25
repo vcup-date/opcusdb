@@ -5,7 +5,7 @@
 //! stable across churn. It stores one component type for many entities.
 //!
 //! Note: the dense order is *insertion/swap-remove* order, not entity order.
-//! Deterministic sim iterates entities in ascending index — that ordered view is
+//! Deterministic sim iterates entities in ascending index, that ordered view is
 //! the query layer's job (a later module), not this storage's.
 
 use crate::entity::EntityId;
@@ -155,7 +155,7 @@ impl<T> SparseSet<T> {
 
     /// Iterate `(entity_index, &value)` in dense order. The generation is not
     /// returned here; pair with the owning `World` when a full `EntityId` is
-    /// needed. Order is unspecified (dense order) — sort by index for determinism.
+    /// needed. Order is unspecified (dense order), sort by index for determinism.
     pub fn iter(&self) -> impl Iterator<Item = (u32, &T)> {
         self.dense.iter().copied().zip(self.data.iter())
     }
@@ -224,7 +224,7 @@ mod tests {
         // `Entities`); the `World` is responsible for removing a despawned
         // entity's components. What the set *does* guarantee is that once a slot
         // is reused by an insert with the new generation, the old id stops
-        // resolving — protecting against a forgotten cleanup aliasing fresh data.
+        // resolving, protecting against a forgotten cleanup aliasing fresh data.
         let mut e = Entities::new();
         let a = e.spawn();
         let mut s: SparseSet<&str> = SparseSet::new();

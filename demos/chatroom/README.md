@@ -1,6 +1,6 @@
 # chatroom
 
-A **serverless, CRDT-mesh chat** with human + AI peers — the P2P / agent track
+A **serverless, CRDT-mesh chat** with human + AI peers, the P2P / agent track
 from `DESIGN.md` §6/§7/§9, with no network layer yet (peers gossip in-process by
 merging CRDT state).
 
@@ -12,7 +12,7 @@ merging CRDT state).
   Both are lattices, so `ChatState` merges conflict-free.
 - **Offline partition + heal.** The scenario splits the peers into `{alice, ai}`
   and `{bob}`; each side talks independently, then the partition heals and a final
-  gossip makes **every replica converge to the identical transcript** — proven by
+  gossip makes **every replica converge to the identical transcript**, proven by
   a test that asserts all peers are byte-equal afterwards.
 - **AI agent as a peer.** The `ai` participant is just another peer: it
   **perceives** the message log and **acts** by appending (`agent_reply`). It is a
@@ -46,9 +46,9 @@ all replicas converged after the offline partition: yes
 cargo test -p opcusdb-chatroom
 ```
 
-- `all_peers_converge_after_partition` — every replica is identical after heal.
-- `merge_is_order_independent` — gossip converges regardless of order.
-- `agent_replies_to_questions_only` — the AI peer's perceive→act behavior.
+- `all_peers_converge_after_partition`, every replica is identical after heal.
+- `merge_is_order_independent`, gossip converges regardless of order.
+- `agent_replies_to_questions_only`, the AI peer's perceive→act behavior.
 - `presence_reflects_all_joins` / `scenario_is_deterministic`.
 
 ## Next (see repo `TODO.md`)

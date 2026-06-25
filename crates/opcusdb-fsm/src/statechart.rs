@@ -1,18 +1,18 @@
 //! Hierarchical + parallel statechart engine (`CORE_SPEC.md` §11).
 //!
 //! An SCXML-class statechart: states form a tree of **compound** (one active
-//! child), **parallel** (all children active — orthogonal regions), and **leaf**
+//! child), **parallel** (all children active, orthogonal regions), and **leaf**
 //! nodes. Events drive transitions with **run-to-completion** semantics, where
 //! the active **configuration** is the set of currently-active states.
 //!
 //! Two-part design so machine state stays snapshot-friendly:
 //! - [`StateChart`] is the immutable definition (holds the guard/action closures);
 //!   shared, never cloned.
-//! - [`MachineState`] is `{ config, ctx }` — `Clone` when `Ctx: Clone`, so the
+//! - [`MachineState`] is `{ config, ctx }`, `Clone` when `Ctx: Clone`, so the
 //!   Timeline (§9) can snapshot/rollback a running machine.
 //!
 //! A transition *is* a `reduce` over the context; a guard *is* a pure predicate;
-//! the machine's history *is* a `fold` of its events — so replay/rollback is free.
+//! the machine's history *is* a `fold` of its events, so replay/rollback is free.
 //!
 //! Implemented: compound/parallel/leaf, LCA-based exit/entry, child-over-ancestor
 //! priority with document-order tie-break, non-conflicting parallel transitions,

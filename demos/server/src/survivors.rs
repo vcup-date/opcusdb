@@ -1,10 +1,10 @@
-//! opcusdb Boomborn — a co-op multiplayer **survivor** (Vampire-Survivors-style
+//! opcusdb Boomborn, a co-op multiplayer **survivor** (Vampire-Survivors-style
 //! "bullet heaven") where you play a **Bomberman**: you only move, your **bombs
 //! auto-fire**, and you mow down hordes of **vampires**.
 //!
 //! Everyone who opens the page auto-joins the shared field. Move with WASD/arrows;
 //! your weapons fire automatically (lob bombs, a Bomberman cross-blast, homing
-//! rockets, a nova pulse). Killed vampires drop **XP gems** — collect them to
+//! rockets, a nova pulse). Killed vampires drop **XP gems**, collect them to
 //! level up and stack/upgrade weapons. Survive the escalating waves.
 //!
 //! The Rust server owns the whole simulation (hundreds of enemies, projectiles,
@@ -218,7 +218,7 @@ fn main() {
         });
     }
     let listener = TcpListener::bind(("0.0.0.0", PORT)).expect("bind");
-    println!("opcusdb Boomborn on http://localhost:{PORT}  — survive the vampire horde (WASD/arrows)");
+    println!("opcusdb Boomborn on http://localhost:{PORT} , survive the vampire horde (WASD/arrows)");
     for stream in listener.incoming().flatten() {
         let arena = arena.clone();
         thread::spawn(move || handle(stream, arena));

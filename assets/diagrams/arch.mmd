@@ -1,5 +1,5 @@
 flowchart TB
-    subgraph bind["Bindings — one C-ABI, two targets"]
+    subgraph bind["Bindings, one C-ABI, two targets"]
         wasm["WASM → browser (PixiJS / Three)"]
         native["native cdylib → Unity / Godot / C"]
     end
@@ -12,11 +12,11 @@ flowchart TB
         d6["particles"]:::d
     end
     subgraph engine["Engine"]
-        time["opcusdb-time — Timeline: rollback · replay · timers"]
-        fsm["opcusdb-fsm — hierarchical + parallel statecharts"]
-        algebra["opcusdb-algebra — reduce · merge · query · fold + CRDTs"]
-        ecs["opcusdb-ecs — World &lt;-&gt; Timeline bridge"]
-        core["opcusdb-core — ECS · queries · scheduler · spatial AOI · select · RNG · Fx"]
+        time["opcusdb-time, Timeline: rollback · replay · timers"]
+        fsm["opcusdb-fsm, hierarchical + parallel statecharts"]
+        algebra["opcusdb-algebra, reduce · merge · query · fold + CRDTs"]
+        ecs["opcusdb-ecs, World &lt;-&gt; Timeline bridge"]
+        core["opcusdb-core, ECS · queries · scheduler · spatial AOI · select · RNG · Fx"]
     end
     bind --> demos --> engine
     time --> core

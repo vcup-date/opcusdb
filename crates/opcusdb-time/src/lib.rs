@@ -1,4 +1,4 @@
-//! `opcusdb-time` — the Timeline (`CORE_SPEC.md` §9–§10).
+//! `opcusdb-time`, the Timeline (`CORE_SPEC.md` §9–§10).
 //!
 //! - [`tick`]: discrete simulation time ([`Tick`]).
 //! - [`timer`]: deterministic [`Timers`] (min-heap, `due(now)`).

@@ -2,8 +2,7 @@
 //!
 //! Lockstep netcode: every peer runs the **same deterministic simulation** and
 //! exchanges only **inputs** (tiny bandwidth), never state. Apply the same inputs
-//! at the same tick on every peer and they stay in perfect, byte-identical sync —
-//! that is the whole model, and it requires determinism, which is why the physics
+//! at the same tick on every peer and they stay in perfect, byte-identical sync, //! that is the whole model, and it requires determinism, which is why the physics
 //! uses fixed-point [`Fx`] (no platform-divergent floats) and the entity order is
 //! fixed. With the [`Timeline`](opcusdb_time::Timeline) it also gets rollback for
 //! late/predicted inputs (GGPO-style).
@@ -59,7 +58,7 @@ impl Match {
         let mut units = Vec::new();
         for p in 0..players {
             for u in 0..per_player {
-                // Spread players along Y, units along X — fully deterministic.
+                // Spread players along Y, units along X, fully deterministic.
                 let x = Fx::from_int(10 + u as i32 * 5);
                 let y = Fx::from_int(10 + p as i32 * 20);
                 units.push(Unit {
@@ -80,7 +79,7 @@ impl Match {
         self.units.iter().map(|u| (u.owner, u.x.floor_int(), u.y.floor_int()))
     }
 
-    /// A checksum of the full state — equal iff two peers are in sync.
+    /// A checksum of the full state, equal iff two peers are in sync.
     pub fn checksum(&self) -> u64 {
         let mut h: u64 = 0xcbf2_9ce4_8422_2325;
         let mut mix = |v: i64| {

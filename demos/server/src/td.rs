@@ -1,4 +1,4 @@
-//! opcusdb Rampart — a **tower defense**. Creeps march along a winding path in
+//! opcusdb Rampart, a **tower defense**. Creeps march along a winding path in
 //! escalating waves; you spend gold to build towers (arrow / cannon / frost) that
 //! auto-target and fire. Let a creep reach your keep and you lose a life; survive
 //! every wave to win. The Rust server is the authoritative simulation (fixed tick,
@@ -21,7 +21,7 @@ const COLS: i32 = 20;
 const ROWS: i32 = 12;
 const TILE: f32 = 48.0;
 const TICK_MS: u64 = 33; // sim ~30 Hz
-const SNAP_MS: u64 = 66; // broadcast ~15 Hz (client interpolates) — gentler on Safari's WebSocket
+const SNAP_MS: u64 = 66; // broadcast ~15 Hz (client interpolates), gentler on Safari's WebSocket
 const DT: f32 = 0.033;
 const MAX_WAVE: i32 = 12;
 
@@ -125,8 +125,7 @@ fn new_game() -> Game {
 }
 
 fn start_wave(g: &mut Game) {
-    // can start the next wave whenever the game is live and not all waves are out —
-    // including DURING a wave (call the next one early), so the button is never stuck.
+    // can start the next wave whenever the game is live and not all waves are out,     // including DURING a wave (call the next one early), so the button is never stuck.
     if g.state >= 2 || g.wave >= MAX_WAVE {
         return;
     }
@@ -380,7 +379,7 @@ fn handle(mut stream: TcpStream, rooms: Rooms) {
     if stream.write_all(resp.as_bytes()).is_err() {
         return;
     }
-    let _ = stream.set_nodelay(true); // no Nagle batching — commands/snapshots go out immediately
+    let _ = stream.set_nodelay(true); // no Nagle batching, commands/snapshots go out immediately
 
     // shared room if a ?room=CODE was given, otherwise a fresh private room
     let rkey = match room_code(&head) {

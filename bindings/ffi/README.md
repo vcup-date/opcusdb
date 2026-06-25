@@ -1,6 +1,6 @@
 # opcusdb-ffi
 
-The opcusdb ECS core compiled to **WebAssembly** for browser clients — the
+The opcusdb ECS core compiled to **WebAssembly** for browser clients, the
 foundation of the web/PixiJS (and later Three.js) demos (`DESIGN.md` §3, §8).
 
 Deliberately **no `wasm-bindgen` dependency**: the binding is a minimal hand-written
@@ -34,7 +34,7 @@ VERIFY OK
 
 ## Cross-target determinism gate
 
-The same deterministic core runs on native *and* WASM — and produces **identical
+The same deterministic core runs on native *and* WASM, and produces **identical
 bytes**. The gate proves it (CORE_SPEC acceptance: "byte-identical across platforms"):
 
 ```sh
@@ -58,9 +58,9 @@ cd bindings/ffi/web && python3 -m http.server 8080
 # open http://localhost:8080
 ```
 
-- `index.html` — swarm with cursor-following AOI interest set.
-- `particles.html` — interactive particle galaxy.
-- `netcode.html` — client prediction vs authoritative server with lag sliders.
+- `index.html`, swarm with cursor-following AOI interest set.
+- `particles.html`, interactive particle galaxy.
+- `netcode.html`, client prediction vs authoritative server with lag sliders.
 
 Each runs its simulation entirely in the Rust core compiled to WASM; JS only renders.
 

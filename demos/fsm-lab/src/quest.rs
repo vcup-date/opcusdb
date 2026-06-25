@@ -1,4 +1,4 @@
-//! Scene B — a quest statechart (`CORE_SPEC.md` §12).
+//! Scene B, a quest statechart (`CORE_SPEC.md` §12).
 //!
 //! Demonstrates the statechart features the intersection doesn't stress:
 //! - **deep hierarchy**: `quest > active > {collecting, escorting}`;

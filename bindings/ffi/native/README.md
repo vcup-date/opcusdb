@@ -24,7 +24,7 @@ after drain: predicted_x=560 server_x=560 pending=0
 NATIVE VERIFY OK
 ```
 
-(Note the numbers match the WASM build — one deterministic core, two FFI targets.)
+(Note the numbers match the WASM build, one deterministic core, two FFI targets.)
 
 ## Unity
 
@@ -48,4 +48,4 @@ NATIVE VERIFY OK
 - **Verified, runnable:** the native cdylib and its C-ABI (`verify.c` above), i.e.
   the exact functions Unity/Godot call.
 - **Provided as glue (not auto-run, no engine in CI):** the Unity/Godot C#
-  scripts — standard `[DllImport]` over the verified ABI.
+  scripts, standard `[DllImport]` over the verified ABI.

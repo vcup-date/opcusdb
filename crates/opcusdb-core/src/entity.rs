@@ -74,7 +74,7 @@ impl Entities {
         } else {
             let index = self.generations.len() as u32;
             // Generations start at 1 so that a zeroed `EntityId` (index 0, gen 0)
-            // is never a live entity — useful as a niche/"null" sentinel.
+            // is never a live entity, useful as a niche/"null" sentinel.
             self.generations.push(1);
             EntityId { index, gen: 1 }
         }

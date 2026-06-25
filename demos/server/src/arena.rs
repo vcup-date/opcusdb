@@ -1,4 +1,4 @@
-//! opcusdb Arena — a real-time multiplayer **Snake** game.
+//! opcusdb Arena, a real-time multiplayer **Snake** game.
 //!
 //! Players create/join a **room** by code, steer with the arrow keys, eat food to
 //! grow and score, and die on collisions (then auto-respawn). The server is
@@ -9,7 +9,7 @@
 //! DB file** (`leaderboard.db`, gitignored), loaded on boot and saved on change.
 //!
 //! Run: `cargo run -p opcusdb-server --bin opcusdb-arena` then open
-//! http://localhost:9003 — create a room, share the code, race your friends.
+//! http://localhost:9003, create a room, share the code, race your friends.
 
 use opcusdb_core::Rng;
 use opcusdb_server::ws;
@@ -22,7 +22,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const PORT: u16 = 9003;
 const GRID: i32 = 32;
-const TICK_MS: u64 = 130; // ~7.7 ticks/sec — classic snake feel
+const TICK_MS: u64 = 130; // ~7.7 ticks/sec, classic snake feel
 const FOOD_PER_ROOM: usize = 4;
 const RESPAWN_TICKS: u64 = 12; // ~1.5s
 const LB_PATH: &str = "leaderboard.db";
@@ -87,7 +87,7 @@ fn main() {
     }
 
     let listener = TcpListener::bind(("0.0.0.0", PORT)).expect("bind");
-    println!("opcusdb Arena (snake) on http://localhost:{PORT}  — create/join a room and play");
+    println!("opcusdb Arena (snake) on http://localhost:{PORT} , create/join a room and play");
     for stream in listener.incoming().flatten() {
         let arena = arena.clone();
         thread::spawn(move || handle(stream, arena));

@@ -1,9 +1,9 @@
-//! opcusdb Co-Board — a collaborative whiteboard built on the engine's **CRDT**.
+//! opcusdb Co-Board, a collaborative whiteboard built on the engine's **CRDT**.
 //!
 //! Many people draw on one shared canvas; the document is an **`OrSet`**
 //! (add-wins observed-remove set) of strokes from `opcusdb-algebra`. Because adds
 //! and removes commute and are idempotent, you can **keep drawing offline** and
-//! your strokes **merge cleanly on reconnect** — no conflicts, no lost work. Live
+//! your strokes **merge cleanly on reconnect**, no conflicts, no lost work. Live
 //! presence cursors show where everyone is.
 //!
 //! Run: `cargo run -p opcusdb-server --bin opcusdb-board` then open
@@ -126,7 +126,7 @@ fn handle(mut stream: TcpStream, board: Arc<Mutex<Board>>) {
             }
             if cs.need_full {
                 cs.need_full = false;
-                // full state as upserts (merge into the client's local set — no clear,
+                // full state as upserts (merge into the client's local set, no clear,
                 // so a reconnecting client keeps its offline strokes too)
                 for sid in b.ids.iter() {
                     if let Some(p) = b.content.get(sid) {
@@ -262,7 +262,7 @@ mod tests {
     #[test]
     fn concurrent_adds_all_survive_and_erase_removes_one() {
         let mut b = Board::new();
-        // two peers draw "at the same time" — both must survive (add-wins CRDT)
+        // two peers draw "at the same time", both must survive (add-wins CRDT)
         apply_draw(&mut b, "1:1", "#f00 3 0,0;1,1");
         apply_draw(&mut b, "2:1", "#00f 3 2,2;3,3");
         assert_eq!(b.ids.len(), 2, "concurrent strokes from different peers both present");

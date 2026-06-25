@@ -3,7 +3,7 @@
 //!
 //! State is treated as a fold over an input log: `state(t) = step^t(initial,
 //! log)`. Because [`Sim::step`] is deterministic, the Timeline can rebuild any
-//! tick from a keyframe + the log — which is the single mechanism behind
+//! tick from a keyframe + the log, which is the single mechanism behind
 //! rollback (netcode), the `fsm-lab` time scrubber, and byte-identical replay.
 //!
 //! The input log is the source of truth and is always retained, so full-history
@@ -12,7 +12,7 @@
 //! seeks; the initial state is kept separately as a baseline for older seeks.
 //!
 //! Generic over the state type so it does not depend on `World` serialization
-//! (that wiring comes once `World` is snapshot-able — CORE_SPEC §14 Q1).
+//! (that wiring comes once `World` is snapshot-able, CORE_SPEC §14 Q1).
 
 use crate::tick::Tick;
 use std::collections::VecDeque;
@@ -30,7 +30,7 @@ pub trait Sim: Clone {
 
 /// A rollback-capable timeline over a [`Sim`].
 pub struct Timeline<S: Sim> {
-    /// The state at tick 0 — the always-available seek baseline.
+    /// The state at tick 0, the always-available seek baseline.
     initial: S,
     /// The live state, at tick [`Self::tick`].
     state: S,
@@ -92,8 +92,7 @@ impl<S: Sim> Timeline<S> {
     }
 
     /// Step one tick forward, applying `inputs`. If the timeline is currently
-    /// seeked into the past (tick < log length), the future is first truncated —
-    /// i.e. this branches history (rollback-then-resimulate).
+    /// seeked into the past (tick < log length), the future is first truncated,     /// i.e. this branches history (rollback-then-resimulate).
     pub fn advance(&mut self, inputs: Vec<S::Input>) {
         let t = self.tick;
         // Branch: drop any recorded future beyond the current tick.
@@ -118,7 +117,7 @@ impl<S: Sim> Timeline<S> {
 
     /// Restore the live state to `target` (a tick in `0..=len`). Returns `false`
     /// if `target` is out of range. Uses the nearest keyframe `<= target` (or the
-    /// initial baseline) and replays the log forward — works backward or forward.
+    /// initial baseline) and replays the log forward, works backward or forward.
     pub fn seek(&mut self, target: u64) -> bool {
         if target > self.log.len() as u64 {
             return false;

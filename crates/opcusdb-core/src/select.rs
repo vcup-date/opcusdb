@@ -1,4 +1,4 @@
-//! `select` — memoized **derived views** over the World (`DESIGN.md` §4,
+//! `select`, memoized **derived views** over the World (`DESIGN.md` §4,
 //! `CORE_SPEC.md` §7). The last of the five sync primitives (`reduce`, `merge`,
 //! `select`, `query`, `fold`).
 //!
@@ -6,7 +6,7 @@
 //! it, recomputing only when one of its declared component **dependencies**
 //! actually changes (tracked by [`World::component_version`]). This is how derived
 //! state (a computed stat, an aggregate, a spatial summary) stays correct without
-//! manual invalidation — and the same change-detection underpins reactive
+//! manual invalidation, and the same change-detection underpins reactive
 //! subscriptions ("a subscription is a query that streams its delta").
 //!
 //! ```ignore

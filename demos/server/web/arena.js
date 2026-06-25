@@ -82,7 +82,7 @@ app.ticker.add(() => {
   }
   $("over").style.display = meDead ? "flex" : "none";
   const me = snakes.find(s => s.id === myId);
-  $("hud").textContent = me ? `your score: ${me.score}` : "—";
+  $("hud").textContent = me ? `your score: ${me.score}` : ", ";
 });
 
 function renderSidebar() {
@@ -95,7 +95,7 @@ function renderSidebar() {
     ps.appendChild(d);
   });
   const lb = $("leaderboard");
-  lb.innerHTML = leaderboard.length ? "" : '<div style="color:#6b7a99">no scores yet — be the first!</div>';
+  lb.innerHTML = leaderboard.length ? "" : '<div style="color:#6b7a99">no scores yet, be the first!</div>';
   leaderboard.forEach(([n, s], i) => {
     const d = document.createElement("div");
     d.className = "row";

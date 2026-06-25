@@ -1,9 +1,9 @@
-//! `loadtest` CLI — run the swarm and report throughput.
+//! `loadtest` CLI, run the swarm and report throughput.
 //!
 //! Usage: `loadtest [--entities N] [--ticks T] [--seed S]`
 //! (defaults: 100000 entities, 100 ticks, seed 1)
 //!
-//! Note: `std::time::Instant` is used only to *measure* the harness — the
+//! Note: `std::time::Instant` is used only to *measure* the harness, the
 //! simulation itself uses no wall-clock (determinism contract §2).
 
 use opcusdb_loadtest::Swarm;

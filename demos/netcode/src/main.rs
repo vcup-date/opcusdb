@@ -1,4 +1,4 @@
-//! `cooldown` CLI — spam-cast an ability and watch the WoW-style cooldown gate
+//! `cooldown` CLI, spam-cast an ability and watch the WoW-style cooldown gate
 //! the casts, tick by tick. Pure deterministic sim driven by the Timeline.
 
 use opcusdb_netcode::{Action, Combat, ABILITY_CD, GCD};

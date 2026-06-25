@@ -1,4 +1,4 @@
-//! `opcusdb-core` — the ECS foundation of opcusdb.
+//! `opcusdb-core`, the ECS foundation of opcusdb.
 //!
 //! This crate is being built bottom-up per `CORE_SPEC.md`:
 //! - §4 [`entity`]: generational entity ids + allocator.
@@ -18,7 +18,7 @@
 //!
 //! Everything here obeys the determinism contract (§2): no wall-clock, no
 //! ambient randomness, and allocation/recycling determined solely by the call
-//! sequence — so state is always reproducible from a snapshot + the event log.
+//! sequence, so state is always reproducible from a snapshot + the event log.
 
 pub mod commands;
 pub mod component;

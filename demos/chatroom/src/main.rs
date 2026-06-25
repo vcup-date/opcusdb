@@ -1,4 +1,4 @@
-//! `chatroom` CLI — run the serverless CRDT-mesh chat scenario and print the
+//! `chatroom` CLI, run the serverless CRDT-mesh chat scenario and print the
 //! converged transcript. Demonstrates offline partition + merge and an AI peer.
 
 use opcusdb_chatroom::run_scenario;

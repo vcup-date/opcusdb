@@ -1,4 +1,4 @@
-// opcusdb Smackdown — browser client. Thin client: it renders the world the Rust
+// opcusdb Smackdown, browser client. Thin client: it renders the world the Rust
 // server broadcasts (PixiJS) and sends inputs. Fancy pixel fighters, a parallax
 // 2-layer scrolling stage, particles, screen-shake, and Web Audio SFX.
 
@@ -239,7 +239,7 @@ app.ticker.add(() => {
   farLayer.x = -camX * 0.3; nearLayer.x = -camX * 0.55;
 
   // platforms: index 0 is the solid ground slab; the rest are thin pass-through
-  // ledges (you land on top, jump up through from below — no side wall to clip).
+  // ledges (you land on top, jump up through from below, no side wall to clip).
   gPlat.clear();
   stage.plats.forEach(([x0, x1, top], i) => {
     if (i === 0) {

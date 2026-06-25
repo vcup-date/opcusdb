@@ -1,4 +1,4 @@
-/* Native C-ABI smoke test for libopcusdb_ffi — the same surface Unity/Godot use.
+/* Native C-ABI smoke test for libopcusdb_ffi, the same surface Unity/Godot use.
  *
  * Build the cdylib first:  cargo build --release -p opcusdb-ffi
  * Then (from repo root):

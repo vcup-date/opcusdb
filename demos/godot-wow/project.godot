@@ -1,4 +1,4 @@
-; opcusdb Townfall — Godot 4 client for the Rust town server (demos/server/src/wow.rs)
+; opcusdb Townfall, Godot 4 client for the Rust town server (demos/server/src/wow.rs)
 ; Run the server:  cargo run -p opcusdb-server --bin opcusdb-wow
 ; Then open this folder in Godot 4.4+ and press Play (open two copies for multiplayer).
 

@@ -1,4 +1,4 @@
-// opcusdb Rampart — tower-defense client (Kingdom-Rush-style presentation).
+// opcusdb Rampart, tower-defense client (Kingdom-Rush-style presentation).
 // The Rust server is authoritative; this renders a smooth, animated view of the
 // state it broadcasts and sends two commands: build a tower, start a wave.
 
@@ -73,7 +73,7 @@ function connect() {
       } else if (tag === "p") {
         projs = rest.split(";").filter(Boolean).map(s => { const a = s.split(","); return { x:+a[0], y:+a[1], kind:+a[2] }; });
       } else if (tag === "n") {
-        players = +rest || 1; updateMpCount();   // update count only — do NOT rebuild the button
+        players = +rest || 1; updateMpCount();   // update count only, do NOT rebuild the button
       }
     }
   };
@@ -92,7 +92,7 @@ function updateHud() {
   const wb = $("wave");
   if (state < 2 && wave < maxWave) { wb.className = "ready"; wb.disabled = false; wb.textContent = (state === 1 ? "▶ Call Wave " : "▶ Start Wave ") + (wave + 1); }
   else if (state === 1) { wb.className = ""; wb.disabled = true; wb.textContent = "Final wave…"; }
-  else { wb.className = ""; wb.disabled = true; wb.textContent = "—"; }
+  else { wb.className = ""; wb.disabled = true; wb.textContent = "Game over"; }
   $("over").style.display = (state >= 2) ? "flex" : "none";
   if (state >= 2) { $("otxt").textContent = state === 2 ? "VICTORY 🏆" : "DEFEAT"; $("otxt").style.color = state === 2 ? "#3ec46a" : "#ff5d5d"; }
   document.querySelectorAll(".tw").forEach(el => el.classList.toggle("poor", gold < COST[+el.dataset.k]));

@@ -1,4 +1,4 @@
-//! opcusdb human + AI chatroom — an IRC-style `#lobby` over WebSocket.
+//! opcusdb human + AI chatroom, an IRC-style `#lobby` over WebSocket.
 //!
 //! Anyone can log in with a nickname; **10 AI chatters** live in the channel and
 //! talk with humans and each other, powered by OpenRouter
@@ -81,7 +81,7 @@ impl Chat {
             .collect::<Vec<_>>()
             .join("\n")
     }
-    /// `name:kind,name:kind,...` — humans (kind 0) followed by the AI bots (kind 1).
+    /// `name:kind,name:kind,...`, humans (kind 0) followed by the AI bots (kind 1).
     fn userlist(&self) -> String {
         let mut parts: Vec<String> = self.humans.values().map(|n| format!("{n}:0")).collect();
         for (name, _) in PERSONAS {
@@ -94,7 +94,7 @@ impl Chat {
 fn main() {
     let chat = Arc::new(Mutex::new(Chat::new()));
     if std::env::var("OPENROUTER_API_KEY").map_or(true, |k| k.is_empty()) {
-        eprintln!("WARNING: OPENROUTER_API_KEY not set — AI chatters will stay silent.");
+        eprintln!("WARNING: OPENROUTER_API_KEY not set, AI chatters will stay silent.");
     }
     run_director(chat.clone());
 
@@ -208,7 +208,7 @@ fn ai_reply(name: &str, persona: &str, transcript: &str) -> Option<String> {
     let system = format!(
         "You are {name} in a casual group chat called #lobby with humans and other people. \
          Your character: {persona}. \
-         Chat like a real person: ONE short, natural line under 20 words. Be specific and concrete — \
+         Chat like a real person: ONE short, natural line under 20 words. Be specific and concrete, \
          mention real things from your world, have opinions, react directly to the last messages, ask or \
          answer plainly. Stay in character. Avoid vague cosmic/abstract metaphors, no emoji, no name prefix, no quotes."
     );

@@ -1,9 +1,9 @@
-//! An interactive **particle field** on the ECS [`World`] — thousands of
+//! An interactive **particle field** on the ECS [`World`], thousands of
 //! particles that are attracted to (or repelled from) a moving point, with an
 //! orbital swirl that turns the cursor into the center of a little galaxy.
 //!
 //! All physics is **fixed-point integer** (positions/velocities scaled by
-//! `FP_ONE`), so the sim stays deterministic (no floats — determinism contract
+//! `FP_ONE`), so the sim stays deterministic (no floats, determinism contract
 //! §2) while still feeling fluid. It's exposed to the browser via the FFI crate;
 //! JS only feeds the pointer position and renders.
 
@@ -16,7 +16,7 @@ const FP_ONE: i64 = 1 << FP_SHIFT;
 
 /// Per-axis velocity clamp (px/tick).
 const MAX_V: i64 = 14 * FP_ONE;
-/// Velocity retained per tick (out of FP_ONE) — light damping.
+/// Velocity retained per tick (out of FP_ONE), light damping.
 const DAMP: i64 = 250;
 /// Constant pull toward the attractor along the unit direction.
 const GRAV: i64 = 40;
@@ -189,7 +189,7 @@ impl Field {
         &self.pixels
     }
 
-    /// Mean distance (pixels) of all particles to a pixel point — a test/inspection helper.
+    /// Mean distance (pixels) of all particles to a pixel point, a test/inspection helper.
     pub fn mean_distance_to(&self, x_px: i32, y_px: i32) -> f64 {
         if self.count == 0 {
             return 0.0;

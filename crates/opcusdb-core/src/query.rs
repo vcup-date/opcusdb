@@ -3,7 +3,7 @@
 //! See `CORE_SPEC.md` §8. A query yields the entities that have *all* of a set of
 //! components, **in ascending `EntityId` order** so iteration is deterministic
 //! (the determinism contract, §2). It collects matching ids from one component's
-//! store, filters by the rest, and sorts — then the typed `query*` helpers on
+//! store, filters by the rest, and sorts, then the typed `query*` helpers on
 //! [`World`] hand back component references via O(1) lookups.
 //!
 //! Scope note: these are read-only joins. Simultaneous *mutable* multi-component
@@ -38,8 +38,7 @@ impl<A: 'static, B: 'static> Filter for (A, B) {
         let (Some(sa), Some(sb)) = (world.store::<A>(), world.store::<B>()) else {
             return Vec::new();
         };
-        // Pick the smaller store as the candidate source, filter by the other —
-        // O(min) candidates instead of O(|A|). Result is still sorted ascending.
+        // Pick the smaller store as the candidate source, filter by the other,         // O(min) candidates instead of O(|A|). Result is still sorted ascending.
         let mut ids: Vec<EntityId> = if sa.len() <= sb.len() {
             sa.iter_full().map(|(id, _)| id).filter(|&id| world.has::<B>(id)).collect()
         } else {

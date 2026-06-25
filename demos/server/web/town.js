@@ -1,4 +1,4 @@
-// opcusdb Hearth — PixiJS client for the AI town. Renders crafted, animated
+// opcusdb Hearth, PixiJS client for the AI town. Renders crafted, animated
 // residents on a (optionally Qwen-Image-generated) map; you walk in and talk to
 // whoever is nearby. Server is authoritative; this interpolates + animates.
 

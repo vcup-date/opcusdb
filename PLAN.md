@@ -1,4 +1,4 @@
-# opcusdb — A Local Real-Time State Database for MMORPGs / State Machines
+# opcusdb, A Local Real-Time State Database for MMORPGs / State Machines
 
 > Research survey + architecture plan. Status: **design only, no code yet.**
 > Recommended implementation language: **Rust** (rationale in §5.1).
@@ -21,7 +21,7 @@ Push changes to subscribed clients over WebSocket/SSE. Persistence-first, not si
 | **SurrealDB** | Rust | RocksDB / TiKV / mem | LIVE SELECT queries | BSL→Apache |
 | **Appwrite** | PHP/Go | MariaDB | WebSocket | BSD-3 |
 | **Hasura / ElectricSQL** | Haskell/Elixir | Postgres | GraphQL subs / local-first sync | Apache-2.0 |
-| **Firebase RTDB / Firestore** | — | — | (proprietary, NOT open source) | closed |
+| **Firebase RTDB / Firestore** |, |, | (proprietary, NOT open source) | closed |
 
 **Verdict for MMO:** disk-anchored, per-row subscriptions, ~10²–10³ writes/s before
 you fight the disk. Great for chat, leaderboards, auction house. **Wrong tool for the
@@ -41,18 +41,18 @@ shared-nothing-per-core design is the model to copy), but they are generic
 KV/structures with no notion of *spatial interest*, *tick loop*, or *atomic
 game-logic transactions*. You'd bolt your simulation on top.
 
-### C. Game-native real-time DBs (database == game server) — the right category
+### C. Game-native real-time DBs (database == game server), the right category
 | Project | Lang | Idea | License |
 |---|---|---|---|
 | **SpacetimeDB** (ClockworkLabs) | **Rust** | In-memory relational DB + WASM "reducers" run *inside* the DB; clients connect directly; powers the **BitCraft** MMO | BSL (core), permissive client SDKs |
-| **Tarantool** (again) | C+Lua | In-mem + stored procs + WAL — closest classic analogue | BSD |
+| **Tarantool** (again) | C+Lua | In-mem + stored procs + WAL, closest classic analogue | BSD |
 | Custom engines (EVE/WoW-style) | C++/C# | Bespoke authoritative servers, in-mem world + RDBMS persistence | closed |
 
 **SpacetimeDB is the reference design for this project.** Key ideas to borrow:
 - In-memory state is the source of truth; WAL gives durability.
 - "Reducers" = atomic transactional functions invoked over the network (≈ commands to a state machine).
 - Clients subscribe to a *query*; the DB streams row deltas.
-- ~150k tx/s reported vs ~1.5k for Node+Postgres on the same logic — two orders of magnitude, purely from collapsing DB↔app boundary and staying in RAM.
+- ~150k tx/s reported vs ~1.5k for Node+Postgres on the same logic, two orders of magnitude, purely from collapsing DB↔app boundary and staying in RAM.
 
 ---
 
@@ -87,25 +87,25 @@ game-logic transactions*. You'd bolt your simulation on top.
 
 **Resource accounting (single 16-core box, the realistic target):**
 - **CPU:** simulation is parallelizable per spatial shard. With shared-nothing-per-core (Dragonfly model), ~14 worker cores × per-core sim → headroom for 10k–50k entities depending on logic cost.
-- **Memory:** entity ≈ a few hundred bytes across components. 100k entities ≈ tens of MB of hot state. RAM is *not* the constraint; cache locality is — hence data-oriented (SoA) layout.
+- **Memory:** entity ≈ a few hundred bytes across components. 100k entities ≈ tens of MB of hot state. RAM is *not* the constraint; cache locality is, hence data-oriented (SoA) layout.
 - **IO:** WAL is sequential append → cheap; batch + group-fsync per tick (or every N ms). Snapshots are the only random-ish IO; do them copy-on-write / fork-style off the hot path.
 - **Network:** dominant cost. Mitigate with AOI culling, delta compression, and bit-packing. This drives the protocol design (§5.6), not the storage engine.
 
-**Conclusion:** the bottleneck for an MMO is *not* storage durability — it's
+**Conclusion:** the bottleneck for an MMO is *not* storage durability, it's
 (1) keeping sim state in cache-friendly RAM, (2) avoiding cross-core locks, and
 (3) network fan-out. A purpose-built engine wins because it co-locates logic +
 state + interest management and never round-trips.
 
 ---
 
-## 4. Feasibility: building an MMORPG on this — yes, with caveats
+## 4. Feasibility: building an MMORPG on this, yes, with caveats
 
 **Proven:** SpacetimeDB + BitCraft is a live MMO whose *entire* backend (chat,
 items, terrain, player state) is one in-memory DB module. So the architecture is
 validated in production.
 
 **What it gives you "for free":**
-- Authoritative server state (cheat resistance) — clients send intents, DB validates in a reducer.
+- Authoritative server state (cheat resistance), clients send intents, DB validates in a reducer.
 - Persistence without a separate ORM/RDBMS for live state.
 - Real-time sync to clients via subscriptions.
 
@@ -117,12 +117,12 @@ validated in production.
 
 **Honest scope ladder:**
 - 1 box, 1 zone, ~1–5k concurrent: very achievable, the focus of this plan.
-- Many zones, 50k+ concurrent: needs sharding + zone hand-off (phase 4) — hard but well-trodden.
+- Many zones, 50k+ concurrent: needs sharding + zone hand-off (phase 4), hard but well-trodden.
 - Seamless single-world (EVE-scale): research-grade; out of scope.
 
 ---
 
-## 5. The plan — **opcusdb** in Rust
+## 5. The plan, **opcusdb** in Rust
 
 ### 5.1 Language choice: Rust (with the trade-offs stated)
 
@@ -159,27 +159,27 @@ validated in production.
                  └───────────────────────────────────────────┘
 ```
 
-### 5.3 Data model — relational/ECS hybrid, data-oriented
+### 5.3 Data model, relational/ECS hybrid, data-oriented
 - World state = **typed tables**. A table ≈ a component type (`Position`, `Health`, `Inventory`).
 - **Entity = generational id** `(index: u32, generation: u32)` → no use-after-free, O(1) lookup.
 - Storage is **SoA (struct-of-arrays) columns** per table → cache-friendly, vectorizable, the ECS performance win.
 - Schema defined once in Rust; **codegen** produces typed client bindings (Rust/C#/TS) so clients are type-safe.
 - Indexes: primary by entity id; secondary spatial index (§5.5); optional hash indexes for lookups (e.g., player name).
 
-### 5.4 Concurrency model — shared-nothing per core (copy Dragonfly + SpacetimeDB)
+### 5.4 Concurrency model, shared-nothing per core (copy Dragonfly + SpacetimeDB)
 - World is partitioned into **shards** (spatial regions). Each shard is **single-threaded**, pinned to a core, **owns its data** → **no locks in the hot path**.
 - Reducers run to completion on their shard's thread → trivially atomic, no cross-thread tearing.
-- Cross-shard interactions (entity at a boundary, trade across zones) go through a **lock-free message bus** as async messages, applied at the next tick — never a synchronous cross-core lock.
+- Cross-shard interactions (entity at a boundary, trade across zones) go through a **lock-free message bus** as async messages, applied at the next tick, never a synchronous cross-core lock.
 - Executor: thread-per-core (e.g. `tokio` current-thread per shard, or a custom runtime); IO (WAL/network) on separate threads so sim never blocks.
 
 ### 5.5 Tick loop + reducers (the "state machine" core)
 - Each shard runs a fixed-rate loop (configurable, default **20 Hz**):
   1. Drain inbound intents/messages.
-  2. Execute **reducers** (atomic: fully apply or roll back) — both player-invoked (move, attack, trade) and system (regen, AI, DoT) via a **scheduler** (timers/cron inside the DB).
+  2. Execute **reducers** (atomic: fully apply or roll back), both player-invoked (move, attack, trade) and system (regen, AI, DoT) via a **scheduler** (timers/cron inside the DB).
   3. Compute dirty set (changed rows).
   4. Append committed tx to WAL (batched, group-fsync).
   5. For each subscribed client, diff against its AOI → emit **delta**.
-- Reducers v1: **native Rust** systems (trait objects / function registry) — fastest, simplest.
+- Reducers v1: **native Rust** systems (trait objects / function registry), fastest, simplest.
 - Reducers v2: **WASM modules** via `wasmtime` for sandboxed, hot-reloadable, untrusted game logic (the SpacetimeDB model). Adds isolation + live deploy at a small perf cost.
 
 ### 5.6 Interest management + subscriptions (the bandwidth saver)
@@ -190,19 +190,19 @@ validated in production.
 
 ### 5.7 Networking
 - **Two channels:**
-  - *Unreliable/UDP (or QUIC datagrams):* high-frequency state (positions) — latest-wins, drop-tolerant.
+  - *Unreliable/UDP (or QUIC datagrams):* high-frequency state (positions), latest-wins, drop-tolerant.
   - *Reliable/ordered (QUIC stream or TCP/WebSocket):* reducer calls, trades, chat, important events.
-- Recommend **QUIC** (e.g. `quinn`): gives both reliable streams and datagrams, encryption, connection migration — one transport.
+- Recommend **QUIC** (e.g. `quinn`): gives both reliable streams and datagrams, encryption, connection migration, one transport.
 - Wire format: compact binary (custom or `bitcode`/`rkyv`); schema-versioned.
 
 ### 5.8 Persistence & recovery
-- **WAL**: append-only log of committed transactions; sequential write; tunable fsync (per-tick group commit vs. every-N-ms — durability/throughput knob).
+- **WAL**: append-only log of committed transactions; sequential write; tunable fsync (per-tick group commit vs. every-N-ms, durability/throughput knob).
 - **Snapshot**: periodic full-state checkpoint via copy-on-write / `fork`-style so the hot path isn't stalled; truncate WAL after snapshot.
 - **Recovery**: load latest snapshot → replay WAL tail. Deterministic reducers make replay exact.
-- Cold/relational data (auction house history, audit logs) can be flushed to Postgres/SQLite asynchronously — keep it *off* the hot path.
+- Cold/relational data (auction house history, audit logs) can be flushed to Postgres/SQLite asynchronously, keep it *off* the hot path.
 
 ### 5.9 Observability & ops
-- Per-shard metrics: tick duration histogram (the #1 health signal — alert if p99 > tick budget), entities/shard, WAL lag, bytes/client.
+- Per-shard metrics: tick duration histogram (the #1 health signal, alert if p99 > tick budget), entities/shard, WAL lag, bytes/client.
 - Deterministic replay from WAL = invaluable for debugging and load reproduction.
 - Admin/console reducers for inspection.
 
@@ -232,6 +232,6 @@ SoA tables, driven by a fixed-rate tick loop, sharded shared-nothing-per-core
 (no hot-path locks), with spatial interest management to cull network fan-out,
 durability via sequential WAL + copy-on-write snapshots, and QUIC for combined
 reliable+unreliable transport. This is the SpacetimeDB/Tarantool model
-specialized for MMORPG state machines — it wins over BaaS (disk-bound) and raw
+specialized for MMORPG state machines, it wins over BaaS (disk-bound) and raw
 KV stores (no spatial/tick/transaction model) precisely by collapsing the
 database↔game-server boundary and never round-tripping.

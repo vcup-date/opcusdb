@@ -1,8 +1,8 @@
-//! opcusdb Townfall — a tiny 3D MMO-style town simulation (the authoritative
+//! opcusdb Townfall, a tiny 3D MMO-style town simulation (the authoritative
 //! server for the **Godot** client in `demos/godot-wow`).
 //!
 //! A small town with **NPC quest givers**, a pack of **wolves** to kill in the
-//! wilds, **quests** ("Cull the Wolves — slay 5"), and **chat**. Multiple players
+//! wilds, **quests** ("Cull the Wolves, slay 5"), and **chat**. Multiple players
 //! connect (Godot, or any WebSocket client) and **see each other** move and fight
 //! in one shared world. The Rust server owns the world (player movement, wolf AI,
 //! combat, quests) at a fixed tick and broadcasts it over the hand-rolled
@@ -138,7 +138,7 @@ fn main() {
         });
     }
     let listener = TcpListener::bind(("0.0.0.0", PORT)).expect("bind");
-    println!("opcusdb Townfall on :{PORT}  — Godot MMO town (quests, wolves, chat, multiplayer)");
+    println!("opcusdb Townfall on :{PORT} , Godot MMO town (quests, wolves, chat, multiplayer)");
     for stream in listener.incoming().flatten() {
         let world = world.clone();
         thread::spawn(move || handle(stream, world));
@@ -342,7 +342,7 @@ fn player_skill(room: &mut Room, id: u32, n: usize) {
     }
     match n {
         0 => {
-            // Cleave — AoE around the player
+            // Cleave, AoE around the player
             room.events.push(('C', id, px, pz));
             let hits: Vec<u32> = room
                 .wolves
@@ -355,7 +355,7 @@ fn player_skill(room: &mut Room, id: u32, n: usize) {
             }
         }
         1 => {
-            // Fireball — nuke the nearest wolf in range
+            // Fireball, nuke the nearest wolf in range
             let target = room
                 .wolves
                 .iter()
@@ -377,7 +377,7 @@ fn player_skill(room: &mut Room, id: u32, n: usize) {
             }
         }
         _ => {
-            // Heal — restore HP
+            // Heal, restore HP
             if let Some(p) = room.players.get_mut(&id) {
                 p.hp = (p.hp + HEAL_AMT).min(PLAYER_HP);
             }
@@ -400,7 +400,7 @@ fn player_interact(room: &mut Room, id: u32) -> Option<String> {
         0 | 3 => {
             p.quest = 1;
             p.prog = 0;
-            format!("{name}: Wolves plague our wilds — slay {QUEST_GOAL} of them!")
+            format!("{name}: Wolves plague our wilds, slay {QUEST_GOAL} of them!")
         }
         1 => format!("{name}: You've felled {}/{QUEST_GOAL}. Keep at it!", p.prog),
         2 => {

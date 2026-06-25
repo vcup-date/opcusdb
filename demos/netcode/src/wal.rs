@@ -1,14 +1,14 @@
 //! Write-ahead log + crash recovery (`CORE_SPEC.md` §9, Phase 1).
 //!
 //! The key insight: for a **deterministic** sim, durability does not require
-//! serializing world state — it only requires the **input log**. Persist each
+//! serializing world state, it only requires the **input log**. Persist each
 //! tick's inputs as they happen; to recover after a crash, start a fresh sim from
 //! its deterministic initial state and **replay the log**. The recovered state is
 //! byte-identical to what was lost.
 //!
 //! This is a std-only text WAL over the [`Combat`](crate::Combat) cooldown sim:
 //! the ability/cooldown state survives a process restart. A crash mid-write
-//! leaves a truncated trailing line, which recovery skips — recovering to the
+//! leaves a truncated trailing line, which recovery skips, recovering to the
 //! last fully-written tick (the standard WAL durability guarantee).
 //!
 //! Not included (needs the serializer decision §14 Q1): periodic *snapshots* to
@@ -80,7 +80,7 @@ impl Wal {
                 // header line; ignore (a missing/garbled header just means no ticks)
                 continue;
             }
-            // "tick: inputs" — skip any line that doesn't parse (truncated tail).
+            // "tick: inputs", skip any line that doesn't parse (truncated tail).
             let Some((tick_str, rest)) = line.split_once(':') else {
                 continue;
             };
@@ -165,7 +165,7 @@ mod tests {
 
     #[test]
     fn recovery_equals_in_memory_replay() {
-        // The WAL recovery must equal the Timeline's in-memory replay — same log,
+        // The WAL recovery must equal the Timeline's in-memory replay, same log,
         // same deterministic result.
         use opcusdb_time::Timeline;
         let path = tmp("equals_replay");

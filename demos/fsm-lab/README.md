@@ -1,14 +1,13 @@
 # fsm-lab
 
-A deterministic, replayable **traffic intersection** built on the opcusdb core —
-the first end-to-end demo (`CORE_SPEC.md` §12).
+A deterministic, replayable **traffic intersection** built on the opcusdb core, the first end-to-end demo (`CORE_SPEC.md` §12).
 
 It exercises every core pillar at once:
 
 | Pillar | Crate | Used for |
 |---|---|---|
 | Statechart | `opcusdb-fsm` | the intersection as a **parallel** machine: a `lights` region (phase cycle) and a `ped` region (walk signal) |
-| Timers | `opcusdb-time` | the phase clock — each phase arms the next phase's timer |
+| Timers | `opcusdb-time` | the phase clock, each phase arms the next phase's timer |
 | Timeline | `opcusdb-time` | drives the sim tick-by-tick and gives **rollback, scrub, and byte-identical replay** for free |
 | Deterministic RNG | `opcusdb-core` | seeded car arrivals (replay-safe) |
 
@@ -29,7 +28,7 @@ cargo run -p opcusdb-fsm-lab --bin fsm-lab -- scrub  run.log --to 10
 ```
 
 `replay` re-runs from the seed and asserts every recorded frame reproduces
-byte-for-byte — a determinism check against a file (tampering exits non-zero with
+byte-for-byte, a determinism check against a file (tampering exits non-zero with
 the first mismatch). `scrub --to T` rebuilds the run and `Timeline::seek`s to tick T.
 
 Example output (one full cycle is 10 ticks):
@@ -50,7 +49,7 @@ tick |  NS     EW    | walk
 
 - **Parallel regions + cross-region interlock.** The pedestrian `walk` signal is
   a separate orthogonal region whose eventless transitions are guarded by
-  `all_red` — context the `lights` region writes. So the walk signal can *only*
+  `all_red`, context the `lights` region writes. So the walk signal can *only*
   activate while both car axes are red.
 - **Safety by construction.** Car phases are mutually exclusive, so the two axes
   are never simultaneously "go". The test suite asserts this invariant on every
@@ -65,12 +64,12 @@ tick |  NS     EW    | walk
 cargo test -p opcusdb-fsm-lab
 ```
 
-- `safety_invariant_never_two_go_axes` — no crossing greens, ever.
-- `pedestrian_walks_during_all_red` — walk signal activates, only during all-red.
-- `phases_cycle_in_order` — exact colour sequence over a full cycle.
-- `replay_reproduces_live_state` — replay determinism (acceptance #1).
-- `rollback_then_resim_reproduces` — rollback equivalence (acceptance #2).
-- `scrub_back_and_forward_is_lossless` — time-scrubbing round-trips.
+- `safety_invariant_never_two_go_axes`, no crossing greens, ever.
+- `pedestrian_walks_during_all_red`, walk signal activates, only during all-red.
+- `phases_cycle_in_order`, exact colour sequence over a full cycle.
+- `replay_reproduces_live_state`, replay determinism (acceptance #1).
+- `rollback_then_resim_reproduces`, rollback equivalence (acceptance #2).
+- `scrub_back_and_forward_is_lossless`, time-scrubbing round-trips.
 
 ## Not yet (see repo `TODO.md`)
 

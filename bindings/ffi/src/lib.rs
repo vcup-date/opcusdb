@@ -1,4 +1,4 @@
-//! FFI binding for the opcusdb sims — one minimal **C-ABI** serving two targets
+//! FFI binding for the opcusdb sims, one minimal **C-ABI** serving two targets
 //! from a single `cdylib`:
 //! - **WebAssembly** (`--target wasm32-unknown-unknown`): a browser renderer
 //!   (PixiJS/Three) reads positions straight from wasm linear memory.
@@ -9,7 +9,7 @@
 //! drifters) and `field_*` (the interactive attractor/swirl particle field).
 //!
 //! Safety: the FFI boundary requires raw pointers, so `unsafe` is allowed here
-//! (localized to this thin shim) — the rest of the workspace stays safe.
+//! (localized to this thin shim), the rest of the workspace stays safe.
 #![allow(unsafe_code)]
 
 use opcusdb_loadtest::{Swarm, HEIGHT, WIDTH};
@@ -145,7 +145,7 @@ pub unsafe extern "C" fn swarm_flags_ptr(handle: *const WasmSwarm) -> *const u8 
 }
 
 /// Deterministic checksum of all positions. Equal across native and WASM builds
-/// for the same seed/steps — the cross-target determinism gate.
+/// for the same seed/steps, the cross-target determinism gate.
 ///
 /// # Safety
 /// `handle` must be a live handle from [`swarm_new`].
@@ -246,7 +246,7 @@ pub unsafe extern "C" fn pfield_positions_ptr(handle: *const Field) -> *const i3
 }
 
 // ---------------------------------------------------------------------------
-// Netcode session (`session_*`) — client prediction vs authoritative server
+// Netcode session (`session_*`), client prediction vs authoritative server
 // ---------------------------------------------------------------------------
 
 /// The field size the session moves within (positions are `0..session_size`).

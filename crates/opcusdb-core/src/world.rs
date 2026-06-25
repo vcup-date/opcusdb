@@ -3,7 +3,7 @@
 //!
 //! See `CORE_SPEC.md` §5. The world owns the entity allocator, one type-erased
 //! [`SparseSet`] per registered component type, and a set of singleton
-//! *resources*. It is the unit that gets snapshotted (§9) — everything mutable
+//! *resources*. It is the unit that gets snapshotted (§9), everything mutable
 //! sim state lives here, nothing in statics.
 //!
 //! Determinism: component stores live in a `Vec` indexed by registration-order
@@ -19,7 +19,7 @@ use std::collections::HashMap;
 /// The ECS world. Holds all entities, components, and resources.
 ///
 /// Components and resources must be `Clone`, which makes the whole `World`
-/// deep-cloneable — that is what lets it be snapshotted and rolled back by the
+/// deep-cloneable, that is what lets it be snapshotted and rolled back by the
 /// Timeline (`CORE_SPEC.md` §9).
 #[derive(Default)]
 pub struct World {
@@ -93,7 +93,7 @@ impl World {
     }
 
     /// The mutation version of component `T`'s store (0 if never registered).
-    /// Bumped on any mutation — the basis of memoized [`Select`](crate::select::Select).
+    /// Bumped on any mutation, the basis of memoized [`Select`](crate::select::Select).
     pub fn component_version<T: 'static>(&self) -> u64 {
         self.version_of(TypeId::of::<T>())
     }
@@ -177,7 +177,7 @@ impl World {
         self.store_mut::<T>().remove(id)
     }
 
-    /// Apply `f` to every `(id, &mut T)` in ascending entity order — a safe,
+    /// Apply `f` to every `(id, &mut T)` in ascending entity order, a safe,
     /// deterministic mutable iteration over a single component (no `get_mut`
     /// dance). No-op if `T` was never registered.
     pub fn for_each_mut<T: Clone + 'static>(&mut self, f: impl FnMut(EntityId, &mut T)) {

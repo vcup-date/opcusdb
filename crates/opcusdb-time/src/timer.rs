@@ -3,7 +3,7 @@
 //! [`Timers<E>`] schedules payloads to fire at future ticks. It is the
 //! deterministic clock behind statechart timeouts, debounces, and periodic
 //! systems. Entries are kept in a min-heap keyed by `(fire_at, TimerId)`, so
-//! [`due`](Timers::due) returns due payloads in a stable order — same-tick timers
+//! [`due`](Timers::due) returns due payloads in a stable order, same-tick timers
 //! fire in `TimerId` (i.e. scheduling) order, satisfying the determinism contract.
 
 use crate::tick::Tick;
@@ -123,7 +123,7 @@ impl<E: Clone> Timers<E> {
     /// Pop and return every payload due at or before `now`, in `(fire_at, id)`
     /// order. Repeating timers are re-scheduled at fixed cadence (`fire_at +
     /// period`), so an overdue repeater "catches up" one firing per missed period
-    /// — under fixed-timestep stepping (`now` advances by 1) that is exactly once.
+    ///, under fixed-timestep stepping (`now` advances by 1) that is exactly once.
     pub fn due(&mut self, now: Tick) -> Vec<E> {
         let mut out = Vec::new();
         while let Some(top) = self.heap.peek() {

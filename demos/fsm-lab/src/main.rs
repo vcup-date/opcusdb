@@ -1,4 +1,4 @@
-//! `fsm-lab` CLI — run, record, replay, and scrub the traffic intersection.
+//! `fsm-lab` CLI, run, record, replay, and scrub the traffic intersection.
 //! A dogfood of the opcusdb core (statechart + timers + deterministic RNG + Timeline).
 //!
 //! Usage:

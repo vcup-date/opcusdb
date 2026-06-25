@@ -1,4 +1,4 @@
-//! `reduce` and `fold` — the event-sourcing primitives.
+//! `reduce` and `fold`, the event-sourcing primitives.
 //!
 //! See `CORE_SPEC.md` §7. A [`Reduce`] state transition must be **pure and
 //! total**: folding the same events from the same starting state always yields
@@ -12,7 +12,7 @@ pub trait Reduce {
     type Event;
 
     /// Apply a single event. Must be deterministic (no wall-clock, no ambient
-    /// randomness — see the determinism contract, §2).
+    /// randomness, see the determinism contract, §2).
     fn reduce(&mut self, event: &Self::Event);
 }
 

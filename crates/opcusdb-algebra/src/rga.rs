@@ -1,4 +1,4 @@
-//! `Rga` — a Replicated Growable Array (ordered sequence CRDT).
+//! `Rga`, a Replicated Growable Array (ordered sequence CRDT).
 //!
 //! See `CORE_SPEC.md` §7. An RGA is the conflict-free data type for ordered
 //! text and chat: concurrent inserts and deletes from many peers merge into one
@@ -8,7 +8,7 @@
 //! Model (a causal tree): every inserted element has a unique [`OpId`] and an
 //! `after` anchor (the element it was inserted to the right of, or the head).
 //! The visible order is a pre-order traversal of that tree where **siblings sort
-//! by id descending** — a fixed rule, so all replicas converge. Deletes are
+//! by id descending**, a fixed rule, so all replicas converge. Deletes are
 //! monotonic tombstones (the node stays to anchor its children). Merge is the
 //! union of nodes with delete-flags OR'd: commutative, associative, idempotent.
 

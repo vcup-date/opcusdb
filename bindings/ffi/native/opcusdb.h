@@ -1,4 +1,4 @@
-/* opcusdb FFI — C header for the native dynamic library (libopcusdb_ffi).
+/* opcusdb FFI, C header for the native dynamic library (libopcusdb_ffi).
  *
  * The same symbols are exported by the WASM build. Link against the cdylib
  * (target/release/libopcusdb_ffi.{dylib,so,dll}) from C, Unity (C# P/Invoke),

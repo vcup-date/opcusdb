@@ -1,7 +1,7 @@
 # opcusdb servers
 
 Two authoritative servers that let many clients share one live world, both over a
-**hand-rolled, dependency-free WebSocket** (`src/ws.rs` — RFC 6455 handshake +
+**hand-rolled, dependency-free WebSocket** (`src/ws.rs`, RFC 6455 handshake +
 framing in std Rust). This is the answer to "how do multiple people see the same
 thing?": clients send inputs; the server simulates authoritatively and broadcasts
 state to everyone.

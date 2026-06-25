@@ -1,4 +1,4 @@
-// Unity binding for the opcusdb swarm — drop into a Unity project and attach to a
+// Unity binding for the opcusdb swarm, drop into a Unity project and attach to a
 // GameObject that has a MeshFilter + MeshRenderer (use a point/vertex-color
 // material). Place the native library in Assets/Plugins/ (libopcusdb_ffi.dylib on
 // macOS, opcusdb_ffi.dll on Windows, libopcusdb_ffi.so on Linux).

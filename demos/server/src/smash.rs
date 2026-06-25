@@ -1,8 +1,8 @@
-//! opcusdb Smackdown — an authoritative online **platform fighter** (Smash-like).
+//! opcusdb Smackdown, an authoritative online **platform fighter** (Smash-like).
 //!
 //! Everyone who opens the page auto-joins the shared **ARENA** room and is given a
 //! pixel fighter. Move with the arrow keys, **Z = attack**, **X = jump** (double
-//! jump). Hits add **damage %**; the higher your %, the farther you fly — knock a
+//! jump). Hits add **damage %**; the higher your %, the farther you fly, knock a
 //! rival off the blast zone to score a KO. The Rust server owns the physics at a
 //! fixed tick and broadcasts the world over the hand-rolled WebSocket (see [`ws`]);
 //! the browser only renders (PixiJS) + plays sound.
@@ -172,7 +172,7 @@ fn main() {
         });
     }
     let listener = TcpListener::bind(("0.0.0.0", PORT)).expect("bind");
-    println!("opcusdb Smackdown on http://localhost:{PORT}  — open it, fight with arrows + Z/X");
+    println!("opcusdb Smackdown on http://localhost:{PORT} , open it, fight with arrows + Z/X");
     for stream in listener.incoming().flatten() {
         let arena = arena.clone();
         thread::spawn(move || handle(stream, arena));

@@ -2,8 +2,8 @@
 //!
 //! Sim code must never use ambient randomness; all randomness comes from a
 //! seeded, explicitly-advanced generator whose seed lives in the event log, so
-//! replay is exact. [`Rng`] is **PCG32** (PCG-XSH-RR 64/32) — small, fast, and
-//! well-distributed — and is `Clone + Eq` so it snapshots and compares cleanly as
+//! replay is exact. [`Rng`] is **PCG32** (PCG-XSH-RR 64/32), small, fast, and
+//! well-distributed, and is `Clone + Eq` so it snapshots and compares cleanly as
 //! part of world state.
 
 /// The PCG32 multiplier (the LCG constant).

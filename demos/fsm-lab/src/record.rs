@@ -2,7 +2,7 @@
 //!
 //! A *record* is the seed + a per-tick golden trace of the observable state.
 //! *Replay* re-runs the sim from the seed and asserts every frame reproduces the
-//! stored trace byte-for-byte — a determinism check you can run against a file.
+//! stored trace byte-for-byte, a determinism check you can run against a file.
 //! The format is a tiny std-only text format (no external serializer); the
 //! framework-wide rkyv-vs-bitcode decision (§14 Q1) is reserved for World
 //! snapshots, which actually need it.

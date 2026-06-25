@@ -1,4 +1,4 @@
-// opcusdb Overlode — Three.js client for the authoritative Tracer FPS server.
+// opcusdb Overlode, Three.js client for the authoritative Tracer FPS server.
 // Thin client: predicts local movement for responsiveness, renders the world the
 // server broadcasts, and sends inputs. Server does lag-compensated hit detection.
 
@@ -387,7 +387,7 @@ function renderBoard(){
     const rows=all.filter(r=>r.team===t).sort((a,b)=>b.elims-a.elims);
     const tot=rows.reduce((s,r)=>s+r.elims,0);
     const col=t===0?'#6fb7ff':'#ff8a5a';
-    html+=`<tr><td colspan="4" style="color:${col};border-bottom:1px solid #233;padding-top:10px">${t===0?'BLUE':'ORANGE'} TEAM — ${tot} elims</td></tr>`;
+    html+=`<tr><td colspan="4" style="color:${col};border-bottom:1px solid #233;padding-top:10px">${t===0?'BLUE':'ORANGE'} TEAM, ${tot} elims</td></tr>`;
     html+=rows.map(r=>{const kd=(r.elims/Math.max(1,r.deaths)).toFixed(1); return `<tr class="${r.me?'me':''}"><td>${esc(r.name)}${r.me?' ★':''}</td><td style="color:${col}">${t===0?'BLUE':'ORANGE'}</td><td>${r.elims} / ${r.deaths}</td><td>${kd} K/D</td></tr>`;}).join("");
   }
   $("boardBody").innerHTML = html;

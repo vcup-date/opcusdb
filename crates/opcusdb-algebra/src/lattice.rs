@@ -2,7 +2,7 @@
 //!
 //! See `CORE_SPEC.md` §7. A lattice's [`merge`](Lattice::merge) is a
 //! join-semilattice operation: **commutative, associative, and idempotent**.
-//! Those three laws are exactly what make CRDT replication conflict-free — any
+//! Those three laws are exactly what make CRDT replication conflict-free, any
 //! order of merges from any set of replicas converges to the same value. The
 //! [`assert_lattice_laws`] helper turns "the laws hold" into a test, not a hope.
 
@@ -26,7 +26,7 @@ pub fn join<L: Lattice>(mut a: L, b: &L) -> L {
 
 /// Assert the three lattice laws hold across every combination of `samples`.
 ///
-/// O(n³) in the number of samples — keep the set small (≈4–8 diverse values).
+/// O(n³) in the number of samples, keep the set small (≈4–8 diverse values).
 /// Intended for use in CRDT unit tests.
 pub fn assert_lattice_laws<L>(samples: &[L])
 where

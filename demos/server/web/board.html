@@ -84,7 +84,7 @@
       <div class="seg" id="weights"><button data-w="2">S</button><button class="on" data-w="4">M</button><button data-w="8">L</button><button data-w="14">XL</button></div>
       <div id="selbox" style="display:none">
         <h4 style="margin-top:14px">Selection</h4>
-        <div id="selnote">—</div>
+        <div id="selnote">, </div>
         <div class="act-btns"><button id="toFront">front</button><button id="toBack">back</button><button class="del" id="del">delete</button></div>
       </div>
     </div>
@@ -92,12 +92,12 @@
     <canvas id="cv"></canvas>
     <div id="cursors"></div>
     <textarea id="txtedit" rows="1"></textarea>
-    <div id="offbanner">⚠ OFFLINE — your edits buffer locally and merge on reconnect (CRDT)</div>
+    <div id="offbanner">⚠ OFFLINE, your edits buffer locally and merge on reconnect (CRDT)</div>
     <div id="hint">drag to draw · click to select · drag handles to resize · double-click text/notes to edit</div>
 
     <div id="join"><div class="panel">
       <h1><b>opcusdb</b> Co-Board</h1>
-      <p>A real-time collaborative vector canvas. The document is a CRDT (<code>OrSet</code>) — draw together, and your work merges even after editing offline.</p>
+      <p>A real-time collaborative vector canvas. The document is a CRDT (<code>OrSet</code>), draw together, and your work merges even after editing offline.</p>
       <input type="text" id="nick" placeholder="your name" maxlength="14" />
       <button class="go" id="go">open the canvas ▶</button>
       <p style="color:#5f6b80;font-size:12px">open more tabs to collaborate</p>

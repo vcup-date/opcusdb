@@ -1,7 +1,7 @@
 //! opcusdb authoritative game server.
 //!
 //! Runs the **real** opcusdb ECS engine as the single source of truth and lets
-//! many browsers connect over WebSocket and share one live world — answering
+//! many browsers connect over WebSocket and share one live world, answering
 //! "how do multiple people see the same thing?": they don't simulate locally,
 //! they send inputs to this server, which simulates authoritatively and
 //! broadcasts state to everyone.

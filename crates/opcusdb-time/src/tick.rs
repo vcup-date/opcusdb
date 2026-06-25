@@ -1,4 +1,4 @@
-//! The [`Tick`] — discrete simulation time.
+//! The [`Tick`], discrete simulation time.
 //!
 //! See `CORE_SPEC.md` §9. All sim time is measured in ticks; there is no
 //! wall-clock in sim code (determinism contract §2). A `Tick` is a monotonic

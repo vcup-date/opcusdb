@@ -1,8 +1,8 @@
-//! opcusdb Overlode — an Overwatch-style team FPS (hero: **Tracer**), authoritative
+//! opcusdb Overlode, an Overwatch-style team FPS (hero: **Tracer**), authoritative
 //! over the hand-rolled WebSocket. Demonstrates the engine's netcode model:
 //! a 60 Hz authoritative server with **lag-compensated hitscan** (it rewinds
 //! targets into the shooter's view for fair hits) and **Recall** (rewind your own
-//! position/health/ammo 3s — opcusdb's timeline, as a hero ability).
+//! position/health/ammo 3s, opcusdb's timeline, as a hero ability).
 //!
 //! Humans are team A; **AI bots** fill team B so you can test solo. Three.js client
 //! in `demos/server/web/ow.{html,js}`.

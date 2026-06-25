@@ -1,4 +1,4 @@
-//! `chatroom` — a serverless CRDT-mesh chat with human + AI peers.
+//! `chatroom`, a serverless CRDT-mesh chat with human + AI peers.
 //!
 //! Demonstrates the opcusdb sync algebra in a P2P/agent setting (`DESIGN.md`
 //! §6/§7/§9) without any network yet: each peer holds a replica of the chat
@@ -7,7 +7,7 @@
 //! that diverge during an **offline partition** re-converge exactly when merged.
 //!
 //! The AI participant is just another peer: it **perceives** the message log and
-//! **acts** by appending — see [`agent_reply`], a rule-based stand-in shaped so a
+//! **acts** by appending, see [`agent_reply`], a rule-based stand-in shaped so a
 //! real model (tool-call → append) drops in unchanged.
 
 use opcusdb_algebra::{Lattice, OpId, OrSet, Rga};
@@ -64,7 +64,7 @@ pub struct Peer {
     pub id: u64,
     /// Display name.
     pub name: String,
-    /// Lamport clock — advanced on every local op and on merge.
+    /// Lamport clock, advanced on every local op and on merge.
     pub lamport: u64,
     /// This peer's view of the chat.
     pub state: ChatState,

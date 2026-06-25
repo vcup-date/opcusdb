@@ -1,8 +1,8 @@
-# opcusdb — Core Spec (Phase 0–2 + `fsm-lab`)
+# opcusdb, Core Spec (Phase 0–2 + `fsm-lab`)
 
 > Buildable, engineering-grade spec for the **core**: ECS, the functional sync
 > algebra, the Timeline, and the **statechart** model that `fsm-lab` demonstrates.
-> Companion to `DESIGN.md` (the vision). **Still no code — this is the spec to
+> Companion to `DESIGN.md` (the vision). **Still no code, this is the spec to
 > build against.** Rust, single-process, no network yet (network is Phase 3).
 >
 > Design rule for this layer: **everything is deterministic and pure**, so that
@@ -81,7 +81,7 @@ struct Entities {
 
 ---
 
-## 5. Component storage — sparse set (with archetype escape hatch)
+## 5. Component storage, sparse set (with archetype escape hatch)
 
 Default storage per component type is a **sparse set**: O(1) insert/remove/lookup,
 dense contiguous values for cache-friendly iteration, stable across churn (ideal
@@ -99,7 +99,7 @@ struct SparseSet<T> {
 - `insert/get/get_mut/remove` are O(1); `remove` swaps last into the hole (swap-remove) and patches `sparse`.
 - Iteration walks `dense`/`data` in dense order; **for deterministic sim, queries
   iterate entities in ascending `entity.index`** (sort the dense view, or keep a
-  secondary ordered index — see §8). Sparse sets are unordered by construction, so
+  secondary ordered index, see §8). Sparse sets are unordered by construction, so
   the ordered view is materialized by the query layer, not the storage.
 - **Archetype escape hatch**: components flagged `#[storage(archetype)]` are packed
   by archetype for iteration-heavy systems. `fsm-lab` uses sparse sets only.
@@ -128,7 +128,7 @@ enum Source { System, Player(PeerId), Agent(AgentId), Timer(TimerId) }
 
 ## 7. Functional algebra (formalized, with laws)
 
-Five primitives. Tests assert the laws — this is how we avoid "looks right" slop.
+Five primitives. Tests assert the laws, this is how we avoid "looks right" slop.
 
 | Primitive | Signature | Laws (CI-checked) |
 |---|---|---|
@@ -244,7 +244,7 @@ struct Timer { fire_at: Tick, repeat: Option<u32>, payload: TimerEvent, id: Time
 
 ## 11. Statechart engine (the `fsm-lab` core), built on the algebra
 
-Not a naive flat FSM — **hierarchical + parallel statecharts** (Harel/SCXML-class),
+Not a naive flat FSM, **hierarchical + parallel statecharts** (Harel/SCXML-class),
 because the user explicitly wants complex systems, not toys.
 
 **Model:**
@@ -269,23 +269,23 @@ struct Machine { def: MachineDefId, config: SmallVec<StateId>, ctx: Value }
    broken by document order (StateId).
 3. Compute exit set / entry set (LCA of source & target), run `on_exit` (deepest
    first), transition `actions`, `on_entry` (shallowest first).
-4. Actions are **reducers** over `(ctx, world)` — they may emit events, set timers,
+4. Actions are **reducers** over `(ctx, world)`, they may emit events, set timers,
    spawn/despawn entities (via command buffer). Pure & deterministic.
 5. Loop until no eventless ("automatic") transitions remain (run-to-completion).
 
 **Why this maps cleanly:** a transition *is* `reduce`; a guard *is* `select`; a
 delayed transition *is* a `Timer`; the machine's history *is* the `fold` of its
-event log — so rollback/replay of a statechart is free. State machines, MMO
+event log, so rollback/replay of a statechart is free. State machines, MMO
 gameplay, and chat moderation all reuse the same engine.
 
 ---
 
 ## 12. `fsm-lab` demo spec
 
-A headless core + a tiny web inspector (later) — but the *logic* is pure Rust,
+A headless core + a tiny web inspector (later), but the *logic* is pure Rust,
 runnable as a CLI now.
 
-**Scene A — 4-way traffic intersection** (showcases parallel regions + timers):
+**Scene A, 4-way traffic intersection** (showcases parallel regions + timers):
 - One `Machine` per traffic light × 4, plus a `Controller` parallel machine
   coordinating N/S vs E/W phases with `green → yellow → red` timed transitions
   and an all-red safety interlock (a guard that forbids two greens on crossing axes).
@@ -293,7 +293,7 @@ runnable as a CLI now.
   spawned by a deterministic Poisson-ish process driven by `World::rng`.
 - Metrics derived via `select`: average wait time, throughput, max queue length.
 
-**Scene B — quest graph** (showcases hierarchy + guards + context):
+**Scene B, quest graph** (showcases hierarchy + guards + context):
 - A `Quest` statechart: `not_started → active{collecting | escorting} → (completed | failed)`
   with guards over inventory/context and timers for fail-on-timeout.
 
@@ -339,7 +339,7 @@ rng, bitcode/rkyv). No transport deps in Phase 0–2.
 2. **Statechart definition source**: hand-built Rust builder API first; do we also
    want an **SCXML** importer early (great for tooling/interop) or defer to Phase 5?
 3. **Memoization granularity** for `select`: per-component version stamps vs.
-   per-entity dirty bits — affects reactive-query cost. Start coarse (component
+   per-entity dirty bits, affects reactive-query cost. Start coarse (component
    version), optimize later.
 4. **Snapshot strategy**: full-copy double-buffer (simple) vs. true CoW pages
    (cheaper for big worlds). `fsm-lab` is small → start full-copy, design the

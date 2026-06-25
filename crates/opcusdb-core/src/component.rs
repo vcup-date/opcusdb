@@ -24,7 +24,7 @@ impl ComponentId {
 }
 
 /// Type-erased view over a `SparseSet<T>` so the world can store, drop-on-despawn,
-/// clone, and downcast stores without naming `T`. `pub(crate)` — an implementation
+/// clone, and downcast stores without naming `T`. `pub(crate)`, an implementation
 /// detail. Components must be `Clone` so the `World` can be snapshotted (§9).
 pub(crate) trait ErasedStore: Any {
     /// Remove this entity's value if present; returns whether something was removed.

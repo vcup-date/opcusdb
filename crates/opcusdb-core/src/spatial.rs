@@ -90,7 +90,7 @@ impl SpatialGrid {
     }
 
     /// Entities within `radius` (inclusive) of `(cx, cy)`, ascending by id.
-    /// Exact (Euclidean) — the cells overlapping the bounding box are scanned and
+    /// Exact (Euclidean), the cells overlapping the bounding box are scanned and
     /// then distance-filtered.
     pub fn query_radius(&self, cx: i32, cy: i32, radius: i32) -> Vec<EntityId> {
         let mut out = Vec::new();

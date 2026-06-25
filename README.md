@@ -3,7 +3,7 @@
 # opcusdb
 
 **A deterministic, time-aware, policy-driven replicated ECS** for real-time
-multiplayer games and AI-agent worlds — written in Rust, dependency-free.
+multiplayer games and AI-agent worlds, written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
@@ -23,13 +23,13 @@ embedded state machines, and a serverless human + AI chatroom.*
 opcusdb is a small engine that treats a game/world as a **pure, deterministic
 function of its inputs**. That single property is the spine of everything:
 
-- **Replay** — re-run the input log and get byte-identical state.
-- **Rollback** — rewind and re-simulate (client prediction, server reconciliation, lag compensation).
-- **Lockstep** — every peer stays in sync exchanging only inputs.
-- **Durability** — recover after a crash by replaying the log (no serializer needed).
+- **Replay**, re-run the input log and get byte-identical state.
+- **Rollback**, rewind and re-simulate (client prediction, server reconciliation, lag compensation).
+- **Lockstep**, every peer stays in sync exchanging only inputs.
+- **Durability**, recover after a crash by replaying the log (no serializer needed).
 
 The thesis (see [`DESIGN.md`](DESIGN.md)): **consistency / authority / topology is a
-_policy_ layered over a common core, not a hard-coded choice** — so the *same*
+_policy_ layered over a common core, not a hard-coded choice**, so the *same*
 engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
@@ -46,22 +46,22 @@ only renders. (Screenshots are captured headlessly from the live demos.)
 | | |
 |:--:|:--:|
 | <img src="assets/swarm-aoi.png" width="420"/> | <img src="assets/netcode-lag.png" width="420"/> |
-| **Spatial AOI** — 4,000 entities; the **interest set** near the cursor is highlighted (MMO interest management) | **Netcode under lag** — the blue **predicted** client leads; the orange **authoritative server** ghost trails and reconciles |
+| **Spatial AOI**, 4,000 entities; the **interest set** near the cursor is highlighted (MMO interest management) | **Netcode under lag**, the blue **predicted** client leads; the orange **authoritative server** ghost trails and reconciles |
 | <img src="assets/netcode-sync.png" width="420"/> | <img src="assets/particles-attract.png" width="420"/> |
-| **Same netcode, low latency** — client & server overlap (one loop, different lag) | **Particle galaxy (attract)** — fixed-point physics in the ECS, drawn with PixiJS |
+| **Same netcode, low latency**, client & server overlap (one loop, different lag) | **Particle galaxy (attract)**, fixed-point physics in the ECS, drawn with PixiJS |
 
-<div align="center"><img src="assets/particles-repel.png" width="420"/><br/><b>Particle galaxy (repel)</b> — hold the mouse to blast particles outward</div>
+<div align="center"><img src="assets/particles-repel.png" width="420"/><br/><b>Particle galaxy (repel)</b>, hold the mouse to blast particles outward</div>
 
-> The four demos above run the engine **locally in one tab** (WASM) — they showcase
+> The four demos above run the engine **locally in one tab** (WASM), they showcase
 > the engine and netcode *logic*, not a shared session. For **actual multiplayer**,
 > see below.
 
-## Multiplayer — many browsers, one authoritative world
+## Multiplayer, many browsers, one authoritative world
 
 `opcusdb-server` runs the **real opcusdb ECS engine on the server** as the single
 source of truth; browsers are thin clients that send inputs over **WebSocket** and
 render the state the server broadcasts. Open it in several tabs/devices and
-everyone shares the same live world — every cursor and every server-simulated dot.
+everyone shares the same live world, every cursor and every server-simulated dot.
 
 ```sh
 cargo run -p opcusdb-server      # then open http://localhost:9001 in 2+ tabs
@@ -70,7 +70,7 @@ cargo run -p opcusdb-server      # then open http://localhost:9001 in 2+ tabs
 <div align="center">
 <img src="assets/diagram-multiplayer.png" width="560" alt="multiplayer topology"/><br/>
 <img src="assets/multiplayer.png" width="460"/><br/>
-<b>One client's view of a shared world</b> — your white cursor, other players (p3/p5/p6), and dots the server simulates for everyone.
+<b>One client's view of a shared world</b>, your white cursor, other players (p3/p5/p6), and dots the server simulates for everyone.
 </div>
 
 > The WebSocket server is **dependency-free** too: the HTTP serving and the
@@ -87,11 +87,11 @@ other. Same hand-rolled WebSocket server; the AI calls go out through the system
 
 <div align="center">
 <img src="assets/chatroom.png" width="620"/><br/>
-<b>#lobby</b> — a human (<code>visitor</code>) and 10 AI chatters with distinct personas, talking to each other in real time.
+<b>#lobby</b>, a human (<code>visitor</code>) and 10 AI chatters with distinct personas, talking to each other in real time.
 </div>
 
 ```sh
-export OPENROUTER_API_KEY=sk-or-...                 # your key — never committed
+export OPENROUTER_API_KEY=sk-or-...                 # your key, never committed
 cargo run -p opcusdb-server --bin opcusdb-chat      # then open http://localhost:9002
 ```
 
@@ -99,18 +99,18 @@ The key is read from **`OPENROUTER_API_KEY`** and is **never stored in the repo*
 (`.env` and `run-chat.sh` are gitignored; see [`.env.example`](.env.example)). To
 save credits, the bots only chat while at least one human is connected.
 
-## Gomoku — online Five-in-a-Row (五子棋) with rooms & a win leaderboard
+## Gomoku, online Five-in-a-Row (五子棋) with rooms & a win leaderboard
 
 `opcusdb-gomoku` is turn-based online **five-in-a-row** on a 15×15 Go board. A
 **lobby lists the open rooms** (with player counts + status) so you can click to
-join or watch — or create a new room. Black moves first; first to **5 in a row**
-(any direction) wins. The Rust server is authoritative — it validates every move
-and detects the win — and **win counts persist to a local DB file** (`gomoku.db`,
+join or watch, or create a new room. Black moves first; first to **5 in a row**
+(any direction) wins. The Rust server is authoritative, it validates every move
+and detects the win, and **win counts persist to a local DB file** (`gomoku.db`,
 gitignored) as an all-time leaderboard.
 
 <div align="center">
 <img src="assets/gomoku-lobby.png" width="320"/> <img src="assets/gomoku.png" width="430"/><br/>
-<b>Lobby</b> (live room list — join / watch / create) and a finished <b>game</b> (winning line highlighted, leaderboard).
+<b>Lobby</b> (live room list, join / watch / create) and a finished <b>game</b> (winning line highlighted, leaderboard).
 </div>
 
 ```sh
@@ -118,7 +118,7 @@ cargo run -p opcusdb-server --bin opcusdb-gomoku     # open http://localhost:900
 # create a room, share the code (or ?room=CODE); 2nd player is white
 ```
 
-## Arena — a multiplayer game with rooms, rules & a persistent leaderboard
+## Arena, a multiplayer game with rooms, rules & a persistent leaderboard
 
 `opcusdb-arena` is a real-time multiplayer **snake** game: **create or join a room
 by code**, steer with arrows/WASD, eat food to grow and score, crash into a
@@ -128,7 +128,7 @@ grid per room, fixed tick, broadcast over WebSocket); scores persist to a small
 
 <div align="center">
 <img src="assets/arena.png" width="600"/><br/>
-<b>opcusdb Arena</b> — neon board, per-room scores, and a persistent all-time leaderboard.
+<b>opcusdb Arena</b>, neon board, per-room scores, and a persistent all-time leaderboard.
 </div>
 
 ```sh
@@ -136,12 +136,12 @@ cargo run -p opcusdb-server --bin opcusdb-arena      # open http://localhost:900
 # create a room, share the code (or ?room=CODE), open more tabs and race
 ```
 
-## Smackdown — an online platform fighter (Smash-style)
+## Smackdown, an online platform fighter (Smash-style)
 
 `opcusdb-smash` is a multiplayer platform fighter: **everyone who opens the page
 auto-joins the shared stage** and gets a pixel fighter. Move with the arrow keys,
-**Z = attack**, **X / ↑ = jump** (double jump). Hits raise your **damage %** — the
-higher it is, the farther you fly — so knock rivals off the blast zone to score
+**Z = attack**, **X / ↑ = jump** (double jump). Hits raise your **damage %**, the
+higher it is, the farther you fly, so knock rivals off the blast zone to score
 KOs. The Rust server owns the physics at a fixed tick and broadcasts the world;
 the browser renders with **PixiJS** (procedural pixel fighters with idle/run/jump/
 attack/hit poses), a **parallax 2-layer scrolling stage**, **particles**,
@@ -149,7 +149,7 @@ screen-shake, and **Web Audio** SFX.
 
 <div align="center">
 <img src="assets/smash.png" width="720"/><br/>
-<b>opcusdb Smackdown</b> — pixel fighters on a parallax stage; <code>Ada</code> mid-attack (slash + hit sparks) with a smash-style damage % HUD.
+<b>opcusdb Smackdown</b>, pixel fighters on a parallax stage; <code>Ada</code> mid-attack (slash + hit sparks) with a smash-style damage % HUD.
 </div>
 
 ```sh
@@ -157,13 +157,13 @@ cargo run -p opcusdb-server --bin opcusdb-smash      # open http://localhost:900
 # arrows move · Z attack · X/↑ jump (double) · open more tabs to add fighters
 ```
 
-## Boomborn — co-op survivor (Vampire-Survivors-style) 💣🧛
+## Boomborn, co-op survivor (Vampire-Survivors-style) 💣🧛
 
 `opcusdb-survivors` is a "bullet heaven": you're a **Bomberman** whose bombs
 **auto-fire** (lob bombs, a Bomberman cross-blast, homing rockets, a nova pulse)
 against hordes of **vampires** (bats, ghouls, vampires, elite bat-lords, and a
 periodic **Vampire Lord boss**). You only **move** (WASD/arrows); killed vampires
-drop **XP gems** — collect them to level up and **pick 1 of 3 upgrades** (unlock or
+drop **XP gems**, collect them to level up and **pick 1 of 3 upgrades** (unlock or
 upgrade a weapon, +HP, +speed, +pickup range, heal). Survive the escalating waves;
 dying ends your run with a **game-over screen** and a one-click restart. **Co-op**:
 everyone who opens the page fights the same horde. The Rust server simulates
@@ -172,21 +172,21 @@ world; best kill counts persist to a local DB file (`survivors.db`, gitignored).
 
 <div align="center">
 <img src="assets/survivors.png" width="780"/><br/>
-<b>opcusdb Boomborn</b> — five bombers fighting a vampire horde (91 on the field) with a <b>Vampire Lord</b> boss, auto-bomb explosions, XP gems, per-player levels & a kills leaderboard.
+<b>opcusdb Boomborn</b>, five bombers fighting a vampire horde (91 on the field) with a <b>Vampire Lord</b> boss, auto-bomb explosions, XP gems, per-player levels & a kills leaderboard.
 </div>
 
 ```sh
 cargo run -p opcusdb-server --bin opcusdb-survivors   # open http://localhost:9006
-# WASD / arrows to move — bombs fire automatically; open more tabs for co-op
+# WASD / arrows to move, bombs fire automatically; open more tabs for co-op
 ```
 
-## Townfall — a 3D MMO town in Godot 4 🏰🐺
+## Townfall, a 3D MMO town in Godot 4 🏰🐺
 
 [`demos/godot-wow`](demos/godot-wow) is a tiny **3D MMO-style town built in Godot 4**
-that talks to the opcusdb authoritative server over WebSocket — proving the engine
+that talks to the opcusdb authoritative server over WebSocket, proving the engine
 isn't browser-only. A small town with **NPC quest givers**, a pack of **wolves** to
-kill, a **quest** ("Cull the Wolves — slay 5"), **chat**, and a **WoW-style action
-bar** — 3 skills on keys **1 Cleave** (AoE) / **2 Fireball** (nuke) / **3 Heal**,
+kill, a **quest** ("Cull the Wolves, slay 5"), **chat**, and a **WoW-style action
+bar**, 3 skills on keys **1 Cleave** (AoE) / **2 Fireball** (nuke) / **3 Heal**,
 each with a **radial cooldown sweep + countdown number**. **Multiple players see
 each other** move, cast, and fight in one shared world. The whole simulation
 (movement, wolf AI, combat, skills/cooldowns, quests, chat) lives in
@@ -195,7 +195,7 @@ it (swing/spark/ring/fireball effects, wolf HP bars) and sends input.
 
 <div align="center">
 <img src="assets/godot-wow.png" width="760"/><br/>
-<b>opcusdb Townfall (Godot 4)</b> — players, Mayor Bram's quest, wolves, live chat, and a WoW-style action bar (Cleave / Fireball / Heal) with cooldown countdowns, all over the shared server.
+<b>opcusdb Townfall (Godot 4)</b>, players, Mayor Bram's quest, wolves, live chat, and a WoW-style action bar (Cleave / Fireball / Heal) with cooldown countdowns, all over the shared server.
 </div>
 
 ```sh
@@ -204,12 +204,12 @@ cargo run -p opcusdb-server --bin opcusdb-wow         # server on :9007
 # WASD move · Space attack · E talk to NPC · 1/2/3 skills · Enter chat
 ```
 
-## Overlode — an Overwatch-style FPS (hero: Tracer) 🎯
+## Overlode, an Overwatch-style FPS (hero: Tracer) 🎯
 
 `opcusdb-ow` is a team FPS that shows the engine's **netcode model**: a 60 Hz
 authoritative server with **lag-compensated hitscan** (it rewinds targets into the
 shooter's view, using each client's measured latency, for fair hits) and **Recall**
-— Tracer's rewind-3-seconds ability, literally opcusdb's timeline as a hero power.
+, Tracer's rewind-3-seconds ability, literally opcusdb's timeline as a hero power.
 Humans are team Blue; **AI bots** (they aim, strafe, and retreat to health packs
 when hurt) fill team Orange so you can test solo. The client is **Three.js**
 (pointer-lock FPS with client-predicted movement + soft reconciliation).
@@ -217,13 +217,12 @@ when hurt) fill team Orange so you can test solo. The client is **Three.js**
 Full kit & mode: **pulse pistols** (mag/reload), **Blink** (3 charges), **Recall**,
 and the **Pulse Bomb ultimate** (charge meter → thrown AoE explosion). Plus a
 **capture-point objective** + elims racing to the round win (win banner &
-auto-reset), **health packs**, **stand-on-cover verticality**, and full game feel —
-**Web Audio** SFX, floating **damage numbers**, hit markers, **killfeed**, a team
+auto-reset), **health packs**, **stand-on-cover verticality**, and full game feel, **Web Audio** SFX, floating **damage numbers**, hit markers, **killfeed**, a team
 **scoreboard** (Tab), damage vignette, muzzle flash & screen shake.
 
 <div align="center">
 <img src="assets/ow.png" width="760"/><br/>
-<b>opcusdb Overlode</b> — first-person Tracer: crosshair, HP/ammo, Blink + Recall + Pulse Bomb, the capture-point objective, killfeed, tracers, and bots that shoot back.
+<b>opcusdb Overlode</b>, first-person Tracer: crosshair, HP/ammo, Blink + Recall + Pulse Bomb, the capture-point objective, killfeed, tracers, and bots that shoot back.
 </div>
 
 ```sh
@@ -231,21 +230,21 @@ cargo run -p opcusdb-server --bin opcusdb-ow          # open http://localhost:90
 # WASD move · mouse aim · click fire · Shift Blink · E Recall · Q Ult · R reload · Tab scores
 ```
 
-## Co-Board — a collaborative vector canvas on a CRDT ✏️
+## Co-Board, a collaborative vector canvas on a CRDT ✏️
 
 `opcusdb-board` is a real-time **collaborative vector editor** (Figma-style) whose
 document is an **`OrSet`** (add-wins observed-remove set) from
 [`opcusdb-algebra`](crates/opcusdb-algebra). Draw **rectangles, ellipses, lines,
-arrows, text, sticky notes, and freehand** — then **select, move, and resize with
+arrows, text, sticky notes, and freehand**, then **select, move, and resize with
 handles**, restyle (stroke/fill/weight), and reorder. Because CRDT adds and removes
 **commute and are idempotent**, every edit is an upsert that merges: many people
 edit at once, you can **keep working while offline**, and it **merges cleanly on
-reconnect** — no conflicts, no lost work. Live **presence cursors** show everyone.
+reconnect**, no conflicts, no lost work. Live **presence cursors** show everyone.
 This is the engine's CRDT / offline-merge story made tangible (no game loop).
 
 <div align="center">
 <img src="assets/board.png" width="820"/><br/>
-<b>opcusdb Co-Board</b> — a collaborative vector canvas (shapes, text, sticky notes, arrows) with selection handles, a properties panel, live cursors; an <code>OrSet</code> CRDT merges everyone's edits, even offline ones.
+<b>opcusdb Co-Board</b>, a collaborative vector canvas (shapes, text, sticky notes, arrows) with selection handles, a properties panel, live cursors; an <code>OrSet</code> CRDT merges everyone's edits, even offline ones.
 </div>
 
 ```sh
@@ -253,13 +252,13 @@ cargo run -p opcusdb-server --bin opcusdb-board   # open http://localhost:9009
 # draw together · open more tabs · hit "go offline", draw, then come back to watch it merge
 ```
 
-## Rampart — tower defense 🏰
+## Rampart, tower defense 🏰
 
 `opcusdb-td` is a **tower-defense** game: creeps march along a winding path in **12
-escalating waves** and you spend gold to build towers — **Arrow** (fast, single
-target), **Cannon** (slow, splash), **Frost** (slows) — that auto-target and fire.
+escalating waves** and you spend gold to build towers, **Arrow** (fast, single
+target), **Cannon** (slow, splash), **Frost** (slows), that auto-target and fire.
 Kill creeps for gold; let one reach your keep and you lose a life; clear every wave
-to win — and you can **call the next wave early** at any time. The Rust server is
+to win, and you can **call the next wave early** at any time. The Rust server is
 the **authoritative** simulation (fixed tick, broadcast over WebSocket). Solo play
 is a **private game**; click **Play with a friend** to spin up a **co-op room** and
 share the `?room=CODE` link so others join the *same* board. All mouse, Mac-friendly:
@@ -267,7 +266,7 @@ click a tower, click a tile.
 
 <div align="center">
 <img src="assets/td.png" width="820"/><br/>
-<b>opcusdb Rampart</b> — build towers along the path to stop waves of creeps before they reach your keep; your own server-authoritative game.
+<b>opcusdb Rampart</b>, build towers along the path to stop waves of creeps before they reach your keep; your own server-authoritative game.
 </div>
 
 ```sh
@@ -275,18 +274,18 @@ cargo run -p opcusdb-server --bin opcusdb-td   # open http://localhost:9010
 # click a tower in the palette, click an empty tile to build · Start Wave (or Space)
 ```
 
-## Hearth — a living AI town you walk into 🏡
+## Hearth, a living AI town you walk into 🏡
 
 `opcusdb-town` is a small town of **12 LLM residents** (OpenRouter
-an OpenRouter model) who follow a daily routine — work → market → socialise
-→ tavern → home — and **hold short, in-character conversations whenever they share a
+an OpenRouter model) who follow a daily routine, work → market → socialise
+→ tavern → home, and **hold short, in-character conversations whenever they share a
 place** (area-of-interest decides who can hear whom). The twist versus a 2023-style
 "watch the agents" demo: **every browser is an embodied visitor.** You walk in, stand
 near someone, and they talk *to you*; open more tabs and several humans share one
 town, indistinguishable to the residents.
 
 The pixel-art map and the twelve animated character sprites are rendered with
-**PixiJS** — day/night cycle, floating speech bubbles, name tags, smooth motion.
+**PixiJS**, day/night cycle, floating speech bubbles, name tags, smooth motion.
 
 <div align="center">
 <img src="assets/town.png" width="820"/><br/>
@@ -327,12 +326,12 @@ cargo run -p opcusdb-server --bin opcusdb-town    # open http://localhost:9011 (
 | Crate | What it is |
 |---|---|
 | `opcusdb-core` | ECS: generational entities, sparse-set storage, **snapshot-able `World`**, deterministic queries (joins / exclusion / pick-smallest / `for_each_mut`), command buffer, **system scheduler**, **spatial grid (AOI)**, change-detection + memoized **`select`**, **PRNG**, **fixed-point `Fx`** |
-| `opcusdb-algebra` | the functional sync algebra — `reduce` · `merge` · `select` · `query` · `fold` — and CRDTs (`LwwReg`, `GCounter`, `PNCounter`, `OrSet`, `Rga`) with law-checkers |
+| `opcusdb-algebra` | the functional sync algebra, `reduce` · `merge` · `select` · `query` · `fold`, and CRDTs (`LwwReg`, `GCounter`, `PNCounter`, `OrSet`, `Rga`) with law-checkers |
 | `opcusdb-time` | the **Timeline**: fixed-timestep loop, keyframe ring, **rollback / scrub / replay**, deterministic timers |
 | `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
 | `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
 | `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
-| `demos/server` | eleven authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), **Townfall** (Godot 4 3D MMO town), **Overlode** (Overwatch-style FPS, lag-compensated), **Co-Board** (CRDT vector canvas), and **Rampart** (tower defense) — with rooms, leaderboards, physics, quests, and AI |
+| `demos/server` | eleven authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), **Townfall** (Godot 4 3D MMO town), **Overlode** (Overwatch-style FPS, lag-compensated), **Co-Board** (CRDT vector canvas), and **Rampart** (tower defense), with rooms, leaderboards, physics, quests, and AI |
 
 ## The five game types → demos
 
@@ -378,7 +377,7 @@ bash bindings/ffi/determinism_gate.sh
 
 Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bindings/ffi/native/).
 
-## Test cases — what's actually proven
+## Test cases, what's actually proven
 
 `cargo test --workspace` → **158 passing across 34 binaries**, clippy-clean. A selection:
 
@@ -426,9 +425,9 @@ FFI shim and has **zero external dependencies**.
 
 ## Documentation
 
-- [`DESIGN.md`](DESIGN.md) — vision/architecture (the policy model, Timeline, sync algebra, topologies).
-- [`CORE_SPEC.md`](CORE_SPEC.md) — buildable engineering spec for the core.
-- [`PLAN.md`](PLAN.md) — original research survey (open-source real-time DBs) + language rationale.
+- [`DESIGN.md`](DESIGN.md), vision/architecture (the policy model, Timeline, sync algebra, topologies).
+- [`CORE_SPEC.md`](CORE_SPEC.md), buildable engineering spec for the core.
+- [`PLAN.md`](PLAN.md), original research survey (open-source real-time DBs) + language rationale.
 - Each demo has its own README.
 
 ## License

@@ -1,4 +1,4 @@
-//! opcusdb Gomoku — online **Five-in-a-Row** (五子棋) on a Go board.
+//! opcusdb Gomoku, online **Five-in-a-Row** (五子棋) on a Go board.
 //!
 //! Two players join a **room** by code (black moves first, then white), take turns
 //! placing stones on a 15×15 board; the first to get **five in a row**
@@ -10,7 +10,7 @@
 //! shown as an all-time leaderboard.
 //!
 //! Run: `cargo run -p opcusdb-server --bin opcusdb-gomoku` then open
-//! http://localhost:9004 — create a room, share the code, play.
+//! http://localhost:9004, create a room, share the code, play.
 
 use opcusdb_server::ws;
 use std::collections::BTreeMap;
@@ -87,7 +87,7 @@ fn main() {
         next_id: 1,
     }));
     let listener = TcpListener::bind(("0.0.0.0", PORT)).expect("bind");
-    println!("opcusdb Gomoku (five-in-a-row) on http://localhost:{PORT}  — create/join a room");
+    println!("opcusdb Gomoku (five-in-a-row) on http://localhost:{PORT} , create/join a room");
     for stream in listener.incoming().flatten() {
         let arena = arena.clone();
         thread::spawn(move || handle(stream, arena));
@@ -163,8 +163,8 @@ fn rebuild_snapshot(room: &mut Room, lb: &[(String, u32)]) {
         room.to_move,
         room.winner,
         room.last,
-        if room.black.id.is_some() { &room.black.nick } else { "—" },
-        if room.white.id.is_some() { &room.white.nick } else { "—" },
+        if room.black.id.is_some() { &room.black.nick } else { "(open)" },
+        if room.white.id.is_some() { &room.white.nick } else { "(open)" },
         win_line,
     ));
     let lb_s = lb.iter().map(|(n, w)| format!("{n}:{w}")).collect::<Vec<_>>().join(",");

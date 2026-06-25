@@ -1,6 +1,6 @@
 // Browser client for the opcusdb shared-world server. Connects over WebSocket,
 // sends this tab's cursor + clicks, and renders the authoritative state the
-// server broadcasts — so every connected tab sees the same live world.
+// server broadcasts, so every connected tab sees the same live world.
 
 const CANVAS = 700;
 let W = 1000, H = 1000, myId = 0, scale = CANVAS / 1000;
@@ -17,7 +17,7 @@ app.stage.addChild(labels);
 let entities = []; // {kind, owner, x, y}
 
 const ws = new WebSocket(`ws://${location.host}/ws`);
-ws.onopen = () => (status.textContent = "connected — open another tab to see shared state");
+ws.onopen = () => (status.textContent = "connected, open another tab to see shared state");
 ws.onclose = () => (status.textContent = "disconnected (is the server running?)");
 ws.onmessage = (ev) => {
   const msg = ev.data;

@@ -1,6 +1,6 @@
 // Headless verification of the opcusdb WASM binding in Node (no browser needed).
 // Instantiates the .wasm, creates a swarm, steps it, and reads positions straight
-// from linear memory — the same contract the PixiJS demo uses.
+// from linear memory, the same contract the PixiJS demo uses.
 //
 // Run after building:
 //   cargo build --release --target wasm32-unknown-unknown -p opcusdb-ffi

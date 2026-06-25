@@ -1,4 +1,4 @@
-//! `lockstep` CLI — run a tiny MOBA match and show that two peers fed the same
+//! `lockstep` CLI, run a tiny MOBA match and show that two peers fed the same
 //! inputs stay byte-identical (the lockstep guarantee). Pure deterministic
 //! fixed-point sim driven by the Timeline.
 

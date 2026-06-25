@@ -1,5 +1,5 @@
 extends Node3D
-## opcusdb Townfall — Godot 4 client for the Rust town server (demos/server/src/wow.rs).
+## opcusdb Townfall, Godot 4 client for the Rust town server (demos/server/src/wow.rs).
 ##
 ## A tiny 3D MMO town: NPC quest givers, wolves to kill, quests, and chat, all over
 ## a WebSocket to the authoritative server. Other connected players appear in your
@@ -220,7 +220,7 @@ func _build_ui() -> void:
 	quest_label.add_theme_color_override("font_color", Color("ffd24a"))
 	qpanel.add_child(quest_label)
 
-	# Controls panel (top-right) — clearly shows how to attack
+	# Controls panel (top-right), clearly shows how to attack
 	var cpanel := Panel.new()
 	cpanel.size = Vector2(330, 152); cpanel.position = Vector2(vp.x - 350, 14)
 	ui.add_child(cpanel)
@@ -232,7 +232,7 @@ func _build_ui() -> void:
 	var ctl := Label.new()
 	ctl.position = Vector2(16, 38); ctl.size = Vector2(300, 110)
 	ctl.add_theme_font_size_override("font_size", 22)
-	ctl.text = "WASD / arrows — move\n[SPACE] — Attack ⚔\n[E] — Talk to NPC\n[ENTER] — Chat"
+	ctl.text = "WASD / arrows, move\n[SPACE], Attack ⚔\n[E], Talk to NPC\n[ENTER], Chat"
 	cpanel.add_child(ctl)
 
 	chat_log = RichTextLabel.new()
@@ -390,14 +390,14 @@ func _play_event(kind: String, id: int, x: float, z: float) -> void:
 				create_tween().tween_property(r, "scale", Vector3.ONE, 0.16)
 		"k":
 			_spark(Vector3(x, 0.7, z), Color(0.7, 0.25, 0.2), 16)
-		"C": # Cleave — expanding ground ring
+		"C": # Cleave, expanding ground ring
 			_ring(Vector3(x, 0.25, z), Color(1, 0.6, 0.15), 4.6)
-		"F": # Fireball — bolt flies from caster to target, then bursts
+		"F": # Fireball, bolt flies from caster to target, then bursts
 			var from := Vector3(x, 1.0, z)
 			if players.has(id):
 				from = players[id].root.position + Vector3(0, 1.0, 0)
 			_fireball(from, Vector3(x, 1.0, z))
-		"L": # Heal — green sparkle on the caster
+		"L": # Heal, green sparkle on the caster
 			_spark(Vector3(x, 1.2, z), Color(0.3, 1.0, 0.45), 16)
 
 func _ring(pos: Vector3, color: Color, r: float) -> void:
@@ -468,7 +468,7 @@ func _update_ui() -> void:
 		0, 3:
 			quest_label.text = "Quest: find Mayor Bram (the ! in town) and press E"
 		1:
-			quest_label.text = "Quest — Cull the Wolves: %d/5 slain" % prog
+			quest_label.text = "Quest, Cull the Wolves: %d/5 slain" % prog
 		2:
 			quest_label.text = "Quest: return to Mayor Bram (press E) to turn in!"
 	for i in skill_ui.size():

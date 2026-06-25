@@ -2,7 +2,7 @@
 //!
 //! Floating-point results can differ across platforms/compilers, which breaks
 //! lockstep and replay. [`Fx`] is a **Q16.16** fixed-point number (16 integer
-//! bits, 16 fractional) backed by `i32` with `i64` intermediates — pure integer
+//! bits, 16 fractional) backed by `i32` with `i64` intermediates, pure integer
 //! math, so every platform computes the exact same bits. Use it for positions,
 //! velocities, and physics in deterministic (lockstep) worlds; convert to `f64`
 //! only at the rendering edge, never inside the sim.
@@ -64,13 +64,13 @@ impl Fx {
         self.0
     }
 
-    /// From an `f64` — for construction/tests only, never inside the sim.
+    /// From an `f64`, for construction/tests only, never inside the sim.
     #[inline]
     pub fn from_num(f: f64) -> Fx {
         Fx((f * ONE_BITS as f64).round() as i32)
     }
 
-    /// To `f64` — for rendering only, never feed back into the sim.
+    /// To `f64`, for rendering only, never feed back into the sim.
     #[inline]
     pub fn to_f64(self) -> f64 {
         self.0 as f64 / ONE_BITS as f64

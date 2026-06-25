@@ -25,7 +25,7 @@ const dots = new PIXI.Graphics();
 app.stage.addChild(dots);
 const stats = document.getElementById("stats");
 
-// The interest radius (sim units) follows the mouse — MMO area-of-interest.
+// The interest radius (sim units) follows the mouse, MMO area-of-interest.
 const RADIUS = 120;
 let mouse = { x: W / 2, y: H / 2 };
 app.view.addEventListener("pointermove", (e) => {
@@ -41,7 +41,7 @@ app.ticker.add(() => {
   // The Rust spatial grid computes the interest set near the cursor.
   const inSet = ex.swarm_mark_near(handle, mouse.x | 0, mouse.y | 0, RADIUS);
 
-  // Re-create views each frame — wasm memory can grow and detach old buffers.
+  // Re-create views each frame, wasm memory can grow and detach old buffers.
   const pos = new Int32Array(ex.memory.buffer, ex.swarm_positions_ptr(handle), n * 2);
   const flags = new Uint8Array(ex.memory.buffer, ex.swarm_flags_ptr(handle), n);
 

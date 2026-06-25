@@ -1,14 +1,14 @@
 //! Netcode demo: a **WoW-style ability cooldown** and how opcusdb handles
-//! **network lag** — answering two design questions concretely.
+//! **network lag**, answering two design questions concretely.
 //!
 //! ## Does it consider network laggyness?
-//! Yes — that is the whole reason the [`Timeline`] exists (`DESIGN.md` §5,
+//! Yes, that is the whole reason the [`Timeline`] exists (`DESIGN.md` §5,
 //! `CORE_SPEC.md` §9). The standard authoritative-server netcode loop is:
-//! 1. **client prediction** — the client runs the real sim on its own input
+//! 1. **client prediction**, the client runs the real sim on its own input
 //!    immediately, so the UI is responsive despite latency;
-//! 2. **server reconciliation** — when the authoritative tick arrives, the client
+//! 2. **server reconciliation**, when the authoritative tick arrives, the client
 //!    **rolls back** to it and **replays** its buffered inputs;
-//! 3. **lag compensation** — the server can rewind to the shooter's render-time.
+//! 3. **lag compensation**, the server can rewind to the shooter's render-time.
 //!
 //! All three are the *same* mechanism: rewind + deterministic re-simulate. The
 //! Timeline already provides it (`seek` + branch-on-`advance` + `replay`), and
@@ -17,12 +17,12 @@
 //! a later track; this shows the handling logic is in place and correct.)
 //!
 //! ## A WoW cooldown over a laggy link
-//! A cooldown is just a **deterministic timer + a guard** — the same primitives as
+//! A cooldown is just a **deterministic timer + a guard**, the same primitives as
 //! the fsm-lab quest. The server is authoritative over the cooldown clock; the
 //! client predicts a cast and reconciles if the server disagrees (e.g. the cast
 //! was actually still on cooldown on the server's clock). Because the logic is
 //! deterministic and tick-based, prediction and the server agree whenever they
-//! see the same inputs — and rollback fixes them up when they don't.
+//! see the same inputs, and rollback fixes them up when they don't.
 
 use opcusdb_time::{Sim, Tick};
 
@@ -34,7 +34,7 @@ pub const GCD: u32 = 2;
 /// The ability's own cooldown (ticks).
 pub const ABILITY_CD: u32 = 5;
 
-/// A player's combat state — the *authoritative* model (also what the client
+/// A player's combat state, the *authoritative* model (also what the client
 /// predicts with). Deterministic and `Clone`, so the Timeline can roll it back.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Combat {

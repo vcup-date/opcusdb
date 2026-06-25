@@ -8,7 +8,7 @@
 //!
 //! This module does the *analysis* and *deterministic serial execution*. Actual
 //! multi-threaded execution within a stage needs to hand each thread a disjoint
-//! slice of the `World` (split by component access) — which requires encapsulated
+//! slice of the `World` (split by component access), which requires encapsulated
 //! `unsafe`; that is deferred. What's here is the correctness foundation, and the
 //! key safety property is verified in tests: **reordering independent systems does
 //! not change the result** (so running them concurrently is sound).

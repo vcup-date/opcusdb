@@ -2,17 +2,17 @@
 //! server-reconciliation** loop (`DESIGN.md` §5/§6).
 //!
 //! This is the netcode loop a laggy link actually runs:
-//! - the **client predicts** — it applies its own move the instant it's made, so
+//! - the **client predicts**, it applies its own move the instant it's made, so
 //!   motion feels lag-free;
-//! - the **server is authoritative** — inputs arrive (delayed) over the up-link
+//! - the **server is authoritative**, inputs arrive (delayed) over the up-link
 //!   and it applies them;
-//! - the **client reconciles** — each authoritative snapshot (delayed over the
+//! - the **client reconciles**, each authoritative snapshot (delayed over the
 //!   down-link) resets the client's confirmed state, drops acknowledged inputs,
 //!   and replays the still-unacknowledged ones on top.
 //!
 //! Everything is deterministic (the [`Link`] uses a seeded RNG for jitter/loss),
 //! so the loop is testable. [`Link`] is the seam where a real transport (QUIC
-//! native / WebRTC browser) drops in later — the loop above is unchanged.
+//! native / WebRTC browser) drops in later, the loop above is unchanged.
 
 use opcusdb_core::Rng;
 
@@ -72,7 +72,7 @@ impl<T: Clone> Link<T> {
     }
 
     /// Remove and return all payloads due at or before `now`, ordered by
-    /// `(deliver_at, seq)` — a stable, deterministic delivery order.
+    /// `(deliver_at, seq)`, a stable, deterministic delivery order.
     pub fn deliver(&mut self, now: u64) -> Vec<T> {
         let mut ready: Vec<(u64, u64, T)> = Vec::new();
         let mut kept: Vec<(u64, u64, T)> = Vec::new();

@@ -1,4 +1,4 @@
-//! `load-test` — a many-entity swarm that exercises the ECS [`World`] at scale.
+//! `load-test`, a many-entity swarm that exercises the ECS [`World`] at scale.
 //!
 //! This is the first use of the ECS in a running simulation (queries + commands
 //! pattern, many entities per tick). It models "many users": each entity is a
@@ -7,7 +7,7 @@
 //! supported" goal and provides a throughput benchmark (see the `loadtest` bin).
 //!
 //! Determinism: positions/velocities are seeded by [`opcusdb_core::Rng`] and the
-//! query layer iterates in ascending entity order, so a run is reproducible — the
+//! query layer iterates in ascending entity order, so a run is reproducible, the
 //! [`Swarm::checksum`] over all positions is identical across runs of the same seed.
 
 use opcusdb_core::{Rng, SpatialGrid, World};
@@ -136,7 +136,7 @@ impl Swarm {
         }
     }
 
-    /// Count entities whose position falls in `[x0,x1) × [y0,y1)` — an
+    /// Count entities whose position falls in `[x0,x1) × [y0,y1)`, an
     /// interest-management-style spatial query.
     pub fn count_in_region(&self, x0: i32, y0: i32, x1: i32, y1: i32) -> usize {
         self.world
@@ -145,7 +145,7 @@ impl Swarm {
             .count()
     }
 
-    /// An order-independent... no — an order-*dependent*, deterministic checksum of
+    /// An order-independent... no, an order-*dependent*, deterministic checksum of
     /// all positions (the query iterates ascending entity id). Equal across runs
     /// of the same seed; a cheap way to assert reproducibility.
     pub fn checksum(&self) -> u64 {
@@ -191,7 +191,7 @@ mod tests {
         let mut s = Swarm::new(1, 7);
         let before = s.checksum();
         s.step();
-        // After a step the position changed (unless velocity is 0,0 — unlikely but
+        // After a step the position changed (unless velocity is 0,0, unlikely but
         // we only assert the field stays in-bounds via region count).
         let _ = before;
         assert_eq!(s.count_in_region(0, 0, WIDTH, HEIGHT), 1, "stays on field");

@@ -1,16 +1,16 @@
-//! `fsm-lab` — a deterministic, replayable traffic intersection.
+//! `fsm-lab`, a deterministic, replayable traffic intersection.
 //!
 //! Demonstrates the opcusdb core composing end-to-end (`CORE_SPEC.md` §12):
 //! - a **hierarchical + parallel statechart** ([`opcusdb_fsm`]) models the
-//!   intersection as two orthogonal regions — the car lights and the pedestrian
-//!   signal — coordinated by a **cross-region interlock guard** (the walk signal
+//!   intersection as two orthogonal regions, the car lights and the pedestrian
+//!   signal, coordinated by a **cross-region interlock guard** (the walk signal
 //!   may only activate while both car axes are red);
 //! - **deterministic timers** ([`opcusdb_time::Timers`]) drive the phase clock;
 //! - the whole thing is a [`Sim`] driven by the **[`Timeline`]**, so it gets
 //!   rollback, time-scrubbing, and byte-identical replay for free.
 //!
 //! Safety by construction: car phases are mutually exclusive, so the two axes are
-//! never simultaneously "go" — verified as an invariant across long randomized runs.
+//! never simultaneously "go", verified as an invariant across long randomized runs.
 
 use opcusdb_core::Rng;
 use opcusdb_fsm::{Action, ChartBuilder, Guard, MachineState, StateChart};
@@ -201,7 +201,7 @@ fn build_chart() -> StateChart<Ctx, Sig> {
     b.on_entry(walk, set_walk(true));
     b.on_entry(dont_walk, set_walk(false));
     // Eventless transitions gated by the interlock guard, which reads context the
-    // lights region writes — so the walk signal activates only during all-red.
+    // lights region writes, so the walk signal activates only during all-red.
     b.transition(dont_walk, None, Some(guard_all_red(true)), Some(walk), None);
     b.transition(walk, None, Some(guard_all_red(false)), Some(dont_walk), None);
 
@@ -209,7 +209,7 @@ fn build_chart() -> StateChart<Ctx, Sig> {
 }
 
 /// The intersection as a [`Sim`]: an immutable chart shared via `Rc`, the live
-/// machine state, and the timer queue. `Clone` (cheap — the `Rc` is shared) so
+/// machine state, and the timer queue. `Clone` (cheap, the `Rc` is shared) so
 /// the [`Timeline`] can snapshot/rollback it.
 #[derive(Clone)]
 pub struct Intersection {
@@ -259,7 +259,7 @@ impl Intersection {
         &self.traffic
     }
 
-    /// The full machine state (configuration + context) — the snapshot-comparable
+    /// The full machine state (configuration + context), the snapshot-comparable
     /// logical state, excluding the shared immutable chart.
     pub fn machine(&self) -> &MachineState<Ctx> {
         &self.state
@@ -375,7 +375,7 @@ mod tests {
     #[test]
     fn replay_reproduces_live_state() {
         // Acceptance #1: replaying the log from a fresh start equals the live
-        // state — including the RNG-driven traffic (replay-safe randomness).
+        // state, including the RNG-driven traffic (replay-safe randomness).
         let tl = run(57);
         let replayed = Timeline::replay(Intersection::new(), tl.log());
         assert_eq!(replayed.machine(), tl.state().machine());

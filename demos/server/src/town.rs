@@ -1,10 +1,10 @@
-//! opcusdb Hearth — a living **AI town** you can walk into.
+//! opcusdb Hearth, a living **AI town** you can walk into.
 //!
 //! Twelve LLM residents (OpenRouter) live in one
 //! shared town: they follow a daily routine (work → market → social → tavern →
 //! home), and whenever characters share a place they hold a short, in-character
 //! conversation. The twist vs. a 2023-style "watch the agents" demo: **every
-//! browser is an embodied visitor** — you walk around, the residents perceive
+//! browser is an embodied visitor**, you walk around, the residents perceive
 //! whoever is near them (area-of-interest) and talk *to you*, and multiple humans
 //! share the same town. So it's a place you're inside of, not a TV channel.
 //!
@@ -52,7 +52,7 @@ const RESIDENTS: [(&str, &str, &str, usize, usize); 12] = [
     ("Finn", "a restless, fast-talking courier who carries rumours and news between towns", "courier", 0, 0),
 ];
 
-// (name, tile_x, tile_y, tile_w, tile_h, kind) — kind drives client rendering
+// (name, tile_x, tile_y, tile_w, tile_h, kind), kind drives client rendering
 // Stand points in pixel coords on WALKABLE ground (the plaza and the cobblestone
 // paths of the generated map), kept well inside the 960x608 view so nobody walks
 // on a roof or wanders off-screen. Index order is fixed (RESIDENTS reference it).
@@ -290,7 +290,7 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
         };
         let system = format!(
             "You are {} in the small town of Hearth. {}. You are at the {} with {}. \
-             Say ONE short, natural, in-character line under 20 words — react to the last lines, be concrete, \
+             Say ONE short, natural, in-character line under 20 words, react to the last lines, be concrete, \
              have an opinion, gossip or banter. If a visitor spoke to you, answer them directly. \
              No emoji, no name prefix, no quotes, stay in character.",
             c.name,
@@ -388,7 +388,7 @@ fn canned(name: &str, persona: &str) -> String {
         "Did you hear what happened by the market?",
         "I've too much to do and too little time.",
         "Sit a while, no need to rush.",
-        "Prices again — everything costs more these days.",
+        "Prices again, everything costs more these days.",
         "Have you eaten? You look hungry.",
     ];
     let i = (name.len() + persona.len()) % base.len();
@@ -505,7 +505,7 @@ fn snapshot(t: &Town, you: u32) -> String {
 fn main() {
     let town = Arc::new(Mutex::new(new_town()));
     if std::env::var("OPENROUTER_API_KEY").map_or(true, |k| k.is_empty()) {
-        eprintln!("WARNING: OPENROUTER_API_KEY not set — residents will use canned lines.");
+        eprintln!("WARNING: OPENROUTER_API_KEY not set, residents will use canned lines.");
     }
     {
         let town = town.clone();

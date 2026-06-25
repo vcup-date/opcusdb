@@ -1,4 +1,4 @@
-// opcusdb Co-Board — collaborative vector canvas. Elements (rect/ellipse/line/
+// opcusdb Co-Board, collaborative vector canvas. Elements (rect/ellipse/line/
 // arrow/text/note/pen) live in an OrSet CRDT on the server; editing an element is
 // an upsert (same id). Selection + resize handles, live presence, offline-merge.
 

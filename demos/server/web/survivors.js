@@ -1,4 +1,4 @@
-// opcusdb Boomborn — browser client. Thin client: renders the world the Rust
+// opcusdb Boomborn, browser client. Thin client: renders the world the Rust
 // server simulates (PixiJS) and sends movement input. Bomberman vs. vampires.
 
 const $ = (id) => document.getElementById(id);
@@ -242,7 +242,7 @@ app.ticker.add(() => {
     gParts.beginFill(pt.col, Math.max(0, pt.life)).drawRect(pt.x, pt.y, pt.size, pt.size).endFill(); }
   particles = particles.filter(p => p.life > 0);
 
-  // player name tags (PIXI text) — keep crisp
+  // player name tags (PIXI text), keep crisp
   syncTags();
   sfxBudget = 3;
 });

@@ -5,7 +5,7 @@ const $ = (id) => document.getElementById(id);
 const cv = $("board"), ctx = cv.getContext("2d");
 let ws = null, myId = 0, role = "s";
 let N = 15, board = [], toMove = 1, winner = 0, last = -1, winLine = [];
-let blackName = "—", whiteName = "—", lb = [];
+let blackName = ", ", whiteName = ", ", lb = [];
 let hover = -1, joined = false;
 
 const SIZE = 600, PAD = 28;
@@ -46,7 +46,7 @@ function joinRoom(code) {
 function renderRooms(listStr) {
   const rooms = listStr.split(",").filter(Boolean).map(x => { const [code, n, status] = x.split(":"); return { code, n: +n, status }; });
   const el = $("roomList");
-  if (!rooms.length) { el.innerHTML = '<div class="hint">no open rooms yet — create one!</div>'; return; }
+  if (!rooms.length) { el.innerHTML = '<div class="hint">no open rooms yet, create one!</div>'; return; }
   el.innerHTML = "";
   rooms.forEach(r => {
     const row = document.createElement("div"); row.className = "lobrow";
@@ -112,8 +112,8 @@ function sidebar() {
   const winOf = (n) => (lb.find(([x]) => x === n) || [, 0])[1];
   $("blackWins").textContent = winOf(blackName); $("whiteWins").textContent = winOf(whiteName);
   const st = $("status");
-  const waiting = blackName === "—" || whiteName === "—";
-  if (winner === 3) { st.className = ""; st.textContent = "draw — board full"; }
+  const waiting = blackName === ", " || whiteName === ", ";
+  if (winner === 3) { st.className = ""; st.textContent = "draw, board full"; }
   else if (winner !== 0) {
     const iWon = winner === myColor();
     st.className = iWon ? "win" : "lose";
