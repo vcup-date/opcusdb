@@ -24,9 +24,10 @@ $("app").appendChild(app.view);
 function fit() { const s = Math.min(innerWidth / W, innerHeight / H) * 0.98; app.view.style.width = W * s + "px"; app.view.style.height = H * s + "px"; }
 addEventListener("resize", fit); fit();
 
-const bgL = new PIXI.Container(), groundL = new PIXI.Container(), labelL = new PIXI.Container(), charL = new PIXI.Container(), bubbleL = new PIXI.Container(), fxL = new PIXI.Container(), nightL = new PIXI.Container(), glowL = new PIXI.Container();
-app.stage.addChild(bgL, groundL, labelL, charL, bubbleL, fxL, nightL, glowL);
-fxL.eventMode = "none"; glowL.eventMode = "none";
+const bgL = new PIXI.Container(), groundL = new PIXI.Container(), labelL = new PIXI.Container(), charL = new PIXI.Container(), bubbleL = new PIXI.Container(), fxL = new PIXI.Container(), nightL = new PIXI.Container(), glowL = new PIXI.Container(), selL = new PIXI.Container();
+app.stage.addChild(bgL, groundL, labelL, charL, bubbleL, fxL, nightL, glowL, selL);
+fxL.eventMode = "none"; glowL.eventMode = "none"; selL.eventMode = "none";
+const selRing = new PIXI.Graphics(); selL.addChild(selRing); let selectedId = 0;
 // warm lamp glows + drifting fireflies, drawn above the night tint so they shine in the dark
 const lampG = new PIXI.Graphics(); const fireG = new PIXI.Graphics(); fireG.blendMode = PIXI.BLEND_MODES.ADD; glowL.addChild(lampG, fireG);
 const fireflies = Array.from({ length: 38 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, ph: Math.random() * 6 }));
@@ -249,6 +250,16 @@ app.ticker.add(() => {
     const fa = 0.25 + 0.55 * Math.max(0, Math.sin(f.ph));
     fireG.beginFill(0xffe88a, fa).drawCircle(f.x, f.y, 1.7).endFill();
   }
+  // selection ring + inspect card for a clicked townsperson
+  const sel = selectedId && chars.get(selectedId);
+  selRing.clear();
+  const insp = $("inspect");
+  if (sel) {
+    const pr = 17 + Math.sin(performance.now() / 240) * 2;
+    selRing.lineStyle(2.5, 0xffe07a, 0.9).drawEllipse(sel.dx, sel.dy + 14, pr, pr * 0.42);
+    const r = roster.find(rr => rr.id === selectedId);
+    if (r && insp) { insp.style.display = "block"; insp.innerHTML = `<div class="nm">${esc(r.name)}</div><div class="rl">${esc(r.kind)}</div><div class="ac">at the ${esc(r.act)}</div>`; }
+  } else if (insp) { insp.style.display = "none"; }
   updateClock();
 });
 // returns [tintColor, alpha]; applied as a MULTIPLY layer so the scene darkens and
@@ -295,7 +306,11 @@ app.view.addEventListener("click", (e) => {
   if (!started) return;
   const r = app.view.getBoundingClientRect();
   const x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
-  ws && ws.readyState === 1 && ws.send(`go ${x.toFixed(0)} ${y.toFixed(0)}`);
+  // click a townsperson to inspect them; click the ground to walk there
+  let hit = 0, hd = 28 * 28;
+  for (const [id, v] of chars) { if (id === myId) continue; const d = (v.dx - x) ** 2 + (v.dy - y) ** 2; if (d < hd) { hd = d; hit = id; } }
+  if (hit) { selectedId = hit; }
+  else { selectedId = 0; ws && ws.readyState === 1 && ws.send(`go ${x.toFixed(0)} ${y.toFixed(0)}`); }
 });
 $("say").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.value.trim()) { ws && ws.readyState === 1 && ws.send("say " + e.target.value.trim()); e.target.value = ""; }
