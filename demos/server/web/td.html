@@ -30,12 +30,16 @@
       canvas{ background:#13301a; border-radius:10px; box-shadow:0 14px 40px #0008; }
       #over{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; background:#06080fcc; }
       #over h1{ font-size:50px; margin:0 0 12px; } #over button{ font:inherit; font-weight:800; font-size:15px; padding:11px 22px; border:0; border-radius:12px; cursor:pointer; background:var(--acc); color:#231600; }
+      #wavebanner{ position:absolute; top:34%; left:50%; transform:translate(-50%,-50%); z-index:8; pointer-events:none;
+        font-size:52px; font-weight:900; letter-spacing:1px; color:#ffd24a; text-shadow:0 4px 18px #000,0 0 34px #ff8a00; opacity:0; white-space:nowrap; }
+      #wavebanner.show{ animation:waveann 1.9s ease-out forwards; }
+      @keyframes waveann{ 0%{opacity:0;transform:translate(-50%,-50%) scale(.5)} 14%{opacity:1;transform:translate(-50%,-50%) scale(1.14)} 28%{transform:translate(-50%,-50%) scale(1)} 78%{opacity:1} 100%{opacity:0;transform:translate(-50%,-50%) scale(1.06)} }
     </style>
   </head>
   <body>
     <div id="top">
       <div class="logo"><b>opcusdb</b> Rampart</div>
-      <span style="color:#6b7689;font-size:11px;font-weight:700">build 8</span>
+      <span style="color:#6b7689;font-size:11px;font-weight:700">build 9</span>
       <div class="stat" id="gold">220<small>GOLD</small></div>
       <div class="stat" id="lives">20<small>LIVES</small></div>
       <div class="stat" id="wavn">0/12<small>WAVE</small></div>
@@ -54,6 +58,7 @@
       </div>
       <div id="stage">
         <canvas id="cv"></canvas>
+        <div id="wavebanner"></div>
         <div id="over"><h1 id="otxt">VICTORY</h1><button id="again">Play again</button></div>
       </div>
     </div>

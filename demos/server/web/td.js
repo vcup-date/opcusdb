@@ -20,6 +20,7 @@ let projs = [];                 // {x,y,kind}
 let gold = 0, lives = 0, wave = 0, maxWave = 12, state = 0, players = 1;
 let pick = 0, hover = null;
 let decor = [];                 // {x,y,type}
+let lastWaveShown = 0, lastWaveClick = 0;
 const ROOM = new URLSearchParams(location.search).get("room");
 
 const COST = [50, 110, 75], RANGE = [120, 135, 105];
@@ -74,7 +75,13 @@ function connect() {
   };
 }
 
+function showWaveBanner(n) {
+  const el = $("wavebanner"); if (!el) return;
+  el.textContent = "⚔  WAVE " + n + " INCOMING!";
+  el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
+}
 function updateHud() {
+  if (wave > lastWaveShown) { lastWaveShown = wave; showWaveBanner(wave); } // big on-screen confirmation
   $("gold").innerHTML = gold + '<small>GOLD</small>';
   $("lives").innerHTML = lives + '<small>LIVES</small>';
   $("wavn").innerHTML = wave + '/' + maxWave + '<small>WAVE</small>';
@@ -245,11 +252,21 @@ cv.addEventListener("mousemove", (ev) => hover = tileAt(ev));
 cv.addEventListener("mouseleave", () => hover = null);
 cv.addEventListener("click", (ev) => { const [c, r] = tileAt(ev); ws && ws.readyState === 1 && ws.send(`place ${pick} ${c} ${r}`); });
 document.querySelectorAll(".tw").forEach(el => el.onclick = () => { pick = +el.dataset.k; document.querySelectorAll(".tw").forEach(x => x.classList.toggle("sel", x === el)); });
-$("wave").onclick = () => ws && ws.readyState === 1 && ws.send("wave");
+function callWave() {
+  const now = performance.now();
+  if (now - lastWaveClick < 500) return;   // debounce: one accidental double-click won't stack two waves
+  lastWaveClick = now;
+  const w = $("wave");
+  if (!ws || ws.readyState !== 1) { w.textContent = "⟳ reconnecting…"; return; }
+  ws.send("wave");
+  // instant tactile feedback (the big banner confirms it landed a moment later)
+  w.style.transform = "scale(0.95)"; setTimeout(() => { w.style.transform = ""; }, 110);
+}
+$("wave").onclick = callWave;
 $("again").onclick = () => ws && ws.readyState === 1 && ws.send("reset");
 addEventListener("keydown", (e) => {
   if (e.key >= "1" && e.key <= "3") { pick = +e.key - 1; document.querySelectorAll(".tw").forEach(x => x.classList.toggle("sel", +x.dataset.k === pick)); }
-  if (e.key === " ") { e.preventDefault(); ws && ws.readyState === 1 && ws.send("wave"); }
+  if (e.key === " ") { e.preventDefault(); callWave(); }
 });
 
 // ---- multiplayer (rooms) --------------------------------------------------
