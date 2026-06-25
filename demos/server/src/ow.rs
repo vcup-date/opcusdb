@@ -30,9 +30,9 @@ const MOVE: f32 = 7.0;
 const JUMP_V: f32 = 8.2;
 
 const MAX_HP: f32 = 150.0;
-const MAG: i32 = 20;
-const FIRE_CD: f32 = 0.11;
-const RELOAD_T: f32 = 1.0;
+const MAG: i32 = 24;
+const FIRE_CD: f32 = 0.06; // Tracer fires fast (~16 rounds/s)
+const RELOAD_T: f32 = 0.9;
 const DMG_NEAR: f32 = 6.0;
 const DMG_FAR: f32 = 3.0;
 const RANGE: f32 = 60.0;

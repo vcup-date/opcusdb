@@ -18,6 +18,7 @@ let scoreA=0, scoreB=0, winner=0, target=25, inter=0;
 let ptOwner=0, ptCap=0, ptA=0, ptB=0;
 const POINT_R=6.5;
 let pos={x:0,y:0,z:22}, vel={x:0,y:0,z:0}, yaw=Math.PI, pitch=0, onGround=true;
+let camPos={x:0,y:EYE,z:22};
 let keys={w:false,s:false,a:false,d:false,jump:false};
 let feed=[];
 let latMs=0, prevHp=150, prevReload=false;
@@ -65,19 +66,32 @@ protTag.textContent="🛡 SPAWN PROTECTED";
 protTag.style.cssText="position:fixed;top:92px;left:50%;transform:translateX(-50%);z-index:5;color:#7fe0ff;font-weight:800;text-shadow:0 2px 4px #000;display:none;pointer-events:none";
 document.body.appendChild(protTag);
 let sens=1;
+// quick full-screen colour flash (recall, etc.)
+function flashColor(css){ const f=document.createElement("div"); f.style.cssText=`position:fixed;inset:0;z-index:3;background:${css};opacity:.35;pointer-events:none;transition:opacity .4s`; document.body.appendChild(f); requestAnimationFrame(()=>f.style.opacity="0"); setTimeout(()=>f.remove(),420); }
 
 // ---- three.js setup -------------------------------------------------------
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 $("app").appendChild(renderer.domElement);
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x9fc0e8);
-scene.fog = new THREE.Fog(0x9fc0e8, 40, 95);
-const camera = new THREE.PerspectiveCamera(92, innerWidth/innerHeight, 0.05, 400);
+scene.fog = new THREE.Fog(0xbcd6ee, 55, 120);
+const camera = new THREE.PerspectiveCamera(92, innerWidth/innerHeight, 0.05, 500);
 camera.rotation.order = "YXZ";
 scene.add(camera);
+// gradient sky dome
+const sky = new THREE.Mesh(new THREE.SphereGeometry(240,32,16), new THREE.ShaderMaterial({
+  side: THREE.BackSide,
+  uniforms:{ top:{value:new THREE.Color(0x2f63b0)}, bot:{value:new THREE.Color(0xd2e6f6)} },
+  vertexShader:"varying vec3 vp; void main(){ vp=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+  fragmentShader:"varying vec3 vp; uniform vec3 top; uniform vec3 bot; void main(){ float h=clamp(normalize(vp).y*0.6+0.35,0.0,1.0); gl_FragColor=vec4(mix(bot,top,h),1.0); }"
+}));
+scene.add(sky);
 addEventListener("resize", ()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
 
 scene.add(new THREE.HemisphereLight(0xdaeaff, 0x40503a, 1.15));
@@ -97,10 +111,12 @@ const wallMat = mat(0x3d4d6e);
 for (const [x,z,w,d] of [[0,ARENA+0.5,ARENA*2+2,1],[0,-ARENA-0.5,ARENA*2+2,1],[ARENA+0.5,0,1,ARENA*2+2],[-ARENA-0.5,0,1,ARENA*2+2]]) {
   const wall = new THREE.Mesh(new THREE.BoxGeometry(w,4,d), wallMat); wall.position.set(x,2,z); wall.castShadow=true; wall.receiveShadow=true; scene.add(wall);
 }
-// cover
+// cover (+ glowing top trim)
 for (const [cx,cz,hx,hz,h] of COVER) {
-  const box = new THREE.Mesh(new THREE.BoxGeometry(hx*2,h,hz*2), mat(0x7a6a52));
+  const box = new THREE.Mesh(new THREE.BoxGeometry(hx*2,h,hz*2), new THREE.MeshStandardMaterial({color:0x6b5c46, roughness:0.8, metalness:0.05}));
   box.position.set(cx,h/2,cz); box.castShadow=true; box.receiveShadow=true; scene.add(box);
+  const trim = new THREE.Mesh(new THREE.BoxGeometry(hx*2+0.06,0.12,hz*2+0.06), new THREE.MeshBasicMaterial({color:0x4de1e6}));
+  trim.position.set(cx,h+0.02,cz); scene.add(trim);
 }
 // team spawn markers
 for (const [z,c] of [[22,0x2a4a7a],[-22,0x7a3a1a]]) {
@@ -188,8 +204,8 @@ function handlePlayer(p) {
     // soft reconciliation toward the authoritative position
     const ex=o.x-pos.x, ey=o.y-pos.y, ez=o.z-pos.z;
     const err=Math.hypot(ex,ey,ez);
-    if (err>2.5) { pos.x=o.x; pos.y=o.y; pos.z=o.z; }   // snap (blink/recall/respawn)
-    else { pos.x+=ex*0.18; pos.y+=ey*0.5; pos.z+=ez*0.18; }
+    if (err>3.0) { pos.x=o.x; pos.y=o.y; pos.z=o.z; }   // snap (blink/recall/respawn/teleport)
+    else { pos.x+=ex*0.12; pos.y+=ey*0.18; pos.z+=ez*0.12; }  // gentle correction (no jitter)
     return;
   }
   let e = players.get(id);
@@ -236,7 +252,7 @@ function handleEvent(ev) {
   else if (f[0]==="X") { bigBoom(+f[1],+f[2],+f[3]); }
   else if (f[0]==="k") { killfeed(+f[1],+f[2]); if(+f[1]===myId) sfxKill(); }
   else if (f[0]==="b") { addSparks(+f[2],1.0,+f[4], 0x6fe0ff, 14); if(+f[1]===myId) sfxBlink(); }
-  else if (f[0]==="r") { addRings(+f[2],+f[4]); if(+f[1]===myId) sfxRecall(); }
+  else if (f[0]==="r") { addRings(+f[2],+f[4]); if(+f[1]===myId){ sfxRecall(); flashColor("#5ad0ff"); } }
   else if (f[0]==="m") { addSparks(+f[2],1.0,+f[3], 0x2ee06a, 14); if(Math.hypot(+f[2]-pos.x,+f[3]-pos.z)<3) sfxHeal(); }
 }
 function addTracer(x1,y1,z1,x2,y2,z2) {
@@ -324,7 +340,7 @@ function stepLocal(dt){
 let lastSend=0;
 function sendInput(now){
   if(!ws||ws.readyState!==1) return;
-  if(now-lastSend < 33) return; lastSend=now;
+  if(now-lastSend < 16) return; lastSend=now;
   ws.send(`in ${+keys.w} ${+keys.s} ${+keys.a} ${+keys.d} ${+keys.jump} ${yaw.toFixed(3)} ${pitch.toFixed(3)} ${latMs.toFixed(0)}`);
 }
 
@@ -384,12 +400,18 @@ function loop(now){
   requestAnimationFrame(loop);
   const dt=Math.min(0.05,(now-last)/1000); last=now;
   if(started){ stepLocal(dt); sendInput(now); }
-  // camera (+ screen shake on explosions)
+  // camera: follow a smoothed position (absorbs reconciliation pops) + shake
   shakeT=Math.max(0,shakeT-dt*1.6);
   const sh=shakeT*0.25;
-  camera.position.set(pos.x+(Math.random()-.5)*sh, pos.y+EYE+(Math.random()-.5)*sh, pos.z+(Math.random()-.5)*sh);
+  const k=Math.min(1,dt*22);
+  camPos.x+=(pos.x-camPos.x)*k; camPos.y+=((pos.y+EYE)-camPos.y)*k; camPos.z+=(pos.z-camPos.z)*k;
+  camera.position.set(camPos.x+(Math.random()-.5)*sh, camPos.y+(Math.random()-.5)*sh, camPos.z+(Math.random()-.5)*sh);
   camera.rotation.y=yaw; camera.rotation.x=pitch;
-  recoil*=0.8; gun.position.z=recoil*0.1; gun.rotation.x=recoil*0.3;
+  // weapon: recoil + reload dip
+  recoil*=0.8;
+  const reloadDip = (me&&me.reload)?1:0;
+  gun.position.z=recoil*0.1; gun.position.y=-reloadDip*0.18;
+  gun.rotation.x=recoil*0.3 + reloadDip*0.6;
   if(firing && me && me.ammo>0 && !me.reload) recoil=Math.min(recoil+0.5,1.2);
   muzzleT=Math.max(0,muzzleT-dt); muzzle.material.opacity=muzzleT>0?0.9:0; muzzle.rotation.z+=0.6;
   // capture-point visuals (colour by owner/contested + pulse)
