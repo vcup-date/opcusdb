@@ -41,5 +41,9 @@ path = "src/survivors.rs"
 name = "opcusdb-wow"
 path = "src/wow.rs"
 
+[[bin]]
+name = "opcusdb-ow"
+path = "src/ow.rs"
+
 [dependencies]
 opcusdb-core = { path = "../../crates/opcusdb-core" }

@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-171%20passing-success)
+![tests](https://img.shields.io/badge/tests-175%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-171 tests · 37 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+175 tests · 38 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -204,6 +204,26 @@ cargo run -p opcusdb-server --bin opcusdb-wow         # server on :9007
 # WASD move · Space attack · E talk to NPC · 1/2/3 skills · Enter chat
 ```
 
+## Overlode — an Overwatch-style FPS (hero: Tracer) 🎯
+
+`opcusdb-ow` is a team FPS that shows the engine's **netcode model**: a 60 Hz
+authoritative server with **lag-compensated hitscan** (it rewinds targets into the
+shooter's view for fair hits) and **Recall** — Tracer's rewind-3-seconds ability,
+which is literally opcusdb's timeline as a hero power. Humans are team Blue; **AI
+bots** fill team Orange so you can test solo. The client is **Three.js**
+(pointer-lock FPS, client-predicted movement); the kit is **pulse pistols, Blink,
+Recall**.
+
+<div align="center">
+<img src="assets/ow.png" width="760"/><br/>
+<b>opcusdb Overlode</b> — first-person Tracer: crosshair, HP/ammo, Blink + Recall, killfeed, tracers & sparks, bots that shoot back.
+</div>
+
+```sh
+cargo run -p opcusdb-server --bin opcusdb-ow          # open http://localhost:9008
+# WASD move · mouse aim · click fire · Shift Blink · E Recall · R reload · Tab scores
+```
+
 ## Architecture
 
 <div align="center"><img src="assets/diagram-arch.png" width="560" alt="architecture"/></div>
@@ -232,7 +252,7 @@ cargo run -p opcusdb-server --bin opcusdb-wow         # server on :9007
 | `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
 | `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
 | `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
-| `demos/server` | six authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), and **Townfall** (the authoritative server for a Godot 4 3D MMO town) — with rooms, leaderboards, physics, quests, and AI |
+| `demos/server` | six authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), **Townfall** (Godot 4 3D MMO town), and **Overlode** (Overwatch-style FPS, lag-compensated) — with rooms, leaderboards, physics, quests, and AI |
 
 ## The five game types → demos
 
@@ -250,6 +270,7 @@ cargo run -p opcusdb-server --bin opcusdb-wow         # server on :9007
 | **platform fighter** | `server` (smash) | `cargo run -p opcusdb-server --bin opcusdb-smash` → :9005 | Smash-style brawl; auto-join; arrows + Z/X; damage % + KOs; pixel fighters, parallax, particles, sound |
 | **survivor (Vampire-Survivors-like)** | `server` (survivors) | `cargo run -p opcusdb-server --bin opcusdb-survivors` → :9006 | co-op bomberman vs vampire hordes; auto-bombs, XP/levels, waves, kills leaderboard |
 | **3D MMO town (Godot)** | `server` (wow) + `demos/godot-wow` | `cargo run -p opcusdb-server --bin opcusdb-wow` → :9007, open the Godot project | NPC quests, wolves, chat; multiplayer 3D town in **Godot 4** |
+| **FPS (Overwatch-like)** | `server` (ow) + Three.js | `cargo run -p opcusdb-server --bin opcusdb-ow` → :9008 | Tracer hero, lag-compensated hitscan, Blink/Recall, AI bots |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start
@@ -303,6 +324,7 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 | Fighter attack hits in front, knockback & KO credit | `server … attack_in_front_damages_and_knocks_back`, `falling_into_blast_zone_kos_and_credits_last_hitter` |
 | Survivor: explosion kills + xp drop, enemy AI, level-up | `server … explosion_kills_enemy_drops_gem_and_scores`, `enemy_moves_toward_player`, `level_up_grants_weapon_or_upgrade` |
 | Townfall: wolf kill advances quest, NPC interact, wolf bite | `server … attack_kills_wolf_and_advances_quest`, `interact_accepts_quest_near_npc`, `wolf_bites_player_when_adjacent` |
+| FPS: lag-compensated hit, no friendly fire, Recall rewind, Blink | `server … lag_comp_hits_a_target_directly_ahead`, `no_friendly_fire`, `recall_restores_past_position` |
 | Snake eats/grows; wall-crash records score | `server … snake_moves_and_eats`, `wall_collision_kills_and_records_score` |
 
 ## Status
