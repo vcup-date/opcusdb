@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-187%20passing-success)
+![tests](https://img.shields.io/badge/tests-188%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-187 tests · 40 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+188 tests · 40 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -253,25 +253,24 @@ cargo run -p opcusdb-server --bin opcusdb-board   # open http://localhost:9009
 # draw together · open more tabs · hit "go offline", draw, then come back to watch it merge
 ```
 
-## Warfront — an RTS with spatial AOI ⚔️
+## Rampart — co-op tower defense 🏰
 
-`opcusdb-rts` is a real-time battle of **infantry & archers** on the engine's
-[`SpatialGrid`](crates/opcusdb-core/src/spatial.rs): the grid does both **combat
-neighbour queries** and **camera area-of-interest streaming** — the server only
-sends each client the units inside its viewport, so the war stays cheap on the wire
-no matter the army size. You command the **blue army** — **drag-select**, then
-**click the ground to attack-move** (no right-click, Mac-friendly) — against a
-**red AI horde**; armies clash on a battlefield with **keeps** (raze the enemy's to
-win), soldier figures that face their fight, flying arrows and death bursts.
+`opcusdb-td` is a **tower-defense** game: creeps march along a winding path in **12
+escalating waves** and you spend gold to build towers — **Arrow** (fast, single
+target), **Cannon** (slow, splash), **Frost** (slows) — that auto-target and fire.
+Kill creeps for gold; let one reach your keep and you lose a life; clear every wave
+to win. The Rust server is the **authoritative** simulation (one shared game, fixed
+tick, broadcast over WebSocket), so it's **co-op** — open more tabs and defend
+together. All mouse, Mac-friendly: click a tower, click a tile.
 
 <div align="center">
-<img src="assets/rts.png" width="820"/><br/>
-<b>opcusdb Warfront</b> — infantry (chevrons) and archers (diamonds) clashing with arrow fire on a battlefield; only the units in your camera are streamed (spatial AOI).
+<img src="assets/td.png" width="820"/><br/>
+<b>opcusdb Rampart</b> — build towers along the path to stop waves of creeps before they reach your keep; a shared, server-authoritative game you can defend co-op.
 </div>
 
 ```sh
-cargo run --release -p opcusdb-server --bin opcusdb-rts   # open http://localhost:9010
-# drag-select your army · click to move/attack · F select all · Esc deselect · WASD pan · wheel zoom
+cargo run -p opcusdb-server --bin opcusdb-td   # open http://localhost:9010
+# click a tower in the palette, click an empty tile to build · Start Wave (or Space)
 ```
 
 ## Architecture
@@ -302,7 +301,7 @@ cargo run --release -p opcusdb-server --bin opcusdb-rts   # open http://localhos
 | `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
 | `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
 | `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
-| `demos/server` | six authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), **Townfall** (Godot 4 3D MMO town), **Overlode** (Overwatch-style FPS, lag-compensated), **Co-Board** (CRDT vector canvas), and **Warfront** (2000-unit RTS on the spatial grid) — with rooms, leaderboards, physics, quests, and AI |
+| `demos/server` | ten authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), **Townfall** (Godot 4 3D MMO town), **Overlode** (Overwatch-style FPS, lag-compensated), **Co-Board** (CRDT vector canvas), and **Rampart** (co-op tower defense) — with rooms, leaderboards, physics, quests, and AI |
 
 ## The five game types → demos
 
@@ -322,7 +321,7 @@ cargo run --release -p opcusdb-server --bin opcusdb-rts   # open http://localhos
 | **3D MMO town (Godot)** | `server` (wow) + `demos/godot-wow` | `cargo run -p opcusdb-server --bin opcusdb-wow` → :9007, open the Godot project | NPC quests, wolves, chat; multiplayer 3D town in **Godot 4** |
 | **FPS (Overwatch-like)** | `server` (ow) + Three.js | `cargo run -p opcusdb-server --bin opcusdb-ow` → :9008 | Tracer hero, lag-compensated hitscan, Blink/Recall, AI bots |
 | **collaborative whiteboard (CRDT)** | `server` (board) | `cargo run -p opcusdb-server --bin opcusdb-board` → :9009 | vector editor (shapes/text/notes, resize handles); OrSet CRDT; offline-merge; presence |
-| **RTS (infantry + archers)** | `server` (rts) | `cargo run --release -p opcusdb-server --bin opcusdb-rts` → :9010 | spatial-grid combat + camera AOI; drag-select, click-to-command (Mac-friendly); keeps |
+| **tower defense (co-op)** | `server` (td) | `cargo run -p opcusdb-server --bin opcusdb-td` → :9010 | waves of creeps on a path; build Arrow/Cannon/Frost towers; gold/lives; click-only (Mac-friendly) |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start
@@ -378,7 +377,7 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 | Townfall: wolf kill advances quest, NPC interact, wolf bite | `server … attack_kills_wolf_and_advances_quest`, `interact_accepts_quest_near_npc`, `wolf_bites_player_when_adjacent` |
 | FPS: lag-compensated hit, no friendly fire, Recall rewind, Blink | `server … lag_comp_hits_a_target_directly_ahead`, `no_friendly_fire`, `recall_restores_past_position` |
 | Co-Board: concurrent CRDT adds survive, offline stroke merges, clear | `server … concurrent_adds_all_survive_and_erase_removes_one`, `late_offline_stroke_merges_after_an_erase` |
-| RTS: enemies in range die, AOI culls off-camera units, orders set targets | `server … enemies_in_range_take_damage_and_die`, `aoi_only_returns_units_in_the_camera_box` |
+| Tower defense: towers kill creeps for bounty, builds reject the path, leaks cost lives, waves advance | `server … a_tower_kills_a_creep_and_pays_bounty`, `placing_a_tower_costs_gold_and_rejects_the_road` |
 | Snake eats/grows; wall-crash records score | `server … snake_moves_and_eats`, `wall_collision_kills_and_records_score` |
 
 ## Status

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>opcusdb Rampart · tower defense</title>
+    <style>
+      :root{ color-scheme:dark; --bg:#0c1018; --panel:#151b27; --panel2:#1d2533; --line:#28324a; --ink:#e9eef8; --mut:#8b97ac; --acc:#ffc24a; }
+      *{ box-sizing:border-box; } html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink);
+        font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; user-select:none; overflow:hidden; }
+      #top{ height:54px; display:flex; align-items:center; gap:20px; padding:0 18px; background:var(--panel); border-bottom:1px solid var(--line); }
+      #top .logo{ font-weight:800; font-size:16px; } #top .logo b{ color:var(--acc); }
+      .stat{ font-size:18px; font-weight:800; } .stat small{ font-size:11px; color:var(--mut); font-weight:600; display:block; line-height:1; }
+      #top .sp{ flex:1; }
+      #wave{ font-size:13px; padding:9px 16px; border-radius:10px; border:1px solid var(--line); background:var(--panel2); color:var(--ink); font-weight:800; cursor:pointer; }
+      #wave.ready{ background:linear-gradient(180deg,#3ec46a,#2ea757); border-color:#2ea757; color:#04220f; }
+      #wrap{ display:flex; height:calc(100% - 54px); }
+      #side{ width:230px; padding:14px; border-right:1px solid var(--line); background:var(--panel); overflow:auto; }
+      #side h4{ margin:4px 0 10px; font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--mut); }
+      .tw{ display:flex; gap:10px; align-items:center; padding:10px; margin-bottom:8px; border:1px solid var(--line); border-radius:12px; background:var(--panel2); cursor:pointer; }
+      .tw.sel{ border-color:var(--acc); box-shadow:0 0 0 1px var(--acc) inset; }
+      .tw.poor{ opacity:.45; }
+      .tw .ic{ width:34px; height:34px; border-radius:9px; flex:none; }
+      .tw .nm{ font-weight:800; } .tw .ds{ font-size:11px; color:var(--mut); } .tw .ct{ margin-left:auto; font-weight:800; color:var(--acc); }
+      #hint{ margin-top:14px; font-size:12px; color:var(--mut); }
+      #stage{ flex:1; display:flex; align-items:center; justify-content:center; position:relative; background:#0a0e15; }
+      canvas{ background:#13301a; border-radius:10px; box-shadow:0 14px 40px #0008; }
+      #over{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; background:#06080fcc; }
+      #over h1{ font-size:50px; margin:0 0 12px; } #over button{ font:inherit; font-weight:800; font-size:15px; padding:11px 22px; border:0; border-radius:12px; cursor:pointer; background:var(--acc); color:#231600; }
+    </style>
+  </head>
+  <body>
+    <div id="top">
+      <div class="logo"><b>opcusdb</b> Rampart</div>
+      <div class="stat" id="gold">220<small>GOLD</small></div>
+      <div class="stat" id="lives">20<small>LIVES</small></div>
+      <div class="stat" id="wavn">0/12<small>WAVE</small></div>
+      <div class="sp"></div>
+      <button id="wave" class="ready">▶ Start Wave 1</button>
+    </div>
+    <div id="wrap">
+      <div id="side">
+        <h4>Build a tower</h4>
+        <div class="tw sel" data-k="0"><div class="ic" style="background:#6fb0ff"></div><div><div class="nm">Arrow</div><div class="ds">fast · single target</div></div><div class="ct">50</div></div>
+        <div class="tw" data-k="1"><div class="ic" style="background:#9a6bff"></div><div><div class="nm">Cannon</div><div class="ds">slow · splash damage</div></div><div class="ct">110</div></div>
+        <div class="tw" data-k="2"><div class="ic" style="background:#49d6ff"></div><div><div class="nm">Frost</div><div class="ds">slows enemies</div></div><div class="ct">75</div></div>
+        <div id="hint">Click a tower above, then click an empty tile to build it. Towers fire on their own. Stop creeps before they reach your keep!</div>
+      </div>
+      <div id="stage">
+        <canvas id="cv"></canvas>
+        <div id="over"><h1 id="otxt">VICTORY</h1><button id="again">Play again</button></div>
+      </div>
+    </div>
+    <script src="/td.js"></script>
+  </body>
+</html>

@@ -54,5 +54,5 @@ name = "opcusdb-board"
 path = "src/board.rs"
 
 [[bin]]
-name = "opcusdb-rts"
-path = "src/rts.rs"
+name = "opcusdb-td"
+path = "src/td.rs"
