@@ -28,6 +28,7 @@ const bgL = new PIXI.Container(), groundL = new PIXI.Container(), labelL = new P
 app.stage.addChild(bgL, groundL, labelL, charL, bubbleL, fxL, nightL, glowL, selL);
 fxL.eventMode = "none"; glowL.eventMode = "none"; selL.eventMode = "none";
 const selRing = new PIXI.Graphics(); selL.addChild(selRing); let selectedId = 0;
+const bios = {}; // id -> one-line persona, for the inspect card
 // warm lamp glows + drifting fireflies, drawn above the night tint so they shine in the dark
 const lampG = new PIXI.Graphics(); const fireG = new PIXI.Graphics(); fireG.blendMode = PIXI.BLEND_MODES.ADD; glowL.addChild(lampG, fireG);
 const fireflies = Array.from({ length: 38 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, ph: Math.random() * 6 }));
@@ -138,6 +139,8 @@ function connect() {
         roster = rest.split(";").filter(Boolean).map(s => { const a = s.split("|"); return { id: +a[0], name: a[1], kind: a[2], act: a[3] }; });
         for (const e of roster) { const v = chars.get(e.id); if (v && v.view._p.nm) v.view._p.nm.text = e.name; }
         renderRoster();
+      } else if (tag === "bio") {
+        for (const s of rest.split(";")) { if (!s) continue; const j = s.indexOf("|"); bios[+s.slice(0, j)] = s.slice(j + 1); }
       } else if (tag === "b") {
         const active = new Set();
         for (const s of rest.split(";")) { if (!s) continue; const j = s.indexOf("|"); const id = +s.slice(0, j), text = s.slice(j + 1); active.add(id); setBubble(id, text); logChatter(id, text); }
@@ -258,7 +261,7 @@ app.ticker.add(() => {
     const pr = 17 + Math.sin(performance.now() / 240) * 2;
     selRing.lineStyle(2.5, 0xffe07a, 0.9).drawEllipse(sel.dx, sel.dy + 14, pr, pr * 0.42);
     const r = roster.find(rr => rr.id === selectedId);
-    if (r && insp) { insp.style.display = "block"; insp.innerHTML = `<div class="nm">${esc(r.name)}</div><div class="rl">${esc(r.kind)}</div><div class="ac">at the ${esc(r.act)}</div>`; }
+    if (r && insp) { insp.style.display = "block"; const bio = bios[selectedId] ? `<div class="rl" style="max-width:260px;margin-top:3px">${esc(bios[selectedId])}</div>` : ""; insp.innerHTML = `<div class="nm">${esc(r.name)}</div><div class="rl">${esc(r.kind)}, at the ${esc(r.act)}</div>${bio}`; }
   } else if (insp) { insp.style.display = "none"; }
   updateClock();
 });

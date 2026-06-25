@@ -512,6 +512,18 @@ fn map_line() -> String {
     format!("map\t{COLS}\t{ROWS}\t{}\t{locs}\n", TILE as i32)
 }
 
+/// One-line persona blurbs, sent once on join so the inspect card can show who a
+/// resident actually is (not just their job).
+fn bio_line() -> String {
+    let bios: String = RESIDENTS
+        .iter()
+        .enumerate()
+        .map(|(i, r)| format!("{}|{}", i as u32 + 1, r.1.replace(['|', ';', '\t', '\n'], " ")))
+        .collect::<Vec<_>>()
+        .join(";");
+    format!("bio\t{bios}\n")
+}
+
 fn snapshot(t: &Town, you: u32) -> String {
     let mut s = String::new();
     s.push_str(&format!("clk\t{:.3}\n", (t.time % DAY_SECS) / DAY_SECS));
@@ -609,6 +621,7 @@ fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>) {
     };
     let _ = ws::write_text(&mut stream, &format!("w\t{id}"));
     let _ = ws::write_text(&mut stream, &map_line());
+    let _ = ws::write_text(&mut stream, &bio_line());
 
     let mut writer = stream.try_clone().expect("clone");
     let wtown = town.clone();
