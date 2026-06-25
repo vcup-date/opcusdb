@@ -358,35 +358,40 @@ fn converse(town: Arc<Mutex<Town>>) {
             let hf = here >= 0 && t.pending[here as usize];
             (t.chars[&speaker].name.clone(), t.chars[&speaker].persona, hf)
         };
-        // Show an instant line so the scene is never silent while the (often slow or
-        // rate-limited) model is queried, then upgrade it to the real reply if it
-        // arrives. This keeps the town chatty even when the free tier is sluggish.
+        // Show an instant in-character line so the scene is never silent, then fetch
+        // the real reply in a detached thread that upgrades the bubble when it lands.
+        // The loop itself only paces on the sleep, so the town stays chatty no matter
+        // how slow or rate-limited the model is.
         let stub = if human_facing { canned_greet(&name) } else { canned(&name, persona) };
         {
             let mut t = town.lock().unwrap();
             let li = t.chars[&speaker].here;
-            if li >= 0 {
-                let now = t.time;
-                t.pending[li as usize] = false;
+            if li < 0 {
+                continue;
+            }
+            let li = li as usize;
+            let now = t.time;
+            t.pending[li] = false;
+            {
                 let c = t.chars.get_mut(&speaker).unwrap();
                 c.bubble = stub.clone();
                 c.bubble_t = 6.0;
                 c.last_spoke = now;
             }
+            record_line(&mut t, li, &name, &stub);
         }
-        let line = ai_say(&system, &user).unwrap_or_else(|| stub.clone());
-        let mut t = town.lock().unwrap();
-        let li = t.chars[&speaker].here;
-        if li < 0 {
-            continue;
-        }
-        let li = li as usize;
-        {
-            let c = t.chars.get_mut(&speaker).unwrap();
-            c.bubble = line.clone();
-            c.bubble_t = 6.0;
-        }
-        record_line(&mut t, li, &name, &line);
+        let town2 = town.clone();
+        thread::spawn(move || {
+            if let Some(real) = ai_say(&system, &user) {
+                let mut t = town2.lock().unwrap();
+                if let Some(c) = t.chars.get_mut(&speaker) {
+                    if c.here >= 0 {
+                        c.bubble = real;
+                        c.bubble_t = 6.0;
+                    }
+                }
+            }
+        });
     }
 }
 
