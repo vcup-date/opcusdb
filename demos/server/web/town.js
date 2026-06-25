@@ -283,9 +283,11 @@ function renderRoster() {
   $("rlist").innerHTML = roster.map(r => {
     const col = r.kind === "you/visitor" ? "#ffd24a" : "#" + (PAL[(r.id - 1) % 12] ? PAL[(r.id - 1) % 12][0].toString(16).padStart(6, "0") : "888888");
     const me = r.id === myId ? " (you)" : "";
-    return `<div class="rrow"><span class="dot" style="background:${col}"></span><span class="nm">${esc(r.name)}${me}</span><span class="ac">${esc(r.act)}</span></div>`;
+    return `<div class="rrow${r.id === selectedId ? " sel" : ""}" data-id="${r.id}"><span class="dot" style="background:${col}"></span><span class="nm">${esc(r.name)}${me}</span><span class="ac">${esc(r.act)}</span></div>`;
   }).join("");
 }
+// click a roster row to select that resident (rings them in the world + shows the card)
+$("rlist").addEventListener("click", (e) => { const row = e.target.closest(".rrow"); if (row && row.dataset.id) { selectedId = +row.dataset.id; renderRoster(); } });
 const esc = (s) => (s || "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
 // live town chatter feed: log each new line a resident says so you can follow the

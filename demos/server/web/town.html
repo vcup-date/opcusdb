@@ -19,7 +19,8 @@
       #roster{ position:fixed; top:14px; right:14px; width:210px; max-height:78vh; overflow:auto; z-index:5;
         background:#0e1422d8; backdrop-filter:blur(6px); border:1px solid #26314a; border-radius:14px; padding:10px 12px; }
       #roster h4{ margin:2px 0 8px; font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--mut); }
-      .rrow{ display:flex; align-items:center; gap:8px; padding:4px 0; font-size:12.5px; }
+      .rrow{ display:flex; align-items:center; gap:8px; padding:4px 6px; font-size:12.5px; cursor:pointer; border-radius:6px; }
+      .rrow:hover{ background:#1b2740; } .rrow.sel{ background:#26314a; }
       .rrow .dot{ width:12px; height:12px; border-radius:50%; flex:none; box-shadow:0 0 0 2px #0006; }
       .rrow .nm{ font-weight:700; } .rrow .ac{ color:var(--mut); margin-left:auto; font-size:11px; }
       #chatbar{ position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:5; width:min(560px,80vw); display:flex; gap:8px; }
