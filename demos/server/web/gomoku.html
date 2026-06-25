@@ -27,6 +27,11 @@
       .panel { background:#0c1322; border:1px solid #233; border-radius:16px; padding:28px 30px; width:360px; text-align:center; }
       .panel input { width:100%; font:inherit; padding:10px 12px; margin:6px 0; border-radius:10px; border:1px solid #2a3550; background:#121a2c; color:#e6edff; text-align:center; }
       .hint { color:#6b7a99; font-size:12px; }
+      #roomList { max-height: 200px; overflow-y: auto; margin: 6px 0; text-align:left; }
+      .lobrow { display:flex; justify-content:space-between; align-items:center; padding:7px 10px; margin:5px 0; border:1px solid #233; border-radius:9px; background:#0f1626; }
+      .lobrow b { color:#ffd24a; } .lobrow .s { color:#6b7a99; font-size:12px; margin-left:6px; }
+      .mini { width:auto; padding:5px 12px; font-size:12px; }
+      .lobby-actions { display:flex; gap:6px; } .lobby-actions input { margin:0; }
     </style>
   </head>
   <body>
@@ -47,10 +52,14 @@
       <h1><span class="accent">opcusdb</span> Gomoku</h1>
       <p class="hint">online five-in-a-row · authoritative Rust server</p>
       <input id="nick" placeholder="nickname" maxlength="14" />
-      <input id="code" placeholder="room code (e.g. GO)" maxlength="6" />
-      <button class="primary" id="join">join room</button>
-      <button class="ghost" id="create" style="margin-top:8px">create new room</button>
-      <p class="hint">first player is black (moves first); share the code for white.</p>
+      <button class="primary" id="create">+ create new room</button>
+      <h3 style="text-align:left;color:#6b7a99;font-size:11px;letter-spacing:1px;margin:14px 0 4px">OPEN ROOMS</h3>
+      <div id="roomList"><div class="hint">connecting…</div></div>
+      <div class="lobby-actions">
+        <input id="code" placeholder="or enter a code" maxlength="6" />
+        <button class="ghost mini" id="joinCode">join</button>
+      </div>
+      <p class="hint" style="margin-top:10px">first to join a room is black (moves first); the next is white.</p>
     </div></div>
     <script src="/gomoku.js"></script>
   </body>

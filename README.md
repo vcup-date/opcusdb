@@ -101,15 +101,16 @@ save credits, the bots only chat while at least one human is connected.
 
 ## Gomoku — online Five-in-a-Row (五子棋) with rooms & a win leaderboard
 
-`opcusdb-gomoku` is turn-based online **five-in-a-row** on a 15×15 Go board:
-**create/join a room by code**, black moves first, place stones, and the first to
-get **5 in a row** (any direction) wins. The Rust server is authoritative — it
-validates every move and detects the win — and **win counts persist to a local DB
-file** (`gomoku.db`, gitignored) as an all-time leaderboard.
+`opcusdb-gomoku` is turn-based online **five-in-a-row** on a 15×15 Go board. A
+**lobby lists the open rooms** (with player counts + status) so you can click to
+join or watch — or create a new room. Black moves first; first to **5 in a row**
+(any direction) wins. The Rust server is authoritative — it validates every move
+and detects the win — and **win counts persist to a local DB file** (`gomoku.db`,
+gitignored) as an all-time leaderboard.
 
 <div align="center">
-<img src="assets/gomoku.png" width="520"/><br/>
-<b>opcusdb Gomoku</b> — wooden goban, the winning line highlighted, per-player wins + leaderboard.
+<img src="assets/gomoku-lobby.png" width="320"/> <img src="assets/gomoku.png" width="430"/><br/>
+<b>Lobby</b> (live room list — join / watch / create) and a finished <b>game</b> (winning line highlighted, leaderboard).
 </div>
 
 ```sh

@@ -6,22 +6,23 @@ const cv = $("board"), ctx = cv.getContext("2d");
 let ws = null, myId = 0, role = "s";
 let N = 15, board = [], toMove = 1, winner = 0, last = -1, winLine = [];
 let blackName = "—", whiteName = "—", lb = [];
-let hover = -1;
+let hover = -1, joined = false;
 
 const SIZE = 600, PAD = 28;
 const step = () => (SIZE - 2 * PAD) / (N - 1);
 const px = (i) => PAD + i * step();
 const myColor = () => (role === "b" ? 1 : role === "w" ? 2 : 0);
 
-function connect(nick, code) {
+// connect once on load; we start in the lobby (server streams the room list)
+function boot() {
   ws = new WebSocket(`ws://${location.host}/ws`);
-  ws.onopen = () => { ws.send(`join ${code} ${nick}`); $("lobby").style.display = "none"; $("roomTag").textContent = code; };
   ws.onclose = () => { $("status").textContent = "disconnected"; };
   ws.onmessage = (e) => {
     for (const line of e.data.split("\n")) {
       if (!line) continue;
       const p = line.split("\t");
-      if (p[0] === "w") { myId = +p[1]; role = p[2]; }
+      if (p[0] === "L") { if (!joined) renderRooms(p[1] || ""); }
+      else if (p[0] === "w") { myId = +p[1]; role = p[2]; }
       else if (p[0] === "s") {
         N = +p[1]; board = [...p[2]].map(Number); toMove = +p[3]; winner = +p[4];
         last = +p[5]; blackName = p[6]; whiteName = p[7];
@@ -30,8 +31,32 @@ function connect(nick, code) {
         lb = (p[1] || "").split(",").filter(Boolean).map(x => { const [n, w] = x.split(":"); return [n, +w]; });
       }
     }
-    render(); sidebar();
+    if (joined) { render(); sidebar(); }
   };
+}
+
+function joinRoom(code) {
+  if (!ws || ws.readyState !== 1 || !code) return;
+  joined = true;
+  ws.send(`join ${code} ${val("nick")}`);
+  $("lobby").style.display = "none";
+  $("roomTag").textContent = code;
+}
+
+function renderRooms(listStr) {
+  const rooms = listStr.split(",").filter(Boolean).map(x => { const [code, n, status] = x.split(":"); return { code, n: +n, status }; });
+  const el = $("roomList");
+  if (!rooms.length) { el.innerHTML = '<div class="hint">no open rooms yet — create one!</div>'; return; }
+  el.innerHTML = "";
+  rooms.forEach(r => {
+    const row = document.createElement("div"); row.className = "lobrow";
+    row.innerHTML = `<span><b>${esc(r.code)}</b><span class="s">${r.n}/2 · ${r.status}</span></span>`;
+    const btn = document.createElement("button");
+    btn.className = "mini " + (r.status === "waiting" ? "primary" : "ghost");
+    btn.textContent = r.status === "waiting" ? "join" : "watch";
+    btn.onclick = () => joinRoom(r.code);
+    row.appendChild(btn); el.appendChild(row);
+  });
 }
 
 function render() {
@@ -125,7 +150,9 @@ $("rematch").onclick = () => ws && ws.send("rematch");
 const rnd = () => Array.from({ length: 4 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
 $("nick").value = "player" + Math.floor(Math.random() * 1000);
 const val = (id) => $(id).value.trim() || $(id).placeholder;
-$("create").onclick = () => { $("code").value = rnd(); connect(val("nick"), $("code").value); };
-$("join").onclick = () => { if (!$("code").value.trim()) $("code").value = rnd(); connect(val("nick"), $("code").value.trim()); };
+$("create").onclick = () => joinRoom(rnd());
+$("joinCode").onclick = () => joinRoom(($("code").value.trim() || rnd()).toUpperCase());
+$("code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("joinCode").click(); });
 const q = new URLSearchParams(location.search).get("room"); if (q) $("code").value = q.toUpperCase();
 render();
+boot();

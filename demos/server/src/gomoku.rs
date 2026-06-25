@@ -129,6 +129,25 @@ fn record_win(lb: &mut Vec<(String, u32)>, nick: &str) {
     lb.truncate(LB_MAX);
 }
 
+/// Build the lobby room list for clients who haven't joined a room yet:
+/// `L\t<code>:<players>:<status>,...` (status: waiting / playing / done).
+fn build_lobby(rooms: &BTreeMap<String, Room>) -> String {
+    let mut items = Vec::new();
+    for (code, r) in rooms {
+        let n = u8::from(r.black.id.is_some()) + u8::from(r.white.id.is_some());
+        if n == 0 {
+            continue;
+        }
+        let status = match (n, r.winner) {
+            (1, _) => "waiting",
+            (2, 0) => "playing",
+            _ => "done",
+        };
+        items.push(format!("{code}:{n}:{status}"));
+    }
+    format!("L\t{}\n", items.join(","))
+}
+
 fn rebuild_snapshot(room: &mut Room, lb: &[(String, u32)]) {
     let board: String = room.board.iter().map(|c| (b'0' + c) as char).collect();
     let win_line = if room.win_line.is_empty() {
@@ -209,9 +228,10 @@ fn handle(mut stream: TcpStream, arena: Arc<Mutex<Arena>>) {
             thread::sleep(Duration::from_millis(120));
             let snap = {
                 let code = wroom.lock().unwrap().clone();
+                let a = warena.lock().unwrap();
                 match code {
-                    Some(c) => warena.lock().unwrap().rooms.get(&c).map(|r| r.snapshot.clone()),
-                    None => None,
+                    Some(c) => a.rooms.get(&c).map(|r| r.snapshot.clone()),
+                    None => Some(build_lobby(&a.rooms)), // lobby view: list of rooms
                 }
             };
             if let Some(s) = snap {
