@@ -24,8 +24,9 @@ $("app").appendChild(app.view);
 function fit() { const s = Math.min(innerWidth / W, innerHeight / H) * 0.98; app.view.style.width = W * s + "px"; app.view.style.height = H * s + "px"; }
 addEventListener("resize", fit); fit();
 
-const bgL = new PIXI.Container(), groundL = new PIXI.Container(), labelL = new PIXI.Container(), charL = new PIXI.Container(), bubbleL = new PIXI.Container(), nightL = new PIXI.Container();
-app.stage.addChild(bgL, groundL, labelL, charL, bubbleL, nightL);
+const bgL = new PIXI.Container(), groundL = new PIXI.Container(), labelL = new PIXI.Container(), charL = new PIXI.Container(), bubbleL = new PIXI.Container(), fxL = new PIXI.Container(), nightL = new PIXI.Container();
+app.stage.addChild(bgL, groundL, labelL, charL, bubbleL, fxL, nightL);
+fxL.eventMode = "none";
 let hasBg = false;
 const night = new PIXI.Graphics().beginFill(0xffffff).drawRect(0, 0, W, H).endFill();
 nightL.addChild(night); nightL.eventMode = "none"; night.blendMode = PIXI.BLEND_MODES.MULTIPLY;
@@ -148,6 +149,14 @@ function setBubble(id, text) {
   }
 }
 
+// little floating emote puffs that rise and fade, to make idle residents lively
+const EMOTES = ["💬", "🎵", "✨", "😄", "💤", "❓", "❤️", "☕", "🌸", "🙂", "💡", "🍞", "🔨", "📖"];
+function addEmote(x, y, txt) {
+  if (fxL.children.length > 36) return;
+  const t = new PIXI.Text(txt, { fontFamily: "system-ui", fontSize: 19 });
+  t.anchor.set(0.5, 1); t.position.set(x, y); t.life = 1.2; fxL.addChild(t);
+}
+
 // ---- loop -----------------------------------------------------------------
 app.ticker.add(() => {
   const dt = app.ticker.deltaMS / 1000;
@@ -158,27 +167,38 @@ app.ticker.add(() => {
     if (v.tface) v.face = v.tface;
     const p = v.view._p;
     v.view.position.set(v.dx, v.dy);
+    // idle actions: when standing around, occasionally hop and puff an emote
+    if (moving) { v.idle = Math.max(v.idle || 0, 1.5); }
+    else {
+      v.idle = (v.idle == null ? 2 + Math.random() * 5 : v.idle) - dt;
+      if (v.idle <= 0) { addEmote(v.dx, v.dy - (p.isSprite ? 54 : 40), EMOTES[(Math.random() * EMOTES.length) | 0]); v.hop = 1; v.idle = 4 + Math.random() * 7; }
+    }
+    if (v.hop > 0) v.hop -= dt * 3.2;
     if (p.isSprite) {
       p.spr.scale.x = p.sc * v.face;
       if (moving) {
         p.bob += dt * 11;
         const s = Math.sin(p.bob);
-        p.spr.y = 19 - Math.abs(s) * 4.5;                 // hop
+        p.spr.y = 19 - Math.abs(s) * 4.5;                 // hop while walking
         p.spr.rotation = s * 0.07 * v.face;               // sway in travel direction
         p.spr.scale.y = p.sc * (1 - Math.abs(s) * 0.05);  // squash
         p.shadow.scale.set(1 + Math.abs(s) * 0.12, 1);
       } else {
-        p.spr.y += (19 - p.spr.y) * 0.25; p.spr.rotation *= 0.8; p.spr.scale.y = p.sc; p.shadow.scale.set(1, 1);
+        const lift = Math.max(0, v.hop) * 9;                                  // idle hop
+        const breathe = Math.sin(performance.now() / 700 + p.bob) * 0.02;     // gentle breathing
+        p.spr.y += (19 - lift - p.spr.y) * 0.3; p.spr.rotation *= 0.8; p.spr.scale.y = p.sc * (1 + breathe); p.shadow.scale.set(1, 1);
       }
       if (p.ring) p.ring.alpha = 0.5 + 0.4 * Math.sin(performance.now() / 300);
     } else {
       p.body.scale.x = v.face;
       if (moving) { p.walk += dt * 12; p.legL.rotation = Math.sin(p.walk) * 0.6; p.legR.rotation = -Math.sin(p.walk) * 0.6; p.body.y = -Math.abs(Math.sin(p.walk)) * 1.5; }
-      else { p.legL.rotation *= 0.7; p.legR.rotation *= 0.7; p.body.y *= 0.7; }
+      else { p.legL.rotation *= 0.7; p.legR.rotation *= 0.7; p.body.y = -Math.max(0, v.hop) * 6; }
       if (p.ring) { p.ring.alpha = 0.5 + 0.4 * Math.sin(performance.now() / 300); }
     }
     v.view.zIndex = v.dy;
   }
+  // animate emote puffs: rise and fade
+  for (const e of [...fxL.children]) { e.y -= dt * 24; e.life -= dt; e.alpha = Math.max(0, Math.min(1, e.life * 1.6)); e.scale.set(1 + (1.2 - e.life) * 0.25); if (e.life <= 0) fxL.removeChild(e); }
   charL.children.sort((a, b) => a.zIndex - b.zIndex);
   // bubbles follow their character
   for (const b of bubbleL.children) { const v = chars.get(+b.name.slice(1)); if (v) b.position.set(v.dx - (b._w || 80) / 2, v.dy - 40 - (b._h || 24)); }
