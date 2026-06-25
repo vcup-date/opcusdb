@@ -308,7 +308,8 @@ fn map_line(g: &Game) -> String {
             }
         }
     }
-    format!("map\t{COLS}\t{ROWS}\t{}\t{roads}\t{},{}\n", TILE as i32, g.base.0, g.base.1)
+    let wps = g.path.iter().map(|(x, y)| format!("{x:.0},{y:.0}")).collect::<Vec<_>>().join(";");
+    format!("map\t{COLS}\t{ROWS}\t{}\t{roads}\t{},{}\t{wps}\n", TILE as i32, g.base.0, g.base.1)
 }
 
 fn snapshot(g: &Game) -> String {
