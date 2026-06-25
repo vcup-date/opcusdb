@@ -62,7 +62,7 @@ function connect(nick) {
       else if (tag === "p") {
         const p = rest.split("\t"); const id = +p[0];
         const cur = players.get(id) || { dispX: +p[1], dispY: +p[2] };
-        Object.assign(cur, { x: +p[1], y: +p[2], hp: +p[3], maxhp: +p[4], level: +p[5], xp: +p[6], xpneed: +p[7], facing: +p[8], kills: +p[9], down: +p[10], name: p[11] });
+        Object.assign(cur, { x: +p[1], y: +p[2], hp: +p[3], maxhp: +p[4], level: +p[5], xp: +p[6], xpneed: +p[7], facing: +p[8], kills: +p[9], down: +p[10], name: p[11], opts: p[12] || "-" });
         players.set(id, cur); pSeen.add(id);
       } else if (tag === "e") {
         for (const s of rest.split(";")) { if (!s) continue; const [id, x, y, k, h] = s.split(",").map(Number);
@@ -83,6 +83,8 @@ function connect(nick) {
     if (pSeen.size || players.size) for (const id of [...players.keys()]) if (!pSeen.has(id)) players.delete(id);
     for (const id of [...enemies.keys()]) if (!eSeen.has(id)) enemies.delete(id);
     updateHUD();
+    updateBoss();
+    updateOverlays();
   };
 }
 
@@ -163,13 +165,24 @@ function drawEnemy(g, e) {
     g.beginFill(0xd9c3a3).drawCircle(x, y - 12, 6).endFill();
     g.beginFill(0x111).drawRect(x - 4, y - 13, 2, 2).drawRect(x + 2, y - 13, 2, 2).endFill();
     g.beginFill(0xff3b6b).drawRect(x - 2, y - 9, 1, 2).drawRect(x + 1, y - 9, 1, 2).endFill(); // fangs
-  } else { // bat-lord (elite)
+  } else if (e.kind === 3) { // bat-lord (elite)
     const flap = Math.sin(now / 70 + x) * 7;
     g.beginFill(0x4a1230).drawEllipse(x, y, 13, 11).endFill();
     g.beginFill(0x6a1d44).drawPolygon([x - 10, y, x - 28, y - 10 - flap, x - 22, y + 8]).endFill();
     g.beginFill(0x6a1d44).drawPolygon([x + 10, y, x + 28, y - 10 - flap, x + 22, y + 8]).endFill();
     g.beginFill(0xffd24a).drawCircle(x, y - 16, 3).endFill(); // crown gem
     g.beginFill(0xff2a2a).drawRect(x - 5, y - 3, 3, 3).drawRect(x + 2, y - 3, 3, 3).endFill();
+  } else { // VAMPIRE LORD (boss)
+    const flap = Math.sin(now / 60 + x) * 12;
+    g.beginFill(0x12000a, 0.5).drawEllipse(x, y + 16, 30, 8).endFill();
+    g.beginFill(0x6a1030).drawPolygon([x - 18, y, x - 56, y - 18 - flap, x - 44, y + 18]).endFill();
+    g.beginFill(0x6a1030).drawPolygon([x + 18, y, x + 56, y - 18 - flap, x + 44, y + 18]).endFill();
+    g.beginFill(0x2a0a1a).drawRoundedRect(x - 20, y - 22, 40, 44, 12).endFill(); // cape body
+    g.beginFill(0xd9c3a3).drawCircle(x, y - 18, 11).endFill(); // pale face
+    g.beginFill(0xff2a2a).drawRect(x - 7, y - 20, 4, 4).drawRect(x + 3, y - 20, 4, 4).endFill(); // eyes
+    g.beginFill(0xffffff).drawRect(x - 4, y - 12, 2, 4).drawRect(x + 2, y - 12, 2, 4).endFill(); // fangs
+    // crown
+    g.beginFill(0xffd24a).drawPolygon([x - 11, y - 27, x - 7, y - 34, x - 3, y - 27, x, y - 35, x + 3, y - 27, x + 7, y - 34, x + 11, y - 27]).endFill();
   }
   // hp pip when hurt
   if (e.hp < 9) { const w = 22, fr = e.hp / 9; g.beginFill(0x000, 0.5).drawRect(x - w / 2, y - 22, w, 3).endFill();
@@ -251,7 +264,6 @@ function updateHUD() {
   $("wave").textContent = `${enemies.size} vampires on the field`;
   const me = players.get(myId);
   if (me) { $("lvl").textContent = "Lv " + me.level; $("xpfill").style.width = (100 * me.xp / Math.max(1, me.xpneed)) + "%"; $("kills").textContent = "☠ " + me.kills; }
-  $("downmsg").style.display = me && me.down ? "flex" : "none";
   const box = $("players"); box.innerHTML = "";
   for (const [id, p] of [...players].sort((a, b) => b[1].kills - a[1].kills)) {
     const col = "#" + PCOL[(id - 1) % PCOL.length].toString(16).padStart(6, "0");
@@ -262,6 +274,46 @@ function updateHUD() {
     box.appendChild(d);
   }
 }
+function updateBoss() {
+  let boss = null;
+  for (const e of enemies.values()) if (e.kind === 4) { boss = e; break; }
+  const bar = $("bossbar");
+  if (boss) { bar.style.display = "block"; $("bossfill").style.width = (boss.hp / 9 * 100) + "%"; }
+  else bar.style.display = "none";
+}
+
+let lastOpts = "";
+function updateOverlays() {
+  const me = players.get(myId);
+  // game over
+  const go = $("gameover");
+  if (me && me.down) {
+    if (go.style.display !== "flex") {
+      go.style.display = "flex";
+      $("goTime").textContent = `${(time / 60 | 0)}:${String(time % 60 | 0).padStart(2, "0")}`;
+      $("goKills").textContent = me.kills; $("goLevel").textContent = "Lv " + me.level;
+    }
+  } else { go.style.display = "none"; }
+  // level-up upgrade cards
+  const up = $("upgrade");
+  const opts = me && !me.down ? (me.opts || "-") : "-";
+  if (opts !== "-" && opts) {
+    if (opts !== lastOpts) {
+      lastOpts = opts;
+      const cards = opts.split("~").map(s => { const i = s.indexOf("|"); return [s.slice(0, i), s.slice(i + 1)]; });
+      const box = $("ucards"); box.innerHTML = "";
+      cards.forEach(([id, label], i) => {
+        const d = document.createElement("div"); d.className = "ucard";
+        d.innerHTML = `${esc(label)}<span class="key">press ${i + 1}</span>`;
+        d.onclick = () => pick(i);
+        box.appendChild(d);
+      });
+    }
+    up.style.display = "flex";
+  } else { up.style.display = "none"; lastOpts = ""; }
+}
+function pick(i) { if (ws && ws.readyState === 1) ws.send("pick " + i); lastOpts = ""; }
+
 function renderLB() { const el = $("lbrows"); el.innerHTML = lb.length ? "" : '<div style="color:#6b7a99">no scores yet</div>';
   lb.slice(0, 6).forEach(([n, k], i) => { const d = document.createElement("div"); d.className = "row"; d.innerHTML = `<span>${i + 1}. ${esc(n)}</span><span>${k}</span>`; el.appendChild(d); }); }
 const esc = (s) => (s || "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
@@ -271,7 +323,13 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const keys = { l: false, r: false, u: false, d: false };
 const MAP = { ArrowLeft: "l", a: "l", A: "l", ArrowRight: "r", d: "r", D: "r", ArrowUp: "u", w: "u", W: "u", ArrowDown: "d", s: "d", S: "d" };
 function send() { if (ws && ws.readyState === 1) ws.send(`keys ${+keys.l} ${+keys.r} ${+keys.u} ${+keys.d}`); }
-addEventListener("keydown", (e) => { const k = MAP[e.key]; if (k && started) { if (!keys[k]) { keys[k] = true; send(); } e.preventDefault(); } });
+addEventListener("keydown", (e) => {
+  if (started && (e.key === "1" || e.key === "2" || e.key === "3")) {
+    const me = players.get(myId);
+    if (me && me.opts && me.opts !== "-" && !me.down) { pick(+e.key - 1); e.preventDefault(); return; }
+  }
+  const k = MAP[e.key]; if (k && started) { if (!keys[k]) { keys[k] = true; send(); } e.preventDefault(); }
+});
 addEventListener("keyup", (e) => { const k = MAP[e.key]; if (k) { keys[k] = false; send(); e.preventDefault(); } });
 
 // ---- start ----------------------------------------------------------------
@@ -280,3 +338,4 @@ function start() { started = true; $("overlay").style.display = "none"; ac();
   connect($("nick").value.trim() || ("P" + (Math.random() * 900 + 100 | 0))); }
 $("start").onclick = start;
 $("nick").addEventListener("keydown", (e) => { if (e.key === "Enter") start(); });
+$("again").onclick = () => { if (ws && ws.readyState === 1) ws.send("respawn"); $("gameover").style.display = "none"; };

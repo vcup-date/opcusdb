@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-165%20passing-success)
+![tests](https://img.shields.io/badge/tests-166%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-165 tests · 36 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+166 tests · 36 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -161,16 +161,18 @@ cargo run -p opcusdb-server --bin opcusdb-smash      # open http://localhost:900
 
 `opcusdb-survivors` is a "bullet heaven": you're a **Bomberman** whose bombs
 **auto-fire** (lob bombs, a Bomberman cross-blast, homing rockets, a nova pulse)
-against hordes of **vampires** (bats, ghouls, vampires, elite bat-lords). You only
-**move** (WASD/arrows); killed vampires drop **XP gems** — collect them to level up
-and stack/upgrade weapons, and survive the escalating waves. **Co-op**: everyone
-who opens the page fights the same horde. The Rust server simulates hundreds of
-enemies + projectiles + explosions at a fixed tick and broadcasts the world;
-best kill counts persist to a local DB file (`survivors.db`, gitignored).
+against hordes of **vampires** (bats, ghouls, vampires, elite bat-lords, and a
+periodic **Vampire Lord boss**). You only **move** (WASD/arrows); killed vampires
+drop **XP gems** — collect them to level up and **pick 1 of 3 upgrades** (unlock or
+upgrade a weapon, +HP, +speed, +pickup range, heal). Survive the escalating waves;
+dying ends your run with a **game-over screen** and a one-click restart. **Co-op**:
+everyone who opens the page fights the same horde. The Rust server simulates
+hundreds of enemies + projectiles + explosions at a fixed tick and broadcasts the
+world; best kill counts persist to a local DB file (`survivors.db`, gitignored).
 
 <div align="center">
-<img src="assets/survivors.png" width="760"/><br/>
-<b>opcusdb Boomborn</b> — two bombers vs. a vampire horde; auto-bombs carpet the field with explosions, XP gems, levels & a kills leaderboard.
+<img src="assets/survivors.png" width="780"/><br/>
+<b>opcusdb Boomborn</b> — five bombers fighting a vampire horde (91 on the field) with a <b>Vampire Lord</b> boss, auto-bomb explosions, XP gems, per-player levels & a kills leaderboard.
 </div>
 
 ```sh

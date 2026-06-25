@@ -40,6 +40,30 @@
       .panel input { width:100%; font:inherit; text-align:center; padding:11px; margin:14px 0 6px; border-radius:10px; border:1px solid #4a2535; background:#1a1018; color:#ffe; }
       .panel button { width:100%; font:inherit; font-weight:800; font-size:16px; padding:13px; border:0; border-radius:12px; cursor:pointer; background:linear-gradient(180deg,#ff5d5d,#c52f2f); color:#fff; }
       .muted { color:#8a7a82; font-size:12px; }
+      /* boss bar */
+      #bossbar { position:fixed; top:96px; left:50%; transform:translateX(-50%); width:520px; max-width:80%; z-index:4; display:none; text-align:center; }
+      #bossbar .bb { height:16px; background:#2a0c14; border:2px solid #5a1a2a; border-radius:8px; overflow:hidden; box-shadow:0 0 20px #8a0c2a88; }
+      #bossbar .bb > i { display:block; height:100%; background:linear-gradient(90deg,#ff2a2a,#ff7a3d); width:100%; }
+      #bossbar span { font-size:12px; letter-spacing:2px; color:#ff8aa0; text-shadow:0 2px 4px #000; }
+      /* upgrade choice cards (game keeps running behind) */
+      #upgrade { position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:8; pointer-events:none;
+        background:linear-gradient(transparent, #04060c55); }
+      #upgrade .wrap { text-align:center; }
+      #upgrade h3 { font-size:18px; color:#ffd24a; text-shadow:0 2px 6px #000; margin:0 0 12px; letter-spacing:1px; }
+      .ucards { display:flex; gap:14px; justify-content:center; }
+      .ucard { pointer-events:auto; cursor:pointer; width:180px; min-height:96px; background:#121a2cf2; border:2px solid #3a4a6a; border-radius:14px;
+        padding:16px 14px; font-size:15px; font-weight:700; display:flex; align-items:center; justify-content:center; text-align:center;
+        box-shadow:0 12px 40px #000a; transition:transform .08s, border-color .08s; }
+      .ucard:hover { transform:translateY(-4px); border-color:#7dcfff; }
+      .ucard .key { display:block; font-size:11px; color:#6b7a99; margin-top:8px; font-weight:400; }
+      /* game over */
+      #gameover { position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:9;
+        background:radial-gradient(700px 400px at 50% 35%, #2a0b12, #05060ce8 75%); }
+      .gopanel { text-align:center; background:#0c0a10ee; border:1px solid #4a1f2a; border-radius:18px; padding:30px 40px; }
+      .gopanel h1 { font-size:40px; margin:0; color:#ff4d6a; letter-spacing:2px; }
+      .gopanel p { color:#cbb; margin:8px 0; }
+      .gopanel .stat { font-size:22px; font-weight:800; color:#ffd24a; }
+      .gopanel button { font:inherit; font-weight:800; font-size:16px; margin-top:14px; padding:12px 26px; border:0; border-radius:12px; cursor:pointer; background:linear-gradient(180deg,#ff5d5d,#c52f2f); color:#fff; }
     </style>
   </head>
   <body>
@@ -49,7 +73,14 @@
     <div id="top"><div id="timer">0:00</div><div id="wave">survive the horde</div></div>
     <div id="players"></div>
     <div id="lb"><h4>🏆 BEST KILLS</h4><div id="lbrows"></div></div>
-    <div id="downmsg"><span>💀 DOWNED — respawning…</span></div>
+    <div id="bossbar"><div class="bb"><i id="bossfill"></i></div><span>🦇 VAMPIRE LORD</span></div>
+    <div id="upgrade"><div class="wrap"><h3>⬆ LEVEL UP — choose an upgrade</h3><div class="ucards" id="ucards"></div></div></div>
+    <div id="gameover"><div class="gopanel">
+      <h1>💀 GAME OVER</h1>
+      <p>you survived <span class="stat" id="goTime">0:00</span></p>
+      <p>kills <span class="stat" id="goKills">0</span> · reached <span class="stat" id="goLevel">Lv 1</span></p>
+      <button id="again">play again ▶</button>
+    </div></div>
     <div id="xpwrap"><span id="lvl">Lv 1</span><div id="xpbar"><div id="xpfill"></div></div><span id="kills">☠ 0</span></div>
 
     <div id="overlay"><div class="panel">

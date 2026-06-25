@@ -46,11 +46,12 @@ struct EKind {
     xp: u32,
     r: f32,
 }
-const EK: [EKind; 4] = [
-    EKind { speed: 95.0, hp: 6.0, dmg: 6.0, xp: 1, r: 13.0 },   // 0 bat
-    EKind { speed: 46.0, hp: 26.0, dmg: 13.0, xp: 3, r: 18.0 }, // 1 ghoul
-    EKind { speed: 70.0, hp: 15.0, dmg: 10.0, xp: 2, r: 15.0 }, // 2 vampire
-    EKind { speed: 80.0, hp: 48.0, dmg: 18.0, xp: 7, r: 24.0 }, // 3 bat-lord (elite)
+const EK: [EKind; 5] = [
+    EKind { speed: 95.0, hp: 6.0, dmg: 6.0, xp: 1, r: 13.0 },    // 0 bat
+    EKind { speed: 46.0, hp: 26.0, dmg: 13.0, xp: 3, r: 18.0 },  // 1 ghoul
+    EKind { speed: 70.0, hp: 15.0, dmg: 10.0, xp: 2, r: 15.0 },  // 2 vampire
+    EKind { speed: 80.0, hp: 48.0, dmg: 18.0, xp: 7, r: 24.0 },  // 3 bat-lord (elite)
+    EKind { speed: 40.0, hp: 450.0, dmg: 32.0, xp: 80, r: 46.0 }, // 4 VAMPIRE LORD (boss)
 ];
 
 struct Weapon {
@@ -85,7 +86,12 @@ struct Player {
     kills: u32,
     weapons: Vec<Weapon>,
     iframe: f32,
-    down: f32, // >0 = downed, counts to respawn
+    dead: bool,           // permadeath this run -> game over screen
+    speed: f32,
+    magnet: f32,
+    choices: Vec<(String, String)>, // pending level-up options (id, label)
+    queued: u32,          // number of unresolved level-ups
+    pick_timer: f32,      // auto-pick countdown
     li: bool,
     ri: bool,
     ui: bool,
@@ -107,8 +113,13 @@ impl Player {
             xpneed: 5,
             kills: 0,
             weapons: vec![Weapon { kind: W_BOMB, level: 1, cd: 0.5 }],
-            iframe: 0.0,
-            down: 0.0,
+            iframe: 1.5,
+            dead: false,
+            speed: 230.0,
+            magnet: 150.0,
+            choices: Vec::new(),
+            queued: 0,
+            pick_timer: 0.0,
             li: false,
             ri: false,
             ui: false,
@@ -159,6 +170,7 @@ struct Room {
     rng: Rng,
     time: f32,
     spawn_cd: f32,
+    boss_cd: f32,
     next_eid: u32,
     snapshot: String,
 }
@@ -174,6 +186,7 @@ impl Room {
             rng: Rng::seed(seed),
             time: 0.0,
             spawn_cd: 1.0,
+            boss_cd: 40.0,
             next_eid: 1,
             snapshot: String::new(),
         }
@@ -227,7 +240,7 @@ fn nearest_enemy(room: &Room, x: f32, y: f32) -> Option<(f32, f32)> {
 fn nearest_alive_player(room: &Room, x: f32, y: f32) -> Option<(f32, f32)> {
     room.players
         .values()
-        .filter(|p| p.down <= 0.0)
+        .filter(|p| !p.dead)
         .min_by(|a, b| dist2(x, y, a.x, a.y).total_cmp(&dist2(x, y, b.x, b.y)))
         .map(|p| (p.x, p.y))
 }
@@ -239,12 +252,64 @@ fn tick_room(room: &mut Room) {
     room.time += DT;
 
     spawn_wave(room);
+    spawn_boss(room);
     move_players(room);
     fire_weapons(room);
     update_projectiles(room);
     update_booms(room);
     move_enemies(room);
     update_gems(room);
+    update_choices(room);
+}
+
+fn spawn_boss(room: &mut Room) {
+    room.boss_cd -= DT;
+    if room.boss_cd > 0.0 {
+        return;
+    }
+    let anchors: Vec<(f32, f32)> = room.players.values().filter(|p| !p.dead).map(|p| (p.x, p.y)).collect();
+    if anchors.is_empty() {
+        return;
+    }
+    room.boss_cd = 55.0;
+    let (ax, ay) = anchors[room.rng.below(anchors.len() as u32) as usize];
+    let ang = (room.rng.below(628) as f32) / 100.0;
+    let x = (ax + ang.cos() * 840.0).clamp(40.0, ARENA - 40.0);
+    let y = (ay + ang.sin() * 840.0).clamp(40.0, ARENA - 40.0);
+    let hp = 450.0 + room.time * 10.0;
+    let id = room.next_eid;
+    room.next_eid += 1;
+    room.enemies.insert(id, Enemy { x, y, kind: 4, hp, maxhp: hp });
+    room.events.push(('b', x, y));
+}
+
+/// Auto-resolve a level-up choice if the player took too long to pick.
+fn update_choices(room: &mut Room) {
+    let ids: Vec<u32> = room.players.keys().copied().collect();
+    for id in ids {
+        let auto = {
+            let p = room.players.get_mut(&id).unwrap();
+            if p.choices.is_empty() {
+                continue;
+            }
+            p.pick_timer -= DT;
+            if p.pick_timer <= 0.0 {
+                Some(p.choices[0].0.clone())
+            } else {
+                None
+            }
+        };
+        if let Some(cid) = auto {
+            let p = room.players.get_mut(&id).unwrap();
+            apply_upgrade(p, &cid);
+            p.choices.clear();
+            if p.queued > 0 {
+                p.queued -= 1;
+            }
+            let p = room.players.get_mut(&id).unwrap();
+            ensure_choices(p, &mut room.rng);
+        }
+    }
 }
 
 fn spawn_wave(room: &mut Room) {
@@ -286,18 +351,13 @@ fn spawn_wave(room: &mut Room) {
 
 fn move_players(room: &mut Room) {
     for p in room.players.values_mut() {
-        if p.down > 0.0 {
-            p.down -= DT;
-            if p.down <= 0.0 {
-                p.hp = p.maxhp * 0.6;
-                p.iframe = 2.0;
-            }
+        if p.dead {
             continue;
         }
         let dx = (p.ri as i32 - p.li as i32) as f32;
         let dy = (p.di as i32 - p.ui as i32) as f32;
         let len = (dx * dx + dy * dy).sqrt();
-        let sp = 230.0;
+        let sp = p.speed;
         if len > 0.0 {
             p.vx = dx / len * sp;
             p.vy = dy / len * sp;
@@ -320,11 +380,11 @@ fn move_players(room: &mut Room) {
 fn fire_weapons(room: &mut Room) {
     let ids: Vec<u32> = room.players.keys().copied().collect();
     for id in ids {
-        let (px, py, down) = {
+        let (px, py, dead) = {
             let p = &room.players[&id];
-            (p.x, p.y, p.down > 0.0)
+            (p.x, p.y, p.dead)
         };
-        if down {
+        if dead {
             continue;
         }
         let target = nearest_enemy(room, px, py);
@@ -389,12 +449,13 @@ fn fire_weapons(room: &mut Room) {
                     }
                     room.events.push(('t', px, py));
                 }
-                _ => {
+                W_NOVA => {
                     // nova: ring blast around the player
                     let dmg = 7.0 + level as f32 * 2.5;
                     room.booms.push(mk_boom(px, py, 130.0 + level as f32 * 16.0, dmg, id));
                     room.events.push(('x', px, py));
                 }
+                _ => {}
             }
         }
     }
@@ -486,7 +547,8 @@ fn move_enemies(room: &mut Room) {
     let er = |k: u8| EK[k as usize].r;
     let elist: Vec<(f32, f32, u8)> = room.enemies.values().map(|e| (e.x, e.y, e.kind)).collect();
     for p in room.players.values_mut() {
-        if p.down > 0.0 || p.iframe > 0.0 {
+        // invulnerable while dead, during i-frames, or while picking an upgrade
+        if p.dead || p.iframe > 0.0 || !p.choices.is_empty() {
             continue;
         }
         for &(ex, ey, k) in &elist {
@@ -496,7 +558,7 @@ fn move_enemies(room: &mut Room) {
                 room.events.push(('h', p.x, p.y));
                 if p.hp <= 0.0 {
                     p.hp = 0.0;
-                    p.down = 5.0;
+                    p.dead = true; // game over for this run
                     room.events.push(('d', p.x, p.y));
                 }
                 break;
@@ -511,22 +573,22 @@ fn update_gems(room: &mut Room) {
     let gems = std::mem::take(&mut room.gems);
     'gem: for mut g in gems {
         // find nearest player; magnetize within radius, collect when close
-        let mut best: Option<(u32, f32, f32, f32)> = None;
+        let mut best: Option<(u32, f32, f32, f32, f32)> = None;
         for (id, p) in room.players.iter() {
-            if p.down > 0.0 {
+            if p.dead {
                 continue;
             }
             let d = dist2(g.x, g.y, p.x, p.y);
-            if best.map_or(true, |(_, bd, _, _)| d < bd) {
-                best = Some((*id, d, p.x, p.y));
+            if best.map_or(true, |(_, bd, _, _, _)| d < bd) {
+                best = Some((*id, d, p.x, p.y, p.magnet));
             }
         }
-        if let Some((pid, d, pxp, pyp)) = best {
+        if let Some((pid, d, pxp, pyp, mag)) = best {
             if d < 26.0_f32.powi(2) {
                 gained.push((pid, g.val));
                 continue 'gem;
             }
-            if d < 150.0_f32.powi(2) {
+            if d < mag * mag {
                 let ang = (pxp - g.x).atan2(pyp - g.y);
                 g.x += ang.sin() * 300.0 * DT;
                 g.y += ang.cos() * 300.0 * DT;
@@ -542,30 +604,72 @@ fn update_gems(room: &mut Room) {
                 p.xp -= p.xpneed;
                 p.level += 1;
                 p.xpneed = (p.xpneed as f32 * 1.3) as u32 + 2;
-                level_up(p, &mut room.rng);
+                p.maxhp += 4.0;
+                p.hp = (p.hp + 10.0).min(p.maxhp);
+                p.queued += 1;
+                p.iframe = p.iframe.max(0.4);
                 room.events.push(('l', p.x, p.y));
             }
+            ensure_choices(p, &mut room.rng);
         }
     }
 }
 
-/// On level up: learn a new weapon, or upgrade an owned one; small heal.
-fn level_up(p: &mut Player, rng: &mut Rng) {
-    p.maxhp += 6.0;
-    p.hp = (p.hp + 20.0).min(p.maxhp);
-    let all = [W_BOMB, W_CROSS, W_ROCKET, W_NOVA];
-    let missing: Vec<u8> = all.iter().copied().filter(|k| !p.weapons.iter().any(|w| w.kind == *k)).collect();
-    let learn_new = !missing.is_empty() && (p.weapons.iter().all(|w| w.level >= 2) || rng.below(2) == 0);
-    if learn_new {
-        let k = missing[rng.below(missing.len() as u32) as usize];
-        p.weapons.push(Weapon { kind: k, level: 1, cd: 0.3 });
-    } else {
-        // upgrade the lowest-level weapon
-        if let Some(w) = p.weapons.iter_mut().filter(|w| w.level < 5).min_by_key(|w| w.level) {
-            w.level += 1;
-        } else if let Some(w) = p.weapons.iter_mut().min_by_key(|w| w.level) {
+const WNAMES: [&str; 4] = ["Bomb", "X-Blast", "Rocket", "Nova"];
+
+/// Build a fresh set of up to 3 level-up options (id, label) for the player.
+fn gen_choices(p: &Player, rng: &mut Rng) -> Vec<(String, String)> {
+    let mut pool: Vec<(String, String)> = Vec::new();
+    for k in 0..4u8 {
+        match p.weapons.iter().find(|w| w.kind == k) {
+            Some(w) if w.level < 5 => {
+                pool.push((format!("u{k}"), format!("⬆ {} Lv{}→{}", WNAMES[k as usize], w.level, w.level + 1)))
+            }
+            None => pool.push((format!("w{k}"), format!("✦ Unlock {}", WNAMES[k as usize]))),
+            _ => {}
+        }
+    }
+    pool.push(("hp".into(), "❤ +25 Max HP".into()));
+    pool.push(("spd".into(), "👟 +Move Speed".into()));
+    pool.push(("mag".into(), "🧲 +Pickup Range".into()));
+    pool.push(("heal".into(), "✚ Heal to Full".into()));
+    let mut out = Vec::new();
+    while out.len() < 3 && !pool.is_empty() {
+        let i = rng.below(pool.len() as u32) as usize;
+        out.push(pool.swap_remove(i));
+    }
+    out
+}
+
+/// Apply a chosen upgrade by its id.
+fn apply_upgrade(p: &mut Player, id: &str) {
+    if let Some(k) = id.strip_prefix('u').and_then(|s| s.parse::<u8>().ok()) {
+        if let Some(w) = p.weapons.iter_mut().find(|w| w.kind == k) {
             w.level = (w.level + 1).min(5);
         }
+    } else if let Some(k) = id.strip_prefix('w').and_then(|s| s.parse::<u8>().ok()) {
+        if !p.weapons.iter().any(|w| w.kind == k) {
+            p.weapons.push(Weapon { kind: k, level: 1, cd: 0.3 });
+        }
+    } else {
+        match id {
+            "hp" => {
+                p.maxhp += 25.0;
+                p.hp += 25.0;
+            }
+            "spd" => p.speed = (p.speed + 26.0).min(360.0),
+            "mag" => p.magnet += 45.0,
+            "heal" => p.hp = p.maxhp,
+            _ => {}
+        }
+    }
+}
+
+/// If a level-up is queued and no options are showing, generate a new set.
+fn ensure_choices(p: &mut Player, rng: &mut Rng) {
+    if p.choices.is_empty() && p.queued > 0 {
+        p.choices = gen_choices(p, rng);
+        p.pick_timer = 9.0;
     }
 }
 
@@ -573,8 +677,13 @@ fn build_snapshot(room: &Room) -> String {
     let mut s = String::new();
     s.push_str(&format!("a\t{}\t{}\t{}\n", ARENA as i32, ARENA as i32, room.time as i32));
     for (id, p) in &room.players {
+        let opts = if p.choices.is_empty() {
+            "-".to_string()
+        } else {
+            p.choices.iter().map(|(i, l)| format!("{i}|{l}")).collect::<Vec<_>>().join("~")
+        };
         s.push_str(&format!(
-            "p\t{id}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+            "p\t{id}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
             p.x as i32,
             p.y as i32,
             p.hp as i32,
@@ -584,8 +693,9 @@ fn build_snapshot(room: &Room) -> String {
             p.xpneed,
             p.facing,
             p.kills,
-            if p.down > 0.0 { 1 } else { 0 },
+            u8::from(p.dead),
             p.name,
+            opts,
         ));
     }
     let e = room
@@ -714,6 +824,40 @@ fn handle(mut stream: TcpStream, arena: Arc<Mutex<Arena>>) {
                             }
                         }
                     }
+                    ["pick", i] => {
+                        if let (Some(code), Ok(i)) = (my_room.lock().unwrap().clone(), i.parse::<usize>()) {
+                            let mut a = arena.lock().unwrap();
+                            if let Some(rm) = a.rooms.get_mut(&code) {
+                                let cid = rm.players.get(&id).and_then(|p| p.choices.get(i)).map(|c| c.0.clone());
+                                if let Some(cid) = cid {
+                                    if let Some(p) = rm.players.get_mut(&id) {
+                                        apply_upgrade(p, &cid);
+                                        p.choices.clear();
+                                        if p.queued > 0 {
+                                            p.queued -= 1;
+                                        }
+                                    }
+                                    if let Some(p) = rm.players.get_mut(&id) {
+                                        ensure_choices(p, &mut rm.rng);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    ["respawn"] => {
+                        if let Some(code) = my_room.lock().unwrap().clone() {
+                            let mut a = arena.lock().unwrap();
+                            // record this run's kills, then start a fresh run
+                            let nk = a.rooms.get(&code).and_then(|r| r.players.get(&id)).map(|p| (p.name.clone(), p.kills));
+                            if let Some((name, kills)) = nk {
+                                record_kills(&mut a.lb, &name, kills);
+                                save_lb(&a.lb);
+                                if let Some(p) = a.rooms.get_mut(&code).and_then(|r| r.players.get_mut(&id)) {
+                                    *p = Player::new(name);
+                                }
+                            }
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -819,15 +963,28 @@ mod tests {
     }
 
     #[test]
-    fn level_up_grants_weapon_or_upgrade() {
-        let mut r = room1();
-        let before = r.players[&1].weapons.len();
+    fn upgrade_choices_generate_and_apply() {
+        let mut p = Player::new("h".into());
         let mut rng = Rng::seed(5);
-        level_up(r.players.get_mut(&1).unwrap(), &mut rng);
-        let p = &r.players[&1];
-        let total: u8 = p.weapons.iter().map(|w| w.level).sum();
-        assert!(p.weapons.len() > before || total > 1, "gained a weapon or a level");
-        assert!(p.maxhp > 100.0, "max hp increased on level up");
+        let opts = gen_choices(&p, &mut rng);
+        assert_eq!(opts.len(), 3, "three options offered");
+        // unlock a new weapon
+        apply_upgrade(&mut p, "w1");
+        assert!(p.weapons.iter().any(|w| w.kind == W_CROSS), "unlocked X-Blast");
+        // upgrade the starting bomb
+        apply_upgrade(&mut p, "u0");
+        assert_eq!(p.weapons.iter().find(|w| w.kind == W_BOMB).unwrap().level, 2);
+        // a stat upgrade
+        apply_upgrade(&mut p, "hp");
+        assert!(p.maxhp > 100.0, "max hp increased");
+    }
+
+    #[test]
+    fn boss_spawns_after_its_timer() {
+        let mut r = room1();
+        r.boss_cd = 0.0;
+        spawn_boss(&mut r);
+        assert!(r.enemies.values().any(|e| e.kind == 4), "a boss appeared");
     }
 
     #[test]
