@@ -116,7 +116,7 @@ function connect() {
           if (!s) continue; const a = s.split(","); const id = +a[0], x = +a[1], y = +a[2], pal = +a[3], face = +a[4], you = +a[5];
           seen.add(id);
           let v = chars.get(id);
-          if (!v) { v = { dx: x, dy: y, tx: x, ty: y, face: 1, view: makeChar(pal === 99 ? humanPal : PAL[pal % 12], pal === 99 || you === 1, pal) }; chars.set(id, v); }
+          if (!v) { v = { dx: x, dy: y, tx: x, ty: y, face: 1, pal, view: makeChar(pal === 99 ? humanPal : PAL[pal % 12], pal === 99 || you === 1, pal) }; chars.set(id, v); }
           v.tx = x; v.ty = y; v.tface = face === 0 ? -1 : 1;
         }
         for (const [id, v] of chars) if (!seen.has(id)) { charL.removeChild(v.view); chars.delete(id); const b = bubbleL.getChildByName("b" + id); if (b) bubbleL.removeChild(b); }
@@ -149,8 +149,17 @@ function setBubble(id, text) {
   }
 }
 
-// little floating emote puffs that rise and fade, to make idle residents lively
-const EMOTES = ["💬", "🎵", "✨", "😄", "💤", "❓", "❤️", "☕", "🌸", "🙂", "💡", "🍞", "🔨", "📖"];
+// little floating emote puffs that rise and fade, to make idle residents lively.
+// each resident pulls from a pool that fits their trade, with a generic fallback.
+const EMOTES = ["💬", "🎵", "✨", "😄", "💤", "❓", "❤️", "☕", "🌸", "🙂", "💡"];
+const ROLE_EMOTES = {
+  0: ["🍞", "🥐", "😋", "🔥"], 1: ["🔨", "⚒️", "🔥", "💪"], 2: ["🌸", "🌱", "🌻", "💧"],
+  3: ["🍺", "🍻", "😄", "🎶"], 4: ["📖", "📚", "🤔", "🔎"], 5: ["💰", "🪙", "✨", "🤝"],
+  6: ["🎵", "🎶", "🎭", "💃"], 7: ["🐟", "🎣", "🌊", "😤"], 8: ["❤️", "🌿", "💊", "😊"],
+  9: ["⭐", "🎈", "❓", "😆"], 10: ["🧵", "🧶", "👀", "😒"], 11: ["✉️", "📜", "💨", "🏃"],
+  99: ["🙂", "💬", "✨", "👋"],
+};
+function pickEmote(v) { const pool = ROLE_EMOTES[v.pal] || EMOTES; return pool[(Math.random() * pool.length) | 0]; }
 function addEmote(x, y, txt) {
   if (fxL.children.length > 36) return;
   const t = new PIXI.Text(txt, { fontFamily: "system-ui", fontSize: 19 });
@@ -174,7 +183,7 @@ app.ticker.add(() => {
     if (moving) { v.idle = Math.max(v.idle || 0, 1.5); }
     else {
       v.idle = (v.idle == null ? 2 + Math.random() * 5 : v.idle) - dt;
-      if (v.idle <= 0) { addEmote(v.dx, v.dy - (p.isSprite ? 54 : 40), EMOTES[(Math.random() * EMOTES.length) | 0]); v.hop = 1; v.idle = 4 + Math.random() * 7; }
+      if (v.idle <= 0) { addEmote(v.dx, v.dy - (p.isSprite ? 54 : 40), pickEmote(v)); v.hop = 1; v.idle = 4 + Math.random() * 7; }
     }
     if (v.hop > 0) v.hop -= dt * 3.2;
     if (p.isSprite) {
