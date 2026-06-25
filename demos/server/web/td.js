@@ -2,6 +2,10 @@
 // The Rust server is authoritative; this renders a smooth, animated view of the
 // state it broadcasts and sends two commands: build a tower, start a wave.
 
+// Safari back-forward-cache: if this page was restored from memory (not re-fetched),
+// force a real reload so we never run a stale snapshot of the code.
+addEventListener("pageshow", (e) => { if (e.persisted) location.reload(); });
+
 const $ = (id) => document.getElementById(id);
 const cv = $("cv"), ctx = cv.getContext("2d");
 
