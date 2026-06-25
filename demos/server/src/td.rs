@@ -1,9 +1,9 @@
-//! opcusdb Rampart — a co-op **tower defense**. Creeps march along a winding path
-//! in escalating waves; you spend gold to build towers (arrow / cannon / frost)
-//! that auto-target and fire. Let a creep reach your keep and you lose a life;
-//! survive every wave to win. The Rust server is the authoritative simulation
-//! (one shared game, fixed tick, broadcast over WebSocket) — open more tabs to
-//! defend together. All mouse: click a tower, click a tile.
+//! opcusdb Rampart — a **tower defense**. Creeps march along a winding path in
+//! escalating waves; you spend gold to build towers (arrow / cannon / frost) that
+//! auto-target and fire. Let a creep reach your keep and you lose a life; survive
+//! every wave to win. The Rust server is the authoritative simulation (fixed tick,
+//! broadcast over WebSocket); **each browser gets its own private game** so nobody
+//! else's actions touch yours. All mouse: click a tower, click a tile.
 //!
 //! Run: `cargo run -p opcusdb-server --bin opcusdb-td` then open http://localhost:9010
 
@@ -72,7 +72,6 @@ struct Game {
     to_spawn: Vec<(u8, f32, f32, i32)>, // (kind, hp, speed, bounty) queued for this wave
     spawn_cd: f32,
     next: u32,
-    next_client: u32,
 }
 
 fn idx(c: i32, r: i32) -> usize {
@@ -120,7 +119,6 @@ fn new_game() -> Game {
         to_spawn: Vec::new(),
         spawn_cd: 0.0,
         next: 1,
-        next_client: 1,
     }
 }
 
@@ -329,23 +327,15 @@ fn snapshot(g: &Game) -> String {
 }
 
 fn main() {
-    let game = Arc::new(Mutex::new(new_game()));
-    {
-        let game = game.clone();
-        thread::spawn(move || loop {
-            thread::sleep(Duration::from_millis(TICK_MS));
-            tick(&mut game.lock().unwrap());
-        });
-    }
     let listener = TcpListener::bind(("0.0.0.0", PORT)).expect("bind");
     println!("opcusdb Rampart (tower defense) on http://localhost:{PORT}");
+    // each connection gets its own private game — no shared state between players
     for stream in listener.incoming().flatten() {
-        let game = game.clone();
-        thread::spawn(move || handle(stream, game));
+        thread::spawn(move || handle(stream));
     }
 }
 
-fn handle(mut stream: TcpStream, game: Arc<Mutex<Game>>) {
+fn handle(mut stream: TcpStream) {
     let Some(head) = read_http_head(&mut stream) else { return };
     if !head.to_ascii_lowercase().contains("upgrade: websocket") {
         serve_file(&mut stream, &head);
@@ -359,11 +349,9 @@ fn handle(mut stream: TcpStream, game: Arc<Mutex<Game>>) {
     if stream.write_all(resp.as_bytes()).is_err() {
         return;
     }
-    {
-        let mut g = game.lock().unwrap();
-        g.next_client += 1;
-    }
-    // writer: map once, then state each tick
+    // a fresh game for this player (wave 0, empty board)
+    let game = Arc::new(Mutex::new(new_game()));
+    // writer thread: advance the sim and broadcast it (map once, then state each tick)
     let mut writer = stream.try_clone().expect("clone");
     let wgame = game.clone();
     let writer_handle = thread::spawn(move || {
@@ -372,6 +360,7 @@ fn handle(mut stream: TcpStream, game: Arc<Mutex<Game>>) {
         }
         loop {
             thread::sleep(Duration::from_millis(TICK_MS));
+            tick(&mut wgame.lock().unwrap());
             let snap = snapshot(&wgame.lock().unwrap());
             if ws::write_text(&mut writer, &snap).is_err() {
                 return;

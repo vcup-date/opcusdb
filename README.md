@@ -253,7 +253,7 @@ cargo run -p opcusdb-server --bin opcusdb-board   # open http://localhost:9009
 # draw together · open more tabs · hit "go offline", draw, then come back to watch it merge
 ```
 
-## Rampart — co-op tower defense 🏰
+## Rampart — tower defense 🏰
 
 `opcusdb-td` is a **tower-defense** game: creeps march along a winding path in **12
 escalating waves** and you spend gold to build towers — **Arrow** (fast, single
@@ -265,7 +265,7 @@ together. All mouse, Mac-friendly: click a tower, click a tile.
 
 <div align="center">
 <img src="assets/td.png" width="820"/><br/>
-<b>opcusdb Rampart</b> — build towers along the path to stop waves of creeps before they reach your keep; a shared, server-authoritative game you can defend co-op.
+<b>opcusdb Rampart</b> — build towers along the path to stop waves of creeps before they reach your keep; your own server-authoritative game.
 </div>
 
 ```sh
@@ -301,7 +301,7 @@ cargo run -p opcusdb-server --bin opcusdb-td   # open http://localhost:9010
 | `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
 | `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
 | `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
-| `demos/server` | ten authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), **Townfall** (Godot 4 3D MMO town), **Overlode** (Overwatch-style FPS, lag-compensated), **Co-Board** (CRDT vector canvas), and **Rampart** (co-op tower defense) — with rooms, leaderboards, physics, quests, and AI |
+| `demos/server` | ten authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), **Townfall** (Godot 4 3D MMO town), **Overlode** (Overwatch-style FPS, lag-compensated), **Co-Board** (CRDT vector canvas), and **Rampart** (tower defense) — with rooms, leaderboards, physics, quests, and AI |
 
 ## The five game types → demos
 
@@ -321,7 +321,7 @@ cargo run -p opcusdb-server --bin opcusdb-td   # open http://localhost:9010
 | **3D MMO town (Godot)** | `server` (wow) + `demos/godot-wow` | `cargo run -p opcusdb-server --bin opcusdb-wow` → :9007, open the Godot project | NPC quests, wolves, chat; multiplayer 3D town in **Godot 4** |
 | **FPS (Overwatch-like)** | `server` (ow) + Three.js | `cargo run -p opcusdb-server --bin opcusdb-ow` → :9008 | Tracer hero, lag-compensated hitscan, Blink/Recall, AI bots |
 | **collaborative whiteboard (CRDT)** | `server` (board) | `cargo run -p opcusdb-server --bin opcusdb-board` → :9009 | vector editor (shapes/text/notes, resize handles); OrSet CRDT; offline-merge; presence |
-| **tower defense (co-op)** | `server` (td) | `cargo run -p opcusdb-server --bin opcusdb-td` → :9010 | waves of creeps on a path; build Arrow/Cannon/Frost towers; gold/lives; click-only (Mac-friendly) |
+| **tower defense** | `server` (td) | `cargo run -p opcusdb-server --bin opcusdb-td` → :9010 | waves of creeps on a path; build Arrow/Cannon/Frost towers; gold/lives; click-only (Mac-friendly) |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start
