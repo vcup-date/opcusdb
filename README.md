@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-142%20passing-success)
+![tests](https://img.shields.io/badge/tests-152%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-142 tests · 28 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+152 tests · 32 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -51,6 +51,53 @@ only renders. (Screenshots are captured headlessly from the live demos.)
 | **Same netcode, low latency** — client & server overlap (one loop, different lag) | **Particle galaxy (attract)** — fixed-point physics in the ECS, drawn with PixiJS |
 
 <div align="center"><img src="assets/particles-repel.png" width="420"/><br/><b>Particle galaxy (repel)</b> — hold the mouse to blast particles outward</div>
+
+> The four demos above run the engine **locally in one tab** (WASM) — they showcase
+> the engine and netcode *logic*, not a shared session. For **actual multiplayer**,
+> see below.
+
+## Multiplayer — many browsers, one authoritative world
+
+`opcusdb-server` runs the **real opcusdb ECS engine on the server** as the single
+source of truth; browsers are thin clients that send inputs over **WebSocket** and
+render the state the server broadcasts. Open it in several tabs/devices and
+everyone shares the same live world — every cursor and every server-simulated dot.
+
+```sh
+cargo run -p opcusdb-server      # then open http://localhost:9001 in 2+ tabs
+```
+
+<div align="center">
+<img src="assets/diagram-multiplayer.png" width="560" alt="multiplayer topology"/><br/>
+<img src="assets/multiplayer.png" width="460"/><br/>
+<b>One client's view of a shared world</b> — your white cursor, other players (p3/p5/p6), and dots the server simulates for everyone.
+</div>
+
+> The WebSocket server is **dependency-free** too: the HTTP serving and the
+> WebSocket protocol (handshake SHA-1/base64 + framing) are hand-rolled in std
+> Rust (`demos/server/src/ws.rs`). The shared-world logic and the WS handshake are
+> unit-tested; the live path was checked with multiple concurrent browser clients.
+
+## Human + AI chatroom (live, over OpenRouter)
+
+`opcusdb-chat` is an IRC-style `#lobby`: **anyone logs in with a nick**, and **10
+AI chatters** (OpenRouter, `deepseek/deepseek-v4-flash`) talk with you and each
+other. Same hand-rolled WebSocket server; the AI calls go out through the system
+`curl` (no HTTP/TLS dependency).
+
+<div align="center">
+<img src="assets/chatroom.png" width="620"/><br/>
+<b>#lobby</b> — a human (<code>visitor</code>) and 10 AI chatters with distinct personas, talking to each other in real time.
+</div>
+
+```sh
+export OPENROUTER_API_KEY=sk-or-...                 # your key — never committed
+cargo run -p opcusdb-server --bin opcusdb-chat      # then open http://localhost:9002
+```
+
+The key is read from **`OPENROUTER_API_KEY`** and is **never stored in the repo**
+(`.env` and `run-chat.sh` are gitignored; see [`.env.example`](.env.example)). To
+save credits, the bots only chat while at least one human is connected.
 
 ## Architecture
 
@@ -80,6 +127,7 @@ only renders. (Screenshots are captured headlessly from the live demos.)
 | `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
 | `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
 | `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
+| `demos/server` | authoritative **game server** + **human/AI chatroom**, both over a **hand-rolled WebSocket** (dependency-free); the chat's AI chatters use OpenRouter via the system `curl` |
 
 ## The five game types → demos
 
@@ -91,6 +139,8 @@ only renders. (Screenshots are captured headlessly from the live demos.)
 | **state machines** | `fsm-lab` | `cargo run -p opcusdb-fsm-lab --bin fsm-lab` | traffic intersection + quest graph; `run`/`record`/`replay`/`scrub` |
 | **human + AI chat** | `chatroom` | `cargo run -p opcusdb-chatroom --bin chatroom` | serverless **CRDT mesh** (`Rga` + `OrSet`), offline-merge, **AI agent as a peer** |
 | *(bonus)* | `particles` | browser | interactive fixed-point particle galaxy |
+| **real multiplayer** | `server` (game) | `cargo run -p opcusdb-server` → open :9001 in 2+ tabs | **authoritative ECS server + WebSocket**; many browsers share one live world |
+| **live human + AI chat** | `server` (chat) | `OPENROUTER_API_KEY=… cargo run -p opcusdb-server --bin opcusdb-chat` → :9002 | IRC-style channel; anyone logs in; **10 AI chatters via OpenRouter** |
 
 ## Quick start
 
@@ -98,7 +148,10 @@ only renders. (Screenshots are captured headlessly from the live demos.)
 # build + test everything
 cargo test --workspace
 
-# browser demos (WASM core + PixiJS): swarm/AOI, particle galaxy, netcode
+# REAL multiplayer: authoritative server; open http://localhost:9001 in 2+ tabs
+cargo run -p opcusdb-server
+
+# local (single-tab) browser demos (WASM core + PixiJS): swarm/AOI, particles, netcode
 bash bindings/ffi/build.sh
 cd bindings/ffi/web && python3 -m http.server 8080   # open http://localhost:8080
 
@@ -113,7 +166,7 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 
 ## Test cases — what's actually proven
 
-`cargo test --workspace` → **142 passing across 28 binaries**, clippy-clean. A selection:
+`cargo test --workspace` → **152 passing across 32 binaries**, clippy-clean. A selection:
 
 | Property proven | Test |
 |---|---|
@@ -134,12 +187,16 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 | Converges despite 60% snapshot loss | `netcode … converges_despite_snapshot_loss` |
 | State survives a crash (WAL replay) | `netcode … recovers_exact_state_after_crash` |
 | Two lockstep peers stay byte-identical | `lockstep … two_peers_stay_in_perfect_sync` |
+| Shared world holds every connected player + spawns | `server … shared_world_holds_all_players_and_spawns` |
+| WebSocket handshake (SHA-1/base64) per RFC 6455 | `server … rfc6455_accept_example` |
 
 ## Status
 
-The core and the five-game-types thesis are **complete and verified**. Intentionally
-left as explicit, dependency-affecting choices: a real network transport
-(QUIC / WebRTC, dropping into the simulated `Link` seam), multi-threaded
+The core and the five-game-types thesis are **complete and verified**, and
+`opcusdb-server` adds **real client/server multiplayer over WebSocket**.
+Still open as explicit, dependency-affecting choices: **WebRTC / QUIC** (for
+browser P2P meshes and lower-latency datagrams), client-side prediction wired to
+the live server (the logic exists in `demos/netcode`), multi-threaded
 scheduler-stage execution (needs encapsulated `unsafe` World-splitting), and an
 on-disk serializer (`rkyv`/`bitcode`). The workspace is `unsafe`-free outside the
 FFI shim and has **zero external dependencies**.

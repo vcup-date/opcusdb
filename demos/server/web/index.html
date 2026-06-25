@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>opcusdb · shared multiplayer world</title>
+    <style>
+      body { margin: 0; background: #04060c; color: #9fb3d9; font: 14px/1.5 system-ui, sans-serif; }
+      header { padding: 12px 16px; }
+      strong { color: #7dcfff; }
+      #stage { display: block; margin: 0 auto; box-shadow: 0 0 0 1px #16213a; }
+      #status { color: #cdd9f5; }
+      kbd { background:#13203a; border-radius:4px; padding:1px 6px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>opcusdb — shared world</strong>. Open this page in <strong>two or more browser tabs/windows</strong>:
+      every cursor and every spawned dot is the <strong>same authoritative world</strong> running on the Rust server.
+      Move the mouse to move your cursor; <kbd>click</kbd> to spawn dots the server simulates for everyone.
+      <div id="status">connecting…</div>
+    </header>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

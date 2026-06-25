@@ -1,0 +1,25 @@
+[package]
+name = "opcusdb-server"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "opcusdb authoritative servers: a shared-world game server and a human+AI chatroom, both over a hand-rolled (dependency-free) WebSocket"
+
+[lints]
+workspace = true
+
+[lib]
+name = "opcusdb_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "opcusdb-server"
+path = "src/main.rs"
+
+[[bin]]
+name = "opcusdb-chat"
+path = "src/chat.rs"
+
+[dependencies]
+opcusdb-core = { path = "../../crates/opcusdb-core" }

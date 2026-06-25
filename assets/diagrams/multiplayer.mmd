@@ -1,0 +1,12 @@
+flowchart TB
+    subgraph clients["Browsers (thin clients — render only)"]
+        b1["tab 1 · PixiJS"]
+        b2["tab 2 · PixiJS"]
+        b3["tab N · PixiJS"]
+    end
+    server["opcusdb-server (native)\nAUTHORITATIVE opcusdb ECS World\n25 Hz sim · hand-rolled WebSocket"]
+    b1 <-->|"inputs up · state down (ws://)"| server
+    b2 <-->|ws://| server
+    b3 <-->|ws://| server
+    classDef s fill:#16304f,stroke:#3a4a66,color:#cdd9f5;
+    class server s;

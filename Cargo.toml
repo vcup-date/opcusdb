@@ -12,6 +12,7 @@ members = [
     "demos/particles",
     "demos/netcode",
     "demos/lockstep",
+    "demos/server",
     "bindings/ffi",
 ]
 

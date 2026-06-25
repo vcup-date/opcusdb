@@ -3,3 +3,9 @@
 Cargo.lock
 .DS_Store
 node_modules/
+
+# secrets — never commit API keys
+.env
+run-chat.sh
+*.local
+*.secret
