@@ -47,3 +47,8 @@ path = "src/ow.rs"
 
 [dependencies]
 opcusdb-core = { path = "../../crates/opcusdb-core" }
+opcusdb-algebra = { path = "../../crates/opcusdb-algebra" }
+
+[[bin]]
+name = "opcusdb-board"
+path = "src/board.rs"

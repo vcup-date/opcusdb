@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-181%20passing-success)
+![tests](https://img.shields.io/badge/tests-184%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-181 tests · 38 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+184 tests · 39 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -231,6 +231,25 @@ cargo run -p opcusdb-server --bin opcusdb-ow          # open http://localhost:90
 # WASD move · mouse aim · click fire · Shift Blink · E Recall · Q Ult · R reload · Tab scores
 ```
 
+## Co-Board — a collaborative whiteboard on a CRDT ✏️
+
+`opcusdb-board` is a shared whiteboard whose document is an **`OrSet`** (add-wins
+observed-remove set) from [`opcusdb-algebra`](crates/opcusdb-algebra). Many people
+draw at once; because CRDT adds and removes **commute and are idempotent**, you can
+**keep drawing while offline** and your strokes **merge cleanly on reconnect** — no
+conflicts, no lost work. Live **presence cursors** show where everyone is — the
+engine's CRDT / offline-merge story made tangible (no game loop required).
+
+<div align="center">
+<img src="assets/board.png" width="760"/><br/>
+<b>opcusdb Co-Board</b> — three people drawing on one shared canvas with live cursors; an <code>OrSet</code> CRDT merges everyone's strokes (and your offline edits on reconnect).
+</div>
+
+```sh
+cargo run -p opcusdb-server --bin opcusdb-board   # open http://localhost:9009
+# draw together · open more tabs · hit "go offline", draw, then come back to watch it merge
+```
+
 ## Architecture
 
 <div align="center"><img src="assets/diagram-arch.png" width="560" alt="architecture"/></div>
@@ -259,7 +278,7 @@ cargo run -p opcusdb-server --bin opcusdb-ow          # open http://localhost:90
 | `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
 | `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
 | `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
-| `demos/server` | six authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), **Townfall** (Godot 4 3D MMO town), and **Overlode** (Overwatch-style FPS, lag-compensated) — with rooms, leaderboards, physics, quests, and AI |
+| `demos/server` | six authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku**, **Arena** (snake), **Smackdown** (platform fighter), **Boomborn** (Vampire-Survivors-style horde survivor), **Townfall** (Godot 4 3D MMO town), **Overlode** (Overwatch-style FPS, lag-compensated), and **Co-Board** (CRDT collaborative whiteboard) — with rooms, leaderboards, physics, quests, and AI |
 
 ## The five game types → demos
 
@@ -278,6 +297,7 @@ cargo run -p opcusdb-server --bin opcusdb-ow          # open http://localhost:90
 | **survivor (Vampire-Survivors-like)** | `server` (survivors) | `cargo run -p opcusdb-server --bin opcusdb-survivors` → :9006 | co-op bomberman vs vampire hordes; auto-bombs, XP/levels, waves, kills leaderboard |
 | **3D MMO town (Godot)** | `server` (wow) + `demos/godot-wow` | `cargo run -p opcusdb-server --bin opcusdb-wow` → :9007, open the Godot project | NPC quests, wolves, chat; multiplayer 3D town in **Godot 4** |
 | **FPS (Overwatch-like)** | `server` (ow) + Three.js | `cargo run -p opcusdb-server --bin opcusdb-ow` → :9008 | Tracer hero, lag-compensated hitscan, Blink/Recall, AI bots |
+| **collaborative whiteboard (CRDT)** | `server` (board) | `cargo run -p opcusdb-server --bin opcusdb-board` → :9009 | shared canvas; OrSet CRDT; offline-merge; presence cursors |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start
@@ -332,6 +352,7 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 | Survivor: explosion kills + xp drop, enemy AI, level-up | `server … explosion_kills_enemy_drops_gem_and_scores`, `enemy_moves_toward_player`, `level_up_grants_weapon_or_upgrade` |
 | Townfall: wolf kill advances quest, NPC interact, wolf bite | `server … attack_kills_wolf_and_advances_quest`, `interact_accepts_quest_near_npc`, `wolf_bites_player_when_adjacent` |
 | FPS: lag-compensated hit, no friendly fire, Recall rewind, Blink | `server … lag_comp_hits_a_target_directly_ahead`, `no_friendly_fire`, `recall_restores_past_position` |
+| Co-Board: concurrent CRDT adds survive, offline stroke merges, clear | `server … concurrent_adds_all_survive_and_erase_removes_one`, `late_offline_stroke_merges_after_an_erase` |
 | Snake eats/grows; wall-crash records score | `server … snake_moves_and_eats`, `wall_collision_kills_and_records_score` |
 
 ## Status
