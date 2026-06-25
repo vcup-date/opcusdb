@@ -37,12 +37,26 @@ const sfxHit=()=>tone(1700,1700,0.035,"square",0.11);
 const sfxKill=()=>{ tone(700,1400,0.12,"triangle",0.18); setTimeout(()=>tone(1100,1500,0.1,"triangle",0.14),90); };
 const sfxHurt=()=>noise(0.18,0.22,450);
 const sfxHeal=()=>tone(520,920,0.2,"sine",0.13);
+const sfxUlt=()=>{ tone(180,520,0.3,"sawtooth",0.16); };
+const sfxBoom=()=>{ noise(0.5,0.32,180); tone(120,40,0.5,"sawtooth",0.22); };
+
+// floating damage numbers (projected from a world point)
+function dmgNumber(x,y,z,amt){
+  const v=new THREE.Vector3(x,y,z); v.project(camera);
+  if(v.z>1) return;
+  const sx=(v.x*0.5+0.5)*innerWidth, sy=(-v.y*0.5+0.5)*innerHeight;
+  const d=document.createElement("div"); d.textContent=Math.round(amt);
+  d.style.cssText=`position:fixed;left:${sx}px;top:${sy}px;z-index:5;color:${amt>=50?"#ff6a4a":"#ffe066"};font:800 ${amt>=50?30:21}px ui-monospace,monospace;text-shadow:0 2px 5px #000;pointer-events:none;transition:transform .6s ease-out,opacity .6s`;
+  document.body.appendChild(d);
+  requestAnimationFrame(()=>{ d.style.transform="translateY(-42px)"; d.style.opacity="0"; });
+  setTimeout(()=>d.remove(),650);
+}
 
 // ---- damage vignette ------------------------------------------------------
 const vig=document.createElement("div");
 vig.style.cssText="position:fixed;inset:0;z-index:3;pointer-events:none;box-shadow:inset 0 0 200px 40px rgba(255,30,30,0);transition:box-shadow .12s";
 document.body.appendChild(vig);
-function flashDmg(){ vig.style.boxShadow="inset 0 0 220px 70px rgba(255,30,30,0.55)"; setTimeout(()=>vig.style.boxShadow="inset 0 0 200px 40px rgba(255,30,30,0)",100); }
+function flashDmg(){ vig.style.boxShadow="inset 0 0 150px 44px rgba(255,30,30,0.42)"; setTimeout(()=>vig.style.boxShadow="inset 0 0 150px 40px rgba(255,30,30,0)",100); }
 
 // ---- three.js setup -------------------------------------------------------
 const renderer = new THREE.WebGLRenderer({antialias:true});
@@ -58,7 +72,7 @@ camera.rotation.order = "YXZ";
 scene.add(camera);
 addEventListener("resize", ()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
 
-scene.add(new THREE.HemisphereLight(0xcfe3ff, 0x3a4a3a, 0.9));
+scene.add(new THREE.HemisphereLight(0xdaeaff, 0x40503a, 1.15));
 const sun = new THREE.DirectionalLight(0xfff4e0, 1.25);
 sun.position.set(20,40,12); sun.castShadow=true;
 sun.shadow.mapSize.set(1024,1024); sun.shadow.camera.left=-40; sun.shadow.camera.right=40; sun.shadow.camera.top=40; sun.shadow.camera.bottom=-40;
@@ -71,7 +85,7 @@ const grid = new THREE.GridHelper(80, 40, 0x33402a, 0x33402a); grid.position.y=0
 
 function mat(c){ return new THREE.MeshStandardMaterial({color:c, roughness:0.9}); }
 // arena walls
-const wallMat = mat(0x2a3550);
+const wallMat = mat(0x3d4d6e);
 for (const [x,z,w,d] of [[0,ARENA+0.5,ARENA*2+2,1],[0,-ARENA-0.5,ARENA*2+2,1],[ARENA+0.5,0,1,ARENA*2+2],[-ARENA-0.5,0,1,ARENA*2+2]]) {
   const wall = new THREE.Mesh(new THREE.BoxGeometry(w,4,d), wallMat); wall.position.set(x,2,z); wall.castShadow=true; wall.receiveShadow=true; scene.add(wall);
 }
@@ -113,6 +127,18 @@ let muzzleT=0; const flashMuzzle=()=>{ muzzleT=0.05; };
 
 const tracers=[]; // {line, life}
 const sparks=[];  // {mesh, life, vel}
+const bombs3=[];  // pulse-bomb meshes (pooled)
+let shakeT=0;
+function updateBombs3(list){
+  while(bombs3.length<list.length){ const m=new THREE.Mesh(new THREE.SphereGeometry(0.32,12,10), new THREE.MeshBasicMaterial({color:0x66e0ff})); scene.add(m); bombs3.push(m); }
+  for(let i=0;i<bombs3.length;i++){ const on=i<list.length; bombs3[i].visible=on; if(on) bombs3[i].position.set(list[i][0],list[i][1],list[i][2]); }
+}
+function bigBoom(x,y,z){
+  addSparks(x,y,z,0xffd24a,28);
+  const m=new THREE.Mesh(new THREE.SphereGeometry(1,16,12), new THREE.MeshBasicMaterial({color:0x66e0ff,transparent:true,opacity:0.85}));
+  m.position.set(x,y,z); scene.add(m); sparks.push({mesh:m,life:1,vel:null,ring:true});
+  shakeT=0.5; sfxBoom();
+}
 
 // ---- networking -----------------------------------------------------------
 function connect(nick) {
@@ -127,6 +153,7 @@ function connect(nick) {
       else if (p[0]==="g") { scoreA=+p[2]; scoreB=+p[3]; }
       else if (p[0]==="p") { handlePlayer(p); seen.add(+p[1]); }
       else if (p[0]==="d") { packAvail = (p[1]||"").split(" ").map(v=>v==="1"); }
+      else if (p[0]==="z") { updateBombs3((p[1]||"").split(";").filter(Boolean).map(s=>s.split(":").map(Number))); }
       else if (p[0]==="P") { latMs = Math.min(300, (performance.now()-(+p[1]))/2); }
       else if (p[0]==="x") { for (const ev of (p[1]||"").split(";")) if(ev) handleEvent(ev); }
     }
@@ -138,7 +165,7 @@ function connect(nick) {
 function handlePlayer(p) {
   const id=+p[1];
   const o = { x:+p[2],y:+p[3],z:+p[4], yaw:+p[5], pitch:+p[6], hp:+p[7], team:+p[8], alive:p[9]==="1",
-    ammo:+p[10], blink:+p[11], blinkcd:+p[12], recallcd:+p[13], reload:p[14]==="1", elims:+p[15], deaths:+p[16], name:p[17] };
+    ammo:+p[10], blink:+p[11], blinkcd:+p[12], recallcd:+p[13], reload:p[14]==="1", elims:+p[15], deaths:+p[16], name:p[17], ult:+p[18] };
   if (id===myId) {
     me = o;
     // soft reconciliation toward the authoritative position
@@ -184,7 +211,9 @@ function handleEvent(ev) {
     const dmine=Math.hypot(+f[1]-pos.x, +f[2]-(pos.y+EYE), +f[3]-pos.z);
     if (dmine<2){ flashMuzzle(); sfxFire(0.14); } else if (dmine<28){ sfxFire(0.045*(1-dmine/28)); }
   }
-  else if (f[0]==="h") { addSparks(+f[2],+f[3],+f[4], 0xff7a4a, 3); if(+f[1]===myId){ hitmark(); sfxHit(); } }
+  else if (f[0]==="h") { addSparks(+f[2],+f[3],+f[4], 0xff7a4a, 3); if(+f[1]===myId){ hitmark(); sfxHit(); if(f[5]) dmgNumber(+f[2],+f[3],+f[4],+f[5]); } }
+  else if (f[0]==="u") { sfxUlt(); }
+  else if (f[0]==="X") { bigBoom(+f[1],+f[2],+f[3]); }
   else if (f[0]==="k") { killfeed(+f[1],+f[2]); if(+f[1]===myId) sfxKill(); }
   else if (f[0]==="b") { addSparks(+f[2],1.0,+f[4], 0x6fe0ff, 14); if(+f[1]===myId) sfxBlink(); }
   else if (f[0]==="r") { addRings(+f[2],+f[4]); if(+f[1]===myId) sfxRecall(); }
@@ -224,6 +253,7 @@ addEventListener("keydown",(e)=>{
   if(e.code==="Space") keys.jump=true;
   if(e.code==="ShiftLeft"||e.code==="ShiftRight"){ localBlink(); ws&&ws.send("blink"); }
   if(e.code==="KeyE") ws&&ws.send("recall");
+  if(e.code==="KeyQ") ws&&ws.send("ult");
   if(e.code==="KeyR") ws&&ws.send("reload");
   if(e.code==="Tab"){ $("board").style.display="flex"; renderBoard(); e.preventDefault(); }
 });
@@ -288,6 +318,10 @@ function updateHUD(){
   // recall
   $("recallCover").style.height = me.recallcd>0 ? (clamp(me.recallcd/12,0,1)*100)+"%":"0%";
   $("recallCd").textContent = me.recallcd>0.1 ? Math.ceil(me.recallcd):"";
+  // ult charge meter (cover recedes as it fills; "ULT" when ready)
+  const u=me.ult||0; $("ultCover").style.height=(100-u)+"%";
+  $("ultReady").textContent = u>=100 ? "ULT" : "";
+  $("ultIcon").style.boxShadow = u>=100 ? "0 0 16px 3px #ffd24a" : "none";
   $("respawn").style.display = me.alive?"none":"flex";
 }
 function renderBoard(){
@@ -303,8 +337,10 @@ function loop(now){
   requestAnimationFrame(loop);
   const dt=Math.min(0.05,(now-last)/1000); last=now;
   if(started){ stepLocal(dt); sendInput(now); }
-  // camera
-  camera.position.set(pos.x,pos.y+EYE,pos.z);
+  // camera (+ screen shake on explosions)
+  shakeT=Math.max(0,shakeT-dt*1.6);
+  const sh=shakeT*0.25;
+  camera.position.set(pos.x+(Math.random()-.5)*sh, pos.y+EYE+(Math.random()-.5)*sh, pos.z+(Math.random()-.5)*sh);
   camera.rotation.y=yaw; camera.rotation.x=pitch;
   recoil*=0.8; gun.position.z=recoil*0.1; gun.rotation.x=recoil*0.3;
   if(firing && me && me.ammo>0 && !me.reload) recoil=Math.min(recoil+0.5,1.2);
@@ -313,7 +349,7 @@ function loop(now){
   for(let i=0;i<packMeshes.length;i++){ packMeshes[i].visible=packAvail[i]; packMeshes[i].rotation.y+=dt*1.5; packMeshes[i].position.y=1.0+Math.sin(now/400+i)*0.15; }
   // damage / reload feedback
   if(me){
-    if(me.hp < prevHp-0.5){ flashDmg(); sfxHurt(); }
+    if(me.hp < prevHp-0.5){ if(!shot) flashDmg(); sfxHurt(); }
     prevHp=me.hp;
     if(me.reload && !prevReload) sfxReload();
     prevReload=me.reload;
@@ -339,6 +375,7 @@ function loop(now){
   const fnow=performance.now(); feed=feed.filter(f=>fnow-f.t<4500);
   $("feed").innerHTML=feed.map(f=>`<div>${f.html}</div>`).join("");
   renderer.render(scene,camera);
+  window.__alive = started && !!(me && me.alive);
   if(shot) driveShot(now);
 }
 requestAnimationFrame(loop);
@@ -364,6 +401,7 @@ function driveShot(now){
   if(!shotStart) shotStart=now;
   const t=(now-shotStart)/1000;
   yaw=0; pitch=-0.04;                   // look down-field toward the enemy team
+  keys.a = Math.floor(t*1.5)%2===0; keys.d=!keys.a;  // strafe to dodge bot fire
   if(t>0.5 && !firing && ws && ws.readyState===1){ ws.send("fire"); firing=true; }
 }
 if(shot){ // auto-join for the capture

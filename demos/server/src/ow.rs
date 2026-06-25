@@ -55,6 +55,15 @@ const PACK_HEAL: f32 = 75.0;
 const PACK_CD: f32 = 10.0;
 const PACK_R: f32 = 1.8;
 
+// ultimate: Pulse Bomb (charge by dealing damage)
+const ULT_MAX: f32 = 600.0;
+const PB_SPEED: f32 = 24.0;
+const PB_GRAV: f32 = 16.0;
+const PB_FUSE: f32 = 1.3;
+const PB_RADIUS: f32 = 5.0;
+const PB_DMG: f32 = 350.0;
+const PB_DMG_MIN: f32 = 130.0;
+
 // cover boxes: (cx, cz, half_x, half_z, height)
 const COVER: [(f32, f32, f32, f32, f32); 7] = [
     (0.0, 0.0, 2.0, 2.0, 2.4),
@@ -119,6 +128,7 @@ struct Player {
     respawn: f32,
     elims: u32,
     deaths: u32,
+    ult: f32, // ultimate charge (0..ULT_MAX)
     lat: f32, // shooter one-way latency (s)
     // inputs
     inf: bool,
@@ -157,6 +167,7 @@ impl Player {
             respawn: 0.0,
             elims: 0,
             deaths: 0,
+            ult: 0.0,
             lat: 0.0,
             inf: false,
             inb: false,
@@ -175,8 +186,17 @@ impl Player {
     }
 }
 
+struct PulseBomb {
+    pos: V3,
+    vel: V3,
+    fuse: f32,
+    owner: u32,
+    team: u8,
+}
+
 struct Match {
     players: BTreeMap<u32, Player>,
+    bombs: Vec<PulseBomb>,
     events: Vec<String>,
     rng: Rng,
     time: f32,
@@ -228,6 +248,7 @@ fn main() {
 fn new_match(seed: u64) -> Match {
     let mut m = Match {
         players: BTreeMap::new(),
+        bombs: Vec::new(),
         events: Vec::new(),
         rng: Rng::seed(seed),
         time: 0.0,
@@ -258,6 +279,7 @@ fn tick(m: &mut Match) {
     for id in &ids {
         try_fire(m, *id);
     }
+    update_bombs(m);
     check_packs(m);
     // record histories
     let t = m.time;
@@ -473,7 +495,10 @@ fn try_fire(m: &mut Match, id: u32) {
             t.hp -= dmg;
             t.hp <= 0.0
         };
-        m.events.push(format!("h:{shooter_id}:{:.2}:{:.2}:{:.2}", end.x, end.y, end.z));
+        if let Some(k) = m.players.get_mut(&shooter_id) {
+            k.ult = (k.ult + dmg).min(ULT_MAX);
+        }
+        m.events.push(format!("h:{shooter_id}:{:.2}:{:.2}:{:.2}:{:.0}", end.x, end.y, end.z, dmg));
         if dead {
             {
                 let t = m.players.get_mut(&tid).unwrap();
@@ -488,6 +513,81 @@ fn try_fire(m: &mut Match, id: u32) {
             m.score[team as usize] += 1;
             let _ = vteam;
             m.events.push(format!("k:{shooter_id}:{tid}"));
+        }
+    }
+}
+
+/// Throw the Pulse Bomb ultimate if fully charged.
+fn do_ult(m: &mut Match, id: u32) {
+    let (eye, dir, team, ready) = match m.players.get(&id) {
+        Some(p) => (p.eye(), dir_from(p.yaw, p.pitch), p.team, p.alive && p.ult >= ULT_MAX),
+        None => return,
+    };
+    if !ready {
+        return;
+    }
+    if let Some(p) = m.players.get_mut(&id) {
+        p.ult = 0.0;
+    }
+    let vel = dir.scale(PB_SPEED).add(V3::new(0.0, 3.0, 0.0));
+    m.bombs.push(PulseBomb { pos: eye, vel, fuse: PB_FUSE, owner: id, team });
+    m.events.push(format!("u:{id}"));
+}
+
+/// Simulate thrown Pulse Bombs and resolve their AoE explosions.
+fn update_bombs(m: &mut Match) {
+    let mut explode: Vec<(V3, u32, u8)> = Vec::new();
+    let mut keep: Vec<PulseBomb> = Vec::new();
+    for mut bz in std::mem::take(&mut m.bombs) {
+        bz.vel.y -= PB_GRAV * DT;
+        bz.pos = bz.pos.add(bz.vel.scale(DT));
+        bz.fuse -= DT;
+        let mut boom = bz.fuse <= 0.0 || bz.pos.y <= 0.25;
+        for (cx, cz, hx, hz, h) in COVER {
+            if bz.pos.x > cx - hx && bz.pos.x < cx + hx && bz.pos.z > cz - hz && bz.pos.z < cz + hz && bz.pos.y < h {
+                boom = true;
+            }
+        }
+        for t in m.players.values() {
+            if t.alive && t.team != bz.team && t.eye().sub(bz.pos).len() < 1.4 {
+                boom = true;
+            }
+        }
+        if boom {
+            explode.push((bz.pos, bz.owner, bz.team));
+        } else {
+            keep.push(bz);
+        }
+    }
+    m.bombs = keep;
+    for (pos, owner, team) in explode {
+        m.events.push(format!("X:{:.2}:{:.2}:{:.2}", pos.x, pos.y, pos.z));
+        let tids: Vec<u32> = m.players.iter().filter(|(_, t)| t.alive && t.team != team).map(|(id, _)| *id).collect();
+        for tid in tids {
+            let tpos = m.players[&tid].pos;
+            let d = V3::new(tpos.x, tpos.y + 0.9, tpos.z).sub(pos).len();
+            if d < PB_RADIUS {
+                let dmg = PB_DMG - (PB_DMG - PB_DMG_MIN) * (d / PB_RADIUS);
+                let dead = {
+                    let t = m.players.get_mut(&tid).unwrap();
+                    t.hp -= dmg;
+                    t.hp <= 0.0
+                };
+                m.events.push(format!("h:{owner}:{:.2}:{:.2}:{:.2}:{:.0}", tpos.x, tpos.y + 1.0, tpos.z, dmg));
+                if dead {
+                    {
+                        let t = m.players.get_mut(&tid).unwrap();
+                        t.alive = false;
+                        t.respawn = RESPAWN;
+                        t.deaths += 1;
+                    }
+                    if let Some(k) = m.players.get_mut(&owner) {
+                        k.elims += 1;
+                    }
+                    m.score[team as usize] += 1;
+                    m.events.push(format!("k:{owner}:{tid}"));
+                }
+            }
         }
     }
 }
@@ -649,7 +749,7 @@ fn build_snapshot(m: &Match) -> String {
     s.push_str(&format!("g\t{:.2}\t{}\t{}\n", m.time, m.score[0], m.score[1]));
     for (id, p) in &m.players {
         s.push_str(&format!(
-            "p\t{id}\t{:.2}\t{:.2}\t{:.2}\t{:.3}\t{:.3}\t{:.0}\t{}\t{}\t{}\t{}\t{:.1}\t{:.1}\t{}\t{}\t{}\t{}\n",
+            "p\t{id}\t{:.2}\t{:.2}\t{:.2}\t{:.3}\t{:.3}\t{:.0}\t{}\t{}\t{}\t{}\t{:.1}\t{:.1}\t{}\t{}\t{}\t{}\t{}\n",
             p.pos.x,
             p.pos.y,
             p.pos.z,
@@ -666,8 +766,11 @@ fn build_snapshot(m: &Match) -> String {
             p.elims,
             p.deaths,
             p.name,
+            (p.ult / ULT_MAX * 100.0) as i32,
         ));
     }
+    let bombs = m.bombs.iter().map(|b| format!("{:.2}:{:.2}:{:.2}", b.pos.x, b.pos.y, b.pos.z)).collect::<Vec<_>>().join(";");
+    s.push_str(&format!("z\t{bombs}\n"));
     let packs = m.pack_cd.iter().map(|c| if *c <= 0.0 { "1" } else { "0" }).collect::<Vec<_>>().join(" ");
     s.push_str(&format!("d\t{packs}\n"));
     s.push_str(&format!("x\t{}\n", m.events.join(";")));
@@ -756,7 +859,7 @@ fn handle(mut stream: TcpStream, server: Arc<Mutex<Server>>) {
                             }
                         }
                     }
-                    [cmd @ ("fire" | "stop" | "blink" | "recall" | "reload")] => {
+                    [cmd @ ("fire" | "stop" | "blink" | "recall" | "reload" | "ult")] => {
                         if let Some(code) = mine.lock().unwrap().clone() {
                             let mut s = server.lock().unwrap();
                             if let Some(m) = s.matches.get_mut(&code) {
@@ -773,6 +876,7 @@ fn handle(mut stream: TcpStream, server: Arc<Mutex<Server>>) {
                                     }
                                     "blink" => do_blink(m, id),
                                     "recall" => do_recall(m, id),
+                                    "ult" => do_ult(m, id),
                                     "reload" => {
                                         if let Some(p) = m.players.get_mut(&id) {
                                             if p.ammo < MAG && p.reload_t <= 0.0 {
@@ -883,6 +987,7 @@ mod tests {
         m.players.insert(2, tgt);
         try_fire(&mut m, 1);
         assert!(m.players[&2].hp < MAX_HP, "target took damage");
+        assert!(m.players[&1].ult > 0.0, "shooter gained ult charge from damage");
         assert!(m.events.iter().any(|e| e.starts_with("t:")), "tracer emitted");
     }
 
@@ -915,6 +1020,31 @@ mod tests {
         do_recall(&mut m, 1);
         assert!((m.players[&1].pos.x - 0.0).abs() < 0.01, "recalled to the old position");
         assert!(m.players[&1].recall_cd > 0.0, "recall on cooldown");
+    }
+
+    #[test]
+    fn ultimate_charges_from_damage_then_pulse_bomb_explodes() {
+        let mut m = m1();
+        let mut s = Player::new("s".into(), false, 0, V3::new(8.0, 0.0, 5.0));
+        s.ult = ULT_MAX;
+        s.yaw = 0.0;
+        let mut t = Player::new("t".into(), false, 1, V3::new(8.0, 0.0, -1.0));
+        for _ in 0..HIST {
+            t.hist.push((m.time, t.eye()));
+        }
+        m.players.insert(1, s);
+        m.players.insert(2, t);
+        do_ult(&mut m, 1);
+        assert_eq!(m.bombs.len(), 1, "pulse bomb thrown");
+        assert_eq!(m.players[&1].ult, 0.0, "ult consumed");
+        for _ in 0..200 {
+            update_bombs(&mut m);
+            if m.bombs.is_empty() {
+                break;
+            }
+        }
+        assert!(m.bombs.is_empty(), "bomb detonated");
+        assert!(m.players[&2].hp < MAX_HP, "pulse bomb damaged the enemy");
     }
 
     #[test]
