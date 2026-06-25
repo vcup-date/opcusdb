@@ -276,16 +276,18 @@ cargo run -p opcusdb-server --bin opcusdb-td   # open http://localhost:9010
 
 ## Hearth, a living AI town you walk into 🏡
 
-`opcusdb-town` is a small town of **12 LLM residents** (OpenRouter
-an OpenRouter model) who follow a daily routine, work → market → socialise
-→ tavern → home, and **hold short, in-character conversations whenever they share a
-place** (area-of-interest decides who can hear whom). The twist versus a 2023-style
-"watch the agents" demo: **every browser is an embodied visitor.** You walk in, stand
-near someone, and they talk *to you*; open more tabs and several humans share one
-town, indistinguishable to the residents.
+`opcusdb-town` is a small town of **12 LLM residents** (over OpenRouter) who follow a
+daily routine (work, market, socialise, tavern, home) and **hold short, in-character
+conversations whenever they share a place** (area-of-interest decides who can hear
+whom). The twist versus a 2023-style "watch the agents" demo: **every browser is an
+embodied visitor.** You walk in, stand near someone, and they talk *to you*; open more
+tabs and several humans share one town, indistinguishable to the residents.
 
-The pixel-art map and the twelve animated character sprites are rendered with
-**PixiJS**, day/night cycle, floating speech bubbles, name tags, smooth motion.
+Rendered with **PixiJS**: animated character sprites that walk, lean, idle, hop, and
+puff trade-themed emotes; a day and night cycle with a dusk grade, warm lamp glows,
+and drifting fireflies; generative ambient music made live in the browser (no audio
+file); a live chatter feed of recent lines; pathfinding along the roads; and click
+any townsperson to see who they are.
 
 <div align="center">
 <img src="assets/town.png" width="820"/><br/>
