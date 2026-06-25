@@ -58,14 +58,14 @@ const RESIDENTS: [(&str, &str, &str, usize, usize); 12] = [
 // on a roof or wanders off-screen. Index order is fixed (RESIDENTS reference it).
 const LOCS: [(&str, f32, f32, &str); 9] = [
     ("Plaza", 480.0, 300.0, "plaza"),
-    ("Bakery", 320.0, 178.0, "bakery"),
-    ("Forge", 640.0, 178.0, "forge"),
-    ("Garden", 320.0, 430.0, "garden"),
-    ("Tavern", 640.0, 430.0, "tavern"),
-    ("Library", 690.0, 300.0, "library"),
-    ("Market", 480.0, 168.0, "market"),
-    ("Dock", 270.0, 300.0, "dock"),
-    ("Homes", 480.0, 446.0, "homes"),
+    ("Bakery", 344.0, 196.0, "bakery"),
+    ("Forge", 616.0, 196.0, "forge"),
+    ("Garden", 344.0, 410.0, "garden"),
+    ("Tavern", 616.0, 410.0, "tavern"),
+    ("Library", 658.0, 300.0, "library"),
+    ("Market", 480.0, 188.0, "market"),
+    ("Dock", 302.0, 300.0, "dock"),
+    ("Homes", 480.0, 424.0, "homes"),
 ];
 
 struct Char {
@@ -210,7 +210,7 @@ fn tick(t: &mut Town) {
             let (wx, wy) = *c.path.first().unwrap_or(&(c.x, c.y));
             let (tx, ty) = if last_hop {
                 let a = id as f32 * 2.39996;
-                let r = 14.0 + (id % 4) as f32 * 9.0; // small stable offset so they don't stack
+                let r = 7.0 + (id % 3) as f32 * 6.0; // tight stable offset so they stay on the path, not on roofs
                 (wx + a.cos() * r, wy + a.sin() * r)
             } else {
                 (wx, wy)
