@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>opcusdb Smackdown · platform fighter</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: #05070e; color: #dce6ff;
+        font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; overflow: hidden; }
+      #game { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+      #stageWrap { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; }
+      canvas { image-rendering: pixelated; max-width: 100%; max-height: 100%; box-shadow: 0 0 80px #0008 inset; }
+      #topbar { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between;
+        padding: 8px 14px; font-size: 13px; z-index: 4; text-shadow: 0 2px 4px #000; pointer-events: none; }
+      .accent { color: #7dcfff; }
+      #hud { display: flex; gap: 10px; justify-content: center; padding: 8px; background: #070b16; border-top: 2px solid #18223c; z-index: 5; flex-wrap: wrap; }
+      .pcard { min-width: 92px; text-align: center; background: #0c1322; border: 2px solid #1c2742; border-radius: 10px; padding: 6px 10px; }
+      .pcard .nm { font-size: 12px; font-weight: 700; }
+      .pcard .pct { font-size: 26px; font-weight: 800; letter-spacing: -1px; }
+      .pcard .ko { font-size: 11px; color: #ffd24a; }
+      #overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        background: radial-gradient(800px 400px at 50% 30%, #16213f, #05070e 75%); z-index: 10; }
+      .panel { text-align: center; background: #0c1322ee; border: 1px solid #233; border-radius: 18px; padding: 30px 36px; width: 420px; }
+      .panel h1 { font-size: 30px; margin: 0 0 4px; letter-spacing: 1px; }
+      .panel p { color: #8aa0c8; margin: 6px 0; }
+      .keys { display: inline-block; background: #121a2c; border: 1px solid #2a3550; border-radius: 6px; padding: 2px 7px; margin: 0 1px; }
+      .panel input { width: 100%; font: inherit; text-align: center; padding: 11px; margin: 14px 0 6px; border-radius: 10px; border: 1px solid #2a3550; background: #121a2c; color: #e6edff; }
+      .panel button { width: 100%; font: inherit; font-weight: 800; font-size: 16px; padding: 13px; border: 0; border-radius: 12px; cursor: pointer;
+        background: linear-gradient(180deg, #ff5d5d, #e23b3b); color: #fff; }
+      .muted { color:#6b7a99; font-size:12px; }
+    </style>
+  </head>
+  <body>
+    <div id="game">
+      <div id="stageWrap">
+        <div id="topbar"><div><span class="accent">opcusdb</span> Smackdown · <span id="roomTag">ARENA</span></div>
+          <div><button id="sound" style="pointer-events:auto;background:#14203a;color:#bcd;border:0;border-radius:8px;padding:4px 10px;cursor:pointer">🔊 sound on</button></div>
+        </div>
+      </div>
+      <div id="hud"></div>
+    </div>
+
+    <div id="overlay"><div class="panel">
+      <h1>⚔️ <span class="accent">opcusdb</span> Smackdown</h1>
+      <p>An online platform fighter. Everyone in the room brawls on the same stage.</p>
+      <p><span class="keys">←</span><span class="keys">→</span> move&nbsp;·&nbsp;<span class="keys">X</span> / <span class="keys">↑</span> jump (double)&nbsp;·&nbsp;<span class="keys">Z</span> attack</p>
+      <p class="muted">Hits raise your <b>damage %</b> — the higher it is, the farther you fly. Knock rivals off the screen to score KOs.</p>
+      <input id="nick" placeholder="your fighter name (optional)" maxlength="12" />
+      <button id="start">enter the arena ▶</button>
+      <p class="muted">a character is auto-assigned · open more tabs to add fighters</p>
+    </div></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
+    <script src="/smash.js"></script>
+  </body>
+</html>

@@ -29,5 +29,9 @@ path = "src/arena.rs"
 name = "opcusdb-gomoku"
 path = "src/gomoku.rs"
 
+[[bin]]
+name = "opcusdb-smash"
+path = "src/smash.rs"
+
 [dependencies]
 opcusdb-core = { path = "../../crates/opcusdb-core" }

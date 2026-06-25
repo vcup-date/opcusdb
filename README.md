@@ -7,7 +7,7 @@ multiplayer games and AI-agent worlds — written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-158%20passing-success)
+![tests](https://img.shields.io/badge/tests-161%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -34,7 +34,7 @@ engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
 ```
-158 tests · 34 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
+161 tests · 35 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
 native + WASM proven byte-identical (cross-target determinism gate passes)
 ```
 
@@ -136,6 +136,27 @@ cargo run -p opcusdb-server --bin opcusdb-arena      # open http://localhost:900
 # create a room, share the code (or ?room=CODE), open more tabs and race
 ```
 
+## Smackdown — an online platform fighter (Smash-style)
+
+`opcusdb-smash` is a multiplayer platform fighter: **everyone who opens the page
+auto-joins the shared stage** and gets a pixel fighter. Move with the arrow keys,
+**Z = attack**, **X / ↑ = jump** (double jump). Hits raise your **damage %** — the
+higher it is, the farther you fly — so knock rivals off the blast zone to score
+KOs. The Rust server owns the physics at a fixed tick and broadcasts the world;
+the browser renders with **PixiJS** (procedural pixel fighters with idle/run/jump/
+attack/hit poses), a **parallax 2-layer scrolling stage**, **particles**,
+screen-shake, and **Web Audio** SFX.
+
+<div align="center">
+<img src="assets/smash.png" width="720"/><br/>
+<b>opcusdb Smackdown</b> — pixel fighters on a parallax stage; <code>Ada</code> mid-attack (slash + hit sparks) with a smash-style damage % HUD.
+</div>
+
+```sh
+cargo run -p opcusdb-server --bin opcusdb-smash      # open http://localhost:9005
+# arrows move · Z attack · X/↑ jump (double) · open more tabs to add fighters
+```
+
 ## Architecture
 
 <div align="center"><img src="assets/diagram-arch.png" width="560" alt="architecture"/></div>
@@ -164,7 +185,7 @@ cargo run -p opcusdb-server --bin opcusdb-arena      # open http://localhost:900
 | `opcusdb-fsm` | hierarchical + parallel **statechart** engine (SCXML-class) |
 | `opcusdb-ecs` | bridge: run an ECS `World` as a Timeline `Sim` (rollback/replay for ECS games) |
 | `bindings/ffi` | one minimal **C-ABI** over the sims → **WASM** (browser) and **native** (Unity/Godot/C); no `wasm-bindgen` |
-| `demos/server` | four authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku** (5-in-a-row), and **Arena** (snake) — both with rooms + persistent leaderboards |
+| `demos/server` | five authoritative servers over a **hand-rolled WebSocket** (dependency-free): a shared-world game, a **human/AI chatroom** (OpenRouter via `curl`), **Gomoku** (5-in-a-row), **Arena** (snake), and **Smackdown** (Smash-style platform fighter) — with rooms, leaderboards, and physics |
 
 ## The five game types → demos
 
@@ -179,6 +200,7 @@ cargo run -p opcusdb-server --bin opcusdb-arena      # open http://localhost:900
 | **real multiplayer** | `server` (game) | `cargo run -p opcusdb-server` → open :9001 in 2+ tabs | **authoritative ECS server + WebSocket**; many browsers share one live world |
 | **live human + AI chat** | `server` (chat) | `OPENROUTER_API_KEY=… cargo run -p opcusdb-server --bin opcusdb-chat` → :9002 | IRC-style channel; anyone logs in; **10 AI chatters via OpenRouter** |
 | **Gomoku (5-in-a-row)** | `server` (gomoku) | `cargo run -p opcusdb-server --bin opcusdb-gomoku` → :9004 | turn-based **five-in-a-row**; rooms; win detection; persistent win leaderboard |
+| **platform fighter** | `server` (smash) | `cargo run -p opcusdb-server --bin opcusdb-smash` → :9005 | Smash-style brawl; auto-join; arrows + Z/X; damage % + KOs; pixel fighters, parallax, particles, sound |
 | **multiplayer game (snake)** | `server` (arena) | `cargo run -p opcusdb-server --bin opcusdb-arena` → :9003 | **rooms + rules + score + persistent leaderboard** (local DB file) |
 
 ## Quick start
@@ -229,6 +251,7 @@ Native **Unity / Godot** bindings (same C-ABI): see [`bindings/ffi/native/`](bin
 | Shared world holds every connected player + spawns | `server … shared_world_holds_all_players_and_spawns` |
 | WebSocket handshake (SHA-1/base64) per RFC 6455 | `server … rfc6455_accept_example` |
 | Gomoku detects horizontal/diagonal five-in-a-row | `server … detects_horizontal_five`, `detects_diagonal_five` |
+| Fighter attack hits in front, knockback & KO credit | `server … attack_in_front_damages_and_knocks_back`, `falling_into_blast_zone_kos_and_credits_last_hitter` |
 | Snake eats/grows; wall-crash records score | `server … snake_moves_and_eats`, `wall_collision_kills_and_records_score` |
 
 ## Status
