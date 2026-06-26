@@ -213,8 +213,9 @@ fn schedule(c: &Char, time: f32) -> usize {
         return c.fav; // evening: gather at your favourite social spot (matches the sunset)
     }
     // daytime: a per-resident-staggered three-way rotation so small groups form and
-    // break up at different places (plaza, your workplace, and a favourite social spot)
-    let slot = (time / 11.0) as u64 + c.work as u64 + c.fav as u64 + c.pal as u64;
+    // break up at different places (plaza, your workplace, and a favourite social spot).
+    // The ~20s period lets a settled group hold a real multi-turn chat before reshuffling.
+    let slot = (time / 20.0) as u64 + c.work as u64 + c.fav as u64 + c.pal as u64;
     match slot % 3 {
         0 => 0,      // the plaza
         1 => c.work, // your own workplace
