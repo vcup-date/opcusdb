@@ -42,7 +42,11 @@ const SPEED: f32 = 46.0;
 // Free models the residents speak through, tried in order until one answers. These
 // were verified to actually return content (many free ids are 404 or fully rate
 // limited). If all are busy the town falls back to canned lines.
-const MODELS: [&str; 2] = ["google/gemma-4-31b-it:free", "nvidia/nemotron-3-nano-30b-a3b:free"];
+const MODELS: [&str; 3] = [
+    "google/gemma-4-31b-it:free",
+    "nvidia/nemotron-3-nano-30b-a3b:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+];
 
 // (name, persona, role, work-location index, favourite social-location index)
 const RESIDENTS: [(&str, &str, &str, usize, usize); 12] = [
