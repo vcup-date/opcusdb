@@ -290,9 +290,12 @@ function skyTint(p) {
 let lastClk = -1;
 function updateClock() {
   if (Math.abs(phase - lastClk) < 0.002) return; lastClk = phase;
-  const hr = (6 + phase * 24) % 24, h = Math.floor(hr), m = Math.floor((hr - h) * 60);
+  // map the cycle so dawn is 06:00 and the dusk/night visuals land at believable
+  // evening hours (the small wrap back to dawn happens during the dark quiet phase);
+  // the label is derived from the same hour so clock, label, and tint all agree
+  const hr = (6 + phase * 17.4) % 24, h = Math.floor(hr), m = Math.floor((hr - h) * 60);
   $("clock").textContent = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
-  $("phase").textContent = phase < 0.22 ? "morning" : phase < 0.5 ? "midday" : phase < 0.72 ? "afternoon" : phase < 0.85 ? "evening" : "night";
+  $("phase").textContent = hr < 11 ? "morning" : hr < 14 ? "midday" : hr < 17 ? "afternoon" : hr < 20 ? "evening" : "night";
 }
 function renderRoster() {
   $("rlist").innerHTML = roster.map(r => {
