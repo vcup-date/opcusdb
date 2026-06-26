@@ -139,6 +139,7 @@ struct Town {
     pending: Vec<bool>,            // per location: a human just spoke -> prioritise a reply
     loc_spoke: Vec<f32>,           // per location: sim-time of its last line, to rotate chatter around town
     time: f32,
+    frozen: bool,  // when set (TOWN_FREEZE), time does not advance, for a steady screenshot
     last_api: f32, // sim-time of the last model call, to throttle under the free-tier limit
     next_id: u32,
     next_client: u32,
@@ -231,7 +232,11 @@ fn new_town() -> Town {
         transcripts: vec![Vec::new(); LOCS.len()],
         pending: vec![false; LOCS.len()],
         loc_spoke: vec![0.0; LOCS.len()],
-        time: 40.0,
+        // start at morning by default, or override with TOWN_TIME (handy for capturing a
+        // night scene on demand, for example: TOWN_TIME=176 for deep dusk). TOWN_FREEZE
+        // holds the clock there so a slow screenshot does not drift into the next day.
+        time: std::env::var("TOWN_TIME").ok().and_then(|t| t.parse().ok()).unwrap_or(40.0),
+        frozen: std::env::var("TOWN_FREEZE").is_ok(),
         last_api: 0.0,
         next_id: 100,
         next_client: 1,
@@ -265,7 +270,9 @@ fn schedule(c: &Char, time: f32) -> usize {
 }
 
 fn tick(t: &mut Town) {
-    t.time += DT;
+    if !t.frozen {
+        t.time += DT;
+    }
     let ids: Vec<u32> = t.chars.keys().copied().collect();
     let mut arrivals: Vec<usize> = Vec::new();
     for id in ids {
