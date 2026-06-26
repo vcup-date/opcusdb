@@ -23,7 +23,7 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// Number of model calls currently in flight, so the async upgrade threads cannot
 /// pile up curl subprocesses under load. Capped in `converse`.
@@ -783,14 +783,17 @@ fn bio_line() -> String {
     format!("bio\t{bios}\n")
 }
 
-fn snapshot(t: &Town, you: u32) -> String {
+// The snapshot is identical for every client (the client marks its own character by
+// comparing each id to the id it was told on join), so it is built once per tick and
+// shared, instead of every connection locking the town and rebuilding it.
+fn snapshot(t: &Town) -> String {
     let mut s = String::new();
     s.push_str(&format!("clk\t{:.3}\n", (t.time % DAY_SECS) / DAY_SECS));
     // positions
     let p: String = t
         .chars
         .iter()
-        .map(|(id, c)| format!("{id},{:.0},{:.0},{},{},{}", c.x, c.y, c.pal, if c.facing < 0.0 { 0 } else { 1 }, if *id == you { 1 } else { 0 }))
+        .map(|(id, c)| format!("{id},{:.0},{:.0},{},{}", c.x, c.y, c.pal, if c.facing < 0.0 { 0 } else { 1 }))
         .collect::<Vec<_>>()
         .join(";");
     s.push_str(&format!("p\t{p}\n"));
@@ -836,15 +839,28 @@ fn main() {
         let town = town.clone();
         thread::spawn(move || converse(town));
     }
+    // one shared snapshot, rebuilt once per broadcast tick, that every client writer sends
+    // as is (no per-connection town lock or rebuild)
+    let snap = Arc::new(RwLock::new(String::new()));
+    {
+        let town = town.clone();
+        let snap = snap.clone();
+        thread::spawn(move || loop {
+            thread::sleep(Duration::from_millis(TICK_MS * 3)); // ~7 Hz
+            let s = snapshot(&town.lock().unwrap());
+            *snap.write().unwrap() = s;
+        });
+    }
     let listener = TcpListener::bind(("0.0.0.0", PORT)).expect("bind");
     println!("opcusdb Hearth (AI town) on http://localhost:{PORT}");
     for stream in listener.incoming().flatten() {
         let town = town.clone();
-        thread::spawn(move || handle(stream, town));
+        let snap = snap.clone();
+        thread::spawn(move || handle(stream, town, snap));
     }
 }
 
-fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>) {
+fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>, snap: Arc<RwLock<String>>) {
     let Some(head) = read_http_head(&mut stream) else { return };
     if !head.to_ascii_lowercase().contains("upgrade: websocket") {
         serve_file(&mut stream, &head);
@@ -886,11 +902,13 @@ fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>) {
     let _ = ws::write_text(&mut stream, &bio_line());
 
     let mut writer = stream.try_clone().expect("clone");
-    let wtown = town.clone();
     let writer_handle = thread::spawn(move || loop {
         thread::sleep(Duration::from_millis(TICK_MS * 3)); // ~7 Hz snapshots
-        let snap = snapshot(&wtown.lock().unwrap(), id);
-        if ws::write_text(&mut writer, &snap).is_err() {
+        let s = snap.read().unwrap().clone(); // shared, already built; no town lock
+        if s.is_empty() {
+            continue;
+        }
+        if ws::write_text(&mut writer, &s).is_err() {
             return;
         }
     });

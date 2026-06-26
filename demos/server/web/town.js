@@ -145,7 +145,7 @@ function connect() {
       } else if (tag === "p") {
         const seen = new Set();
         for (const s of rest.split(";")) {
-          if (!s) continue; const a = s.split(","); const id = +a[0], x = +a[1], y = +a[2], pal = +a[3], face = +a[4], you = +a[5];
+          if (!s) continue; const a = s.split(","); const id = +a[0], x = +a[1], y = +a[2], pal = +a[3], face = +a[4], you = id === myId ? 1 : 0; // the snapshot is shared, so we mark our own character ourselves
           seen.add(id);
           let v = chars.get(id);
           if (!v) { const human = pal === 99 || you === 1; const ringCol = human ? (you === 1 ? 0xffe07a : visitorColor(id)) : null; v = { dx: x, dy: y, tx: x, ty: y, face: 1, pal, view: makeChar(pal === 99 ? humanPal : PAL[pal % 12], human, pal, ringCol) }; chars.set(id, v);
