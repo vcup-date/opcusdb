@@ -977,6 +977,33 @@ mod tests {
     }
 
     #[test]
+    fn visitor_location_outranks_a_resident_arrival_elsewhere() {
+        let mut t = new_town();
+        for c in t.chars.values_mut() {
+            c.here = -1; // clear the map
+        }
+        // a small group at the Tavern (4) where a visitor is standing
+        t.chars.get_mut(&1).unwrap().here = 4;
+        t.chars.get_mut(&2).unwrap().here = 4;
+        // a group at the Garden (3) where a resident just arrived (pending, no human)
+        t.chars.get_mut(&3).unwrap().here = 3;
+        t.chars.get_mut(&4).unwrap().here = 3;
+        t.pending[3] = true;
+        t.chars.insert(
+            200,
+            Char {
+                x: 616.0, y: 410.0, tx: 616.0, ty: 410.0,
+                name: "Wanderer".to_string(),
+                persona: "", role: "visitor", pal: 99, work: 0, fav: 0, here: 4,
+                bubble: String::new(), bubble_t: 0.0, last_spoke: 0.0, facing: 1.0,
+                goal: 0, path: Vec::new(), human: true, mem: Vec::new(),
+            },
+        );
+        let (sid, _, _) = next_utterance(&t).expect("a scene forms");
+        assert_eq!(t.chars[&sid].here, 4, "the visitor's group wins over a resident arrival elsewhere");
+    }
+
+    #[test]
     fn prompt_carries_time_place_and_company() {
         let mut t = new_town();
         for c in t.chars.values_mut() {
