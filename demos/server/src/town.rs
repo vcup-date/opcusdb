@@ -319,6 +319,16 @@ fn chars_at(t: &Town, li: i32) -> Vec<u32> {
     t.chars.iter().filter(|(_, c)| c.here == li).map(|(id, _)| *id).collect()
 }
 
+/// True when the most recent line at `li` was spoken by a visitor present there, meaning
+/// a visitor just asked or said something (so a fallback should acknowledge it).
+fn visitor_just_asked(t: &Town, li: usize) -> bool {
+    t.transcripts[li].last().is_some_and(|line| {
+        chars_at(t, li as i32)
+            .iter()
+            .any(|cid| t.chars[cid].human && line.starts_with(&format!("{}:", t.chars[cid].name)))
+    })
+}
+
 /// Pick a scene + speaker + prompt context for the next AI line.
 /// Returns (speaker_id, system_prompt, user_prompt) or None.
 fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
@@ -495,12 +505,7 @@ fn converse(town: Arc<Mutex<Town>>) {
             // is stronger: the latest line here is a visitor's, so they asked something.
             let hf = here >= 0 && chars_at(&t, here).iter().any(|cid| t.chars[cid].human);
             let hw = hf && t.pending[here as usize];
-            let hs = here >= 0
-                && t.transcripts[here as usize].last().is_some_and(|line| {
-                    chars_at(&t, here)
-                        .iter()
-                        .any(|cid| t.chars[cid].human && line.starts_with(&format!("{}:", t.chars[cid].name)))
-                });
+            let hs = here >= 0 && visitor_just_asked(&t, here as usize);
             (t.chars[&speaker].name.clone(), t.chars[&speaker].persona, hf, hw, hs)
         };
         // Show an instant in-character line so the scene is never silent, then fetch
@@ -1035,6 +1040,29 @@ mod tests {
         );
         let (sid, _, _) = next_utterance(&t).expect("a scene forms");
         assert_eq!(t.chars[&sid].here, 4, "the visitor's group wins over a resident arrival elsewhere");
+    }
+
+    #[test]
+    fn visitor_just_asked_tracks_the_latest_speaker() {
+        let mut t = new_town();
+        for c in t.chars.values_mut() {
+            c.here = -1;
+        }
+        t.chars.get_mut(&1).unwrap().here = 0; // a resident at the plaza
+        t.chars.insert(
+            200,
+            Char {
+                x: 480.0, y: 300.0, tx: 480.0, ty: 300.0,
+                name: "Wanderer".to_string(),
+                persona: "", role: "visitor", pal: 99, work: 0, fav: 0, here: 0,
+                bubble: String::new(), bubble_t: 0.0, last_spoke: 0.0, facing: 1.0,
+                goal: 0, path: Vec::new(), human: true, mem: Vec::new(),
+            },
+        );
+        record_line(&mut t, 0, "Wanderer", "where is the bakery?");
+        assert!(visitor_just_asked(&t, 0), "the visitor's line is the latest, so they just asked");
+        record_line(&mut t, 0, "Mara", "just down the lane, friend");
+        assert!(!visitor_just_asked(&t, 0), "a resident has since replied, so it is no longer a fresh question");
     }
 
     #[test]
