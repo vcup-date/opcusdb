@@ -138,6 +138,26 @@ fn loc_stand(i: usize) -> (f32, f32) {
     (LOCS[i].1, LOCS[i].2)
 }
 
+/// Where a resident actually stands at node `goal` (a per-resident offset so groups
+/// spread instead of piling). The plaza is open, so it fans radially around the
+/// fountain; other nodes sit against buildings, so the spread is biased toward the
+/// open plaza-side path and never radially (which could land someone on a roof).
+fn stand_offset(goal: usize, id: u32, wx: f32, wy: f32) -> (f32, f32) {
+    if goal == 0 {
+        let a = id as f32 * 2.39996; // golden angle
+        let r = 20.0 + (id % 4) as f32 * 8.0;
+        (wx + a.cos() * r, wy + a.sin() * r)
+    } else {
+        let (cx, cy) = loc_stand(0); // plaza centre = the open direction
+        let (dx, dy) = (cx - wx, cy - wy);
+        let len = (dx * dx + dy * dy).sqrt().max(1.0);
+        let (ux, uy) = (dx / len, dy / len);
+        let along = 6.0 + (id % 3) as f32 * 9.0; // 6..24 toward the open side
+        let perp = ((id % 4) as f32 - 1.5) * 13.0; // fan the row out sideways
+        (wx + ux * along - uy * perp, wy + uy * along + ux * perp)
+    }
+}
+
 /// The location node nearest to a point (the start of a route).
 fn nearest_node(x: f32, y: f32) -> usize {
     let mut best = 0;
@@ -250,24 +270,7 @@ fn tick(t: &mut Town) {
             }
             let last_hop = c.path.len() <= 1;
             let (wx, wy) = *c.path.first().unwrap_or(&(c.x, c.y));
-            let (tx, ty) = if last_hop && c.goal == 0 {
-                // the plaza is a wide open hub: fan the crowd around the fountain
-                let a = id as f32 * 2.39996;
-                let r = 20.0 + (id % 4) as f32 * 8.0;
-                (wx + a.cos() * r, wy + a.sin() * r)
-            } else if last_hop {
-                // other nodes sit against buildings, so spread the gathering toward the open
-                // plaza-side path (never radially, which could land someone on a roof): a
-                // little way along the line to the plaza, fanned out perpendicular to it
-                let (dx, dy) = (480.0 - wx, 300.0 - wy);
-                let len = (dx * dx + dy * dy).sqrt().max(1.0);
-                let (ux, uy) = (dx / len, dy / len);
-                let along = 6.0 + (id % 3) as f32 * 9.0; // 6..24 toward the plaza side
-                let perp = ((id % 4) as f32 - 1.5) * 13.0; // fan the row out sideways
-                (wx + ux * along - uy * perp, wy + uy * along + ux * perp)
-            } else {
-                (wx, wy)
-            };
+            let (tx, ty) = if last_hop { stand_offset(c.goal, id, wx, wy) } else { (wx, wy) };
             c.tx = tx;
             c.ty = ty;
         }
@@ -1045,6 +1048,22 @@ mod tests {
         );
         let (sid, _, _) = next_utterance(&t).expect("a scene forms");
         assert_eq!(t.chars[&sid].here, 4, "the visitor's group wins over a resident arrival elsewhere");
+    }
+
+    #[test]
+    fn building_side_gatherings_spread_toward_open_ground() {
+        // a non-plaza node against a building (the Tavern, index 4)
+        let (nx, ny) = loc_stand(4);
+        let (cx, cy) = loc_stand(0); // plaza centre
+        let to_center = |x: f32, y: f32| ((x - cx).powi(2) + (y - cy).powi(2)).sqrt();
+        let node_d = to_center(nx, ny);
+        for id in 1..=12u32 {
+            let (sx, sy) = stand_offset(4, id, nx, ny);
+            assert!(
+                to_center(sx, sy) <= node_d + 1.0,
+                "stand point should bias toward the open plaza side, never further into the building"
+            );
+        }
     }
 
     #[test]
