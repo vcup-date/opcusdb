@@ -22,7 +22,9 @@ const humanPal = [0xffd24a, 0x3a2418, 0xf0c9a0];
 const VIS_RINGS = [0x6ad1ff, 0xff7ab0, 0x8aff6a, 0xc79bff, 0xffae5b, 0x5bffd0, 0xff6a6a];
 const visitorColor = (id) => VIS_RINGS[id % VIS_RINGS.length];
 
-const app = new PIXI.Application({ width: W, height: H, backgroundColor: 0x223021, antialias: true });
+// render at the display's pixel ratio (capped) so the art stays crisp on retina and
+// hidpi screens instead of being upscaled softly by the fit() CSS scaling below
+const app = new PIXI.Application({ width: W, height: H, backgroundColor: 0x223021, antialias: true, resolution: Math.min(2, window.devicePixelRatio || 1), autoDensity: true });
 $("app").appendChild(app.view);
 function fit() { const s = Math.min(innerWidth / W, innerHeight / H) * 0.98; app.view.style.width = W * s + "px"; app.view.style.height = H * s + "px"; }
 addEventListener("resize", fit); fit();
