@@ -704,7 +704,9 @@ fn sanitize(s: &str) -> String {
     if t.len() >= 2 && t.starts_with('"') && t.ends_with('"') {
         t = t[1..t.len() - 1].to_string();
     }
-    t.trim().chars().take(160).collect()
+    // drop any stray control characters (consistent with clean_name) so an odd byte in a
+    // model response can never reach a bubble; the newline/tab cases are already spaces
+    t.trim().chars().filter(|c| !c.is_control()).take(160).collect()
 }
 
 /// A visitor-chosen name, with the snapshot delimiters (`|` `;` tab newline) and
@@ -1247,6 +1249,8 @@ mod tests {
         assert!(!out.contains('—'), "em-dash removed");
         assert_eq!(out, "the waterwheel, it still spins");
         assert!(!sanitize("*grins* welcome, friend").contains('*'), "stage-direction asterisks removed");
+        let ctrl = sanitize("hello\u{0}\u{7}there");
+        assert_eq!(ctrl, "hellothere", "stray control characters removed");
     }
 
     #[test]
