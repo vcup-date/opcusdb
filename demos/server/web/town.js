@@ -113,8 +113,12 @@ function makeSpriteChar(row, isHuman, ringCol) {
   const shadow = new PIXI.Graphics().beginFill(0x000000, 0.30).drawEllipse(0, 16, 12, 4.5).endFill(); c.addChild(shadow);
   let ring = null;
   if (isHuman) { ring = new PIXI.Graphics().lineStyle(2.5, ringCol || 0xffe07a, 0.9).drawEllipse(0, 16, 15, 6); c.addChild(ring); }
-  // one clean frame, animated procedurally (bob + sway + squash): reads as a real
-  // walk and avoids the jitter of cycling four inconsistent generated frames
+  // one clean frame, animated procedurally (bob + sway + squash + lean + a scaling
+  // shadow): reads as a grounded walk and avoids the jitter of cycling four inconsistent
+  // generated frames. True multi-frame leg articulation would need an image-to-video walk
+  // cycle (the LTX 2.3 22B model under ~/Documents/ltx is installed but heavy: a separate
+  // ComfyUI, slow on this machine, and the video-to-clean-sprite conversion needs a human
+  // eye), so that is a supervised pass; this procedural walk is the standalone solution.
   const spr = new PIXI.Sprite(new PIXI.Texture(atlasBase, new PIXI.Rectangle(0, row * 128, 96, 128)));
   spr.anchor.set(0.5, 1); const sc = 50 / 128; spr.scale.set(sc); spr.position.set(0, 19);
   c.addChild(spr);
