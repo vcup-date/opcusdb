@@ -205,13 +205,14 @@ app.ticker.add(() => {
     if (moving && Math.abs(vx) > 0.05) v.face = vx < 0 ? -1 : 1; // face the way you travel
     const leanT = moving ? Math.max(-0.14, Math.min(0.14, vx * 0.05)) : 0;
     v.lean = (v.lean || 0) + (leanT - (v.lean || 0)) * Math.min(1, dt * 8); // ease a lean into the motion
-    // while speaking, turn to face the nearest neighbour and do a little bounce
+    // when standing, turn to face whoever is nearest so a gathered group faces inward
+    // and reads as a conversation; the speaker also does a little talking bounce
     const talking = bubbleL.getChildByName("b" + id) != null;
-    if (talking && !moving) {
-      let bx = null, bd = 1e9;
+    if (!moving) {
+      let bx = null, bd = 90 * 90;
       for (const ov of chars.values()) { if (ov === v) continue; const d = (ov.dx - v.dx) ** 2 + (ov.dy - v.dy) ** 2; if (d < bd) { bd = d; bx = ov.dx; } }
       if (bx != null && Math.abs(bx - v.dx) > 4) v.face = bx < v.dx ? -1 : 1;
-      v.talk = (v.talk || 0) + dt * 9;
+      v.talk = talking ? (v.talk || 0) + dt * 9 : 0;
     } else v.talk = 0;
     const p = v.view._p;
     v.view.position.set(v.dx, v.dy);
