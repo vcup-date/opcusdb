@@ -1004,6 +1004,36 @@ mod tests {
     }
 
     #[test]
+    fn nearest_resident_answers_the_visitor() {
+        let mut t = new_town();
+        for c in t.chars.values_mut() {
+            c.here = -1;
+        }
+        // a visitor at the plaza centre, one resident right beside them, one further off
+        {
+            let c = t.chars.get_mut(&1).unwrap();
+            c.x = 485.0; c.y = 300.0; c.here = 0; // ~5px from the visitor
+        }
+        {
+            let c = t.chars.get_mut(&2).unwrap();
+            c.x = 525.0; c.y = 325.0; c.here = 0; // ~50px from the visitor
+        }
+        t.pending[0] = true; // the visitor just spoke
+        t.chars.insert(
+            200,
+            Char {
+                x: 480.0, y: 300.0, tx: 480.0, ty: 300.0,
+                name: "Wanderer".to_string(),
+                persona: "", role: "visitor", pal: 99, work: 0, fav: 0, here: 0,
+                bubble: String::new(), bubble_t: 0.0, last_spoke: 0.0, facing: 1.0,
+                goal: 0, path: Vec::new(), human: true, mem: Vec::new(),
+            },
+        );
+        let (sid, _, _) = next_utterance(&t).expect("a scene forms");
+        assert_eq!(sid, 1, "the resident nearest the visitor answers when the visitor speaks");
+    }
+
+    #[test]
     fn prompt_carries_time_place_and_company() {
         let mut t = new_town();
         for c in t.chars.values_mut() {
