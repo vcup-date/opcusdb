@@ -80,6 +80,20 @@ const LOCS: [(&str, f32, f32, &str); 9] = [
     ("Homes", 480.0, 424.0, "homes"),
 ];
 
+/// A rotating "talk of the town", shared by every resident so the day's gossip is
+/// coherent across the whole town instead of each group inventing its own topic. The
+/// current one changes with each in-game day.
+const TOWN_NEWS: [&str; 8] = [
+    "the old stone bridge at the east crossing is finally being repaired",
+    "a traveling troupe of players is said to be coming for the festival",
+    "someone has been leaving baskets of apples on doorsteps before dawn",
+    "the miller swears the river ran backwards for a moment yesterday",
+    "a fine new bell is being cast for the chapel tower",
+    "wolves have been heard up in the hills since the first frost",
+    "the harvest came in early this year and the granary is full",
+    "a peddler is selling little charms he claims keep the rain away",
+];
+
 struct Char {
     x: f32,
     y: f32,
@@ -353,9 +367,11 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
         } else {
             "night"
         };
+        let news = TOWN_NEWS[((t.time / DAY_SECS) as usize) % TOWN_NEWS.len()];
         let system = format!(
             "You are {}, a resident of the small town of Hearth. {}. \
              It is {} and you are at the {} with {}. \
+             Lately the whole town has been talking about how {}. \
              Reply with ONE short, natural line (under 22 words) that a real person would actually say here. \
              React to the most recent line, sometimes address someone by name, and vary what you do: share a \
              bit of local news or gossip, give a blunt opinion, tease a friend, ask a question, or mention your \
@@ -365,7 +381,8 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
             c.persona,
             timeword,
             locname,
-            if others.is_empty() { "no one in particular".to_string() } else { others.join(", ") }
+            if others.is_empty() { "no one in particular".to_string() } else { others.join(", ") },
+            news
         );
         let mut user = String::new();
         if !memory.is_empty() {
