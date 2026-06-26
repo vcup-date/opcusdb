@@ -302,8 +302,20 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
         if ai_here.is_empty() {
             continue;
         }
-        // choose the AI who spoke least recently here
-        let speaker = *ai_here.iter().min_by(|a, b| t.chars[a].last_spoke.partial_cmp(&t.chars[b].last_spoke).unwrap())?;
+        // if a visitor just spoke here, the resident nearest them answers (you talk to
+        // the person you walked up to); otherwise the one who spoke least recently goes
+        let human_here = present.iter().find(|id| t.chars[id].human);
+        let speaker = match (t.pending[li], human_here) {
+            (true, Some(hid)) => {
+                let h = &t.chars[hid];
+                *ai_here.iter().min_by(|a, b| {
+                    let da = (t.chars[a].x - h.x).powi(2) + (t.chars[a].y - h.y).powi(2);
+                    let db = (t.chars[b].x - h.x).powi(2) + (t.chars[b].y - h.y).powi(2);
+                    da.partial_cmp(&db).unwrap()
+                })?
+            }
+            _ => *ai_here.iter().min_by(|a, b| t.chars[a].last_spoke.partial_cmp(&t.chars[b].last_spoke).unwrap())?,
+        };
         let c = &t.chars[&speaker];
         let others: Vec<&str> = present.iter().filter(|&&id| id != speaker).map(|id| t.chars[id].name.as_str()).collect();
         let locname = LOCS[li].0;
