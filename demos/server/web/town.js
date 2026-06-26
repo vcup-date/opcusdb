@@ -367,7 +367,7 @@ function updateClock() {
   // the label is derived from the same hour so clock, label, and tint all agree
   const hr = (6 + phase * 17.4) % 24, h = Math.floor(hr), m = Math.floor((hr - h) * 60);
   $("clock").textContent = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
-  $("phase").textContent = hr < 11 ? "morning" : hr < 14 ? "midday" : hr < 17 ? "afternoon" : hr < 20 ? "evening" : "night";
+  $("phase").textContent = hr < 8 ? "dawn" : hr < 11 ? "morning" : hr < 14 ? "midday" : hr < 17 ? "afternoon" : hr < 20 ? "evening" : "night";
 }
 function renderRoster() {
   $("rlist").innerHTML = roster.map(r => {
