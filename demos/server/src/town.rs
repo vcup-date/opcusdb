@@ -504,7 +504,13 @@ fn canned_greet(name: &str) -> String {
 }
 
 fn sanitize(s: &str) -> String {
-    let mut t: String = s.trim().replace(['\n', '\r', '\t', '|', ';'], " ");
+    // models love em-dashes and *stage directions*; both read as AI slop, so turn
+    // dashes into commas and drop asterisks for natural, human-sounding dialogue
+    let mut t: String = s.trim().replace(['\n', '\r', '\t', '|', ';'], " ").replace(['—', '–'], ", ").replace('*', "");
+    while t.contains("  ") {
+        t = t.replace("  ", " ");
+    }
+    t = t.replace(" ,", ",").replace(",,", ",");
     if t.len() >= 2 && t.starts_with('"') && t.ends_with('"') {
         t = t[1..t.len() - 1].to_string();
     }
@@ -833,6 +839,14 @@ mod tests {
         let (sid, sys, _user) = job.unwrap();
         assert!(!t.chars[&sid].human, "speaker is an AI resident");
         assert!(sys.contains("Hearth"), "prompt grounds the character in the town");
+    }
+
+    #[test]
+    fn sanitize_cleans_ai_slop() {
+        let out = sanitize("the waterwheel—it still spins");
+        assert!(!out.contains('—'), "em-dash removed");
+        assert_eq!(out, "the waterwheel, it still spins");
+        assert!(!sanitize("*grins* welcome, friend").contains('*'), "stage-direction asterisks removed");
     }
 
     #[test]
