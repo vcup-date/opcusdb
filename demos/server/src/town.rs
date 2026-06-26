@@ -474,7 +474,7 @@ fn ai_say(system: &str, user: &str) -> Option<String> {
         );
         let out = Command::new("curl")
             .args([
-                "-s", "-m", "9", "--connect-timeout", "5", "-X", "POST", "https://openrouter.ai/api/v1/chat/completions",
+                "-s", "-m", "7", "--connect-timeout", "4", "-X", "POST", "https://openrouter.ai/api/v1/chat/completions",
                 "-H", &format!("Authorization: Bearer {key}"), "-H", "Content-Type: application/json", "-d", &body,
             ])
             .output()
