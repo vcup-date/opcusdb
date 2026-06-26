@@ -486,21 +486,35 @@ fn converse(town: Arc<Mutex<Town>>) {
             4500
         }));
         let Some((speaker, system, user)) = job else { continue };
-        let (name, persona, human_facing, human_waiting) = {
+        let (name, persona, human_facing, human_waiting, human_spoke) = {
             let t = town.lock().unwrap();
             let here = t.chars[&speaker].here;
             // a real visitor must be present (pending can also be a resident arrival, which
             // should not draw the visitor-greeting fallback). human_waiting also requires the
-            // scene pending, meaning the visitor actually spoke or just walked up.
+            // scene pending, meaning the visitor actually spoke or just walked up. human_spoke
+            // is stronger: the latest line here is a visitor's, so they asked something.
             let hf = here >= 0 && chars_at(&t, here).iter().any(|cid| t.chars[cid].human);
             let hw = hf && t.pending[here as usize];
-            (t.chars[&speaker].name.clone(), t.chars[&speaker].persona, hf, hw)
+            let hs = here >= 0
+                && t.transcripts[here as usize].last().is_some_and(|line| {
+                    chars_at(&t, here)
+                        .iter()
+                        .any(|cid| t.chars[cid].human && line.starts_with(&format!("{}:", t.chars[cid].name)))
+                });
+            (t.chars[&speaker].name.clone(), t.chars[&speaker].persona, hf, hw, hs)
         };
         // Show an instant in-character line so the scene is never silent, then fetch
         // the real reply in a detached thread that upgrades the bubble when it lands.
         // The loop itself only paces on the sleep, so the town stays chatty no matter
-        // how slow or rate-limited the model is.
-        let stub = if human_facing { canned_greet(&name) } else { canned(&name, persona) };
+        // how slow or rate-limited the model is. If a visitor just asked something, the
+        // fallback acknowledges the question rather than greeting them as if they arrived.
+        let stub = if human_spoke {
+            canned_reply(&name)
+        } else if human_facing {
+            canned_greet(&name)
+        } else {
+            canned(&name, persona)
+        };
         // throttle real model calls so we stay under the free-tier rate limit and
         // actual AI lines get through; a visitor waiting (human_facing) jumps the queue.
         // gap is just under the ambient sleep, so most ambient turns make a real call
@@ -624,6 +638,23 @@ fn canned_greet(name: &str) -> String {
         "Hello, hello. Come, tell me your story.",
     ];
     let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 5 + 3;
+    base[h % base.len()].to_string()
+}
+
+/// Fallback when a visitor has just asked something but the model is unavailable: a
+/// deflection that acknowledges the question rather than greeting them as a newcomer.
+fn canned_reply(name: &str) -> String {
+    let base = [
+        "Hm, good question. You might ask around the square.",
+        "That I could not say for certain, friend.",
+        "Let me think on that a moment.",
+        "Hard to say, but someone here is bound to know.",
+        "Ah, you will find your way soon enough.",
+        "Good of you to ask. Stick around a while.",
+        "Now there is a question. Anyone know?",
+        "Could not tell you offhand, but you are welcome here.",
+    ];
+    let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 11 + 7;
     base[h % base.len()].to_string()
 }
 
