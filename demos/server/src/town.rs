@@ -250,16 +250,21 @@ fn tick(t: &mut Town) {
             }
             let last_hop = c.path.len() <= 1;
             let (wx, wy) = *c.path.first().unwrap_or(&(c.x, c.y));
-            let (tx, ty) = if last_hop {
-                let a = id as f32 * 2.39996; // golden angle so they fan out evenly
-                // the plaza is a wide open hub, so spread its crowd around the fountain;
-                // the other nodes are tight against buildings, so keep their offset small
-                let r = if c.goal == 0 {
-                    20.0 + (id % 4) as f32 * 8.0
-                } else {
-                    7.0 + (id % 3) as f32 * 6.0
-                };
+            let (tx, ty) = if last_hop && c.goal == 0 {
+                // the plaza is a wide open hub: fan the crowd around the fountain
+                let a = id as f32 * 2.39996;
+                let r = 20.0 + (id % 4) as f32 * 8.0;
                 (wx + a.cos() * r, wy + a.sin() * r)
+            } else if last_hop {
+                // other nodes sit against buildings, so spread the gathering toward the open
+                // plaza-side path (never radially, which could land someone on a roof): a
+                // little way along the line to the plaza, fanned out perpendicular to it
+                let (dx, dy) = (480.0 - wx, 300.0 - wy);
+                let len = (dx * dx + dy * dy).sqrt().max(1.0);
+                let (ux, uy) = (dx / len, dy / len);
+                let along = 6.0 + (id % 3) as f32 * 9.0; // 6..24 toward the plaza side
+                let perp = ((id % 4) as f32 - 1.5) * 13.0; // fan the row out sideways
+                (wx + ux * along - uy * perp, wy + uy * along + ux * perp)
             } else {
                 (wx, wy)
             };
