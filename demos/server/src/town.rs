@@ -20,7 +20,7 @@ use opcusdb_core::Rng;
 use opcusdb_server::ws;
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::{Shutdown, TcpListener, TcpStream};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
@@ -969,7 +969,9 @@ fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>, snap: Arc<RwLock<String
         t.chars.remove(&id);
         t.humans = t.humans.saturating_sub(1);
     }
-    drop(stream);
+    // shut the socket both ways so the writer's next send fails and it exits promptly,
+    // even if the client only half-closed; otherwise join() could hang and leak threads
+    let _ = stream.shutdown(Shutdown::Both);
     let _ = writer_handle.join();
 }
 
