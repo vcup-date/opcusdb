@@ -276,26 +276,32 @@ app.ticker.add(() => {
         p.shadow.scale.set(1 + Math.abs(s) * 0.12, 1);
       } else {
         const talkb = v.talk ? Math.abs(Math.sin(v.talk)) * 3 : 0;            // bounce while speaking
-        const lift = Math.max(0, v.hop) * 9 + talkb;
+        const lift = Math.max(0, v.hop || 0) * 9 + talkb;                     // v.hop is undefined until the first emote; guard against NaN
         const breathe = Math.sin(performance.now() / 700 + p.bob) * 0.02;     // gentle breathing
+        if (!Number.isFinite(p.spr.y)) p.spr.y = 19;                          // recover if it ever went NaN (the lerp below cannot)
         p.spr.y += (19 - lift - p.spr.y) * 0.3; p.spr.rotation *= 0.8; p.spr.scale.y = p.sc * (1 + breathe + (v.talk ? Math.sin(v.talk * 1.3) * 0.03 : 0)); p.shadow.scale.set(1, 1);
       }
       if (p.ring) p.ring.alpha = 0.5 + 0.4 * Math.sin(performance.now() / 300);
     } else {
       p.body.scale.x = v.face;
       if (moving) { p.walk += Math.min(0.45, v.spd * 0.36); p.legL.rotation = Math.sin(p.walk) * 0.6; p.legR.rotation = -Math.sin(p.walk) * 0.6; p.body.y = -Math.abs(Math.sin(p.walk)) * 1.5; }
-      else { p.legL.rotation *= 0.7; p.legR.rotation *= 0.7; p.body.y = -Math.max(0, v.hop) * 6; }
+      else { p.legL.rotation *= 0.7; p.legR.rotation *= 0.7; p.body.y = -Math.max(0, v.hop || 0) * 6; }
       if (p.ring) { p.ring.alpha = 0.5 + 0.4 * Math.sin(performance.now() / 300); }
     }
     v.view.zIndex = v.dy;
   }
-  // de-overlap name tags within a cluster: stack each label above the lower-id ones
-  // nearby, so a group's names stay readable without moving the characters
+  // de-overlap name tags within a cluster: lift a tag only above lower-id neighbours whose
+  // tag would actually collide with it (close in x, since the text is horizontal), so a
+  // group fanned out around a node keeps its names low and attached rather than stacking
+  // them all high into a detached column
   for (const [id, v] of chars) {
     const p = v.view._p; if (!p.nm) continue;
     let above = 0;
-    for (const [oid, ov] of chars) { if (oid >= id) continue; const dx = ov.dx - v.dx, dy = ov.dy - v.dy; if (dx * dx + dy * dy < 26 * 26) above++; }
-    p.nm.y = (p.isSprite ? -56 : -38) - Math.min(above, 4) * 13;
+    for (const [oid, ov] of chars) {
+      if (oid >= id) continue;
+      if (Math.abs(ov.dx - v.dx) < 22 && Math.abs(ov.dy - v.dy) < 34) above++;
+    }
+    p.nm.y = (p.isSprite ? -56 : -38) - Math.min(above, 3) * 12;
   }
   // fade a place label when a resident is standing at that node, so the place name and
   // the person's name tag do not stack muddily; restore it when the node is clear
