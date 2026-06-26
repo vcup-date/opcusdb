@@ -1115,6 +1115,31 @@ mod tests {
     }
 
     #[test]
+    fn daytime_keeps_the_plaza_a_small_group_and_the_town_spread() {
+        // sweep the daytime part of the cycle and, at each instant, count how many
+        // residents are scheduled to the plaza (node 0). The plaza is a single node while
+        // work and fav fan out across many, so an unbounded plaza share reads as a pile.
+        // This guards the spread fix: the peak should stay small, and over the day every
+        // other location should see use too.
+        let t = new_town();
+        let mut plaza_peak = 0;
+        let mut used = std::collections::BTreeSet::new();
+        let mut step = 0;
+        while step < 144 {
+            let time = step as f32;
+            let here_now: Vec<usize> = t.chars.values().map(|c| schedule(c, time)).collect();
+            let at_plaza = here_now.iter().filter(|&&g| g == 0).count();
+            plaza_peak = plaza_peak.max(at_plaza);
+            for g in here_now {
+                used.insert(g);
+            }
+            step += 2;
+        }
+        assert!(plaza_peak <= 6, "plaza should stay a small group, peak was {plaza_peak}");
+        assert!(used.len() >= 7, "the day should make use of many locations, used {}", used.len());
+    }
+
+    #[test]
     fn schedule_staggers_so_pals_are_not_in_lockstep() {
         // two residents identical except their pal offset should not move in perfect
         // lockstep (the original "clump and move in lockstep" complaint); across a day
