@@ -29,7 +29,7 @@ use std::sync::{Arc, Mutex, RwLock};
 /// pile up curl subprocesses under load. Capped in `converse`.
 static INFLIGHT: AtomicUsize = AtomicUsize::new(0);
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const PORT: u16 = 9011;
 const TILE: f32 = 32.0;
@@ -982,9 +982,15 @@ fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>, snap: Arc<RwLock<String
 }
 
 fn read_http_head(stream: &mut TcpStream) -> Option<String> {
+    let start = Instant::now();
     let mut buf = Vec::new();
     let mut byte = [0u8; 1];
     loop {
+        // a per-read timeout (set by the caller) drops a stalled handshake; this total
+        // bound drops a slow trickle that keeps sending a byte just inside that timeout
+        if start.elapsed() > Duration::from_secs(10) {
+            return None;
+        }
         match stream.read(&mut byte) {
             Ok(0) => return None,
             Ok(_) => {
