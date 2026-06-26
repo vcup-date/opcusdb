@@ -387,16 +387,23 @@ fn record_line(t: &mut Town, li: usize, name: &str, line: &str) {
 /// Background conversation loop: every couple of seconds, advance one scene.
 fn converse(town: Arc<Mutex<Town>>) {
     loop {
-        // react quickly when a human is waiting (a pending scene), relax otherwise
-        let (job, urgent) = {
+        // react quickly when a human is waiting (a pending scene), relax otherwise,
+        // and poll often while empty so a visitor who walks in is noticed right away
+        let (job, urgent, idle) = {
             let t = town.lock().unwrap();
             if t.humans == 0 {
-                (None, false) // only spend tokens when someone is actually in the town
+                (None, false, true) // only spend tokens when someone is actually in the town
             } else {
-                (next_utterance(&t), t.pending.iter().any(|&p| p))
+                (next_utterance(&t), t.pending.iter().any(|&p| p), false)
             }
         };
-        thread::sleep(Duration::from_millis(if urgent { 700 } else { 4500 }));
+        thread::sleep(Duration::from_millis(if idle {
+            800
+        } else if urgent {
+            700
+        } else {
+            4500
+        }));
         let Some((speaker, system, user)) = job else { continue };
         let (name, persona, human_facing) = {
             let t = town.lock().unwrap();
