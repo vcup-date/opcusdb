@@ -861,6 +861,10 @@ fn main() {
 }
 
 fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>, snap: Arc<RwLock<String>>) {
+    // bound the handshake in time so a slow trickle of header bytes cannot pin a thread
+    // (the 16KB head cap bounds size, this bounds time); cleared before the read loop so
+    // an idle viewer who is just watching is not disconnected
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(10)));
     let Some(head) = read_http_head(&mut stream) else { return };
     if !head.to_ascii_lowercase().contains("upgrade: websocket") {
         serve_file(&mut stream, &head);
@@ -913,6 +917,8 @@ fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>, snap: Arc<RwLock<String
         }
     });
 
+    // handshake is done; a connected viewer may sit idle for minutes, so drop the timeout
+    let _ = stream.set_read_timeout(None);
     loop {
         match ws::read_frame(&mut stream) {
             Ok(Some(ws::Msg::Text(t))) => {
