@@ -28,6 +28,17 @@ use std::sync::{Arc, Mutex, RwLock};
 /// Number of model calls currently in flight, so the async upgrade threads cannot
 /// pile up curl subprocesses under load. Capped in `converse`.
 static INFLIGHT: AtomicUsize = AtomicUsize::new(0);
+/// Live client connections. Each holds two threads (reader and writer), so a flood of
+/// connections could exhaust threads and stop the server accepting; cap it.
+static CONNS: AtomicUsize = AtomicUsize::new(0);
+const MAX_CONNS: usize = 256;
+/// Decrements the live connection count when a handler thread ends, even on panic.
+struct ConnGuard;
+impl Drop for ConnGuard {
+    fn drop(&mut self) {
+        CONNS.fetch_sub(1, Ordering::SeqCst);
+    }
+}
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -854,9 +865,17 @@ fn main() {
     let listener = TcpListener::bind(("0.0.0.0", PORT)).expect("bind");
     println!("opcusdb Hearth (AI town) on http://localhost:{PORT}");
     for stream in listener.incoming().flatten() {
+        // cap concurrent connections so a flood cannot exhaust threads and wedge the server
+        if CONNS.fetch_add(1, Ordering::SeqCst) + 1 > MAX_CONNS {
+            CONNS.fetch_sub(1, Ordering::SeqCst);
+            continue; // stream is dropped here, refusing the connection
+        }
         let town = town.clone();
         let snap = snap.clone();
-        thread::spawn(move || handle(stream, town, snap));
+        thread::spawn(move || {
+            let _guard = ConnGuard; // decrements CONNS when this handler ends
+            handle(stream, town, snap);
+        });
     }
 }
 
