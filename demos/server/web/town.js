@@ -33,6 +33,7 @@ const bgL = new PIXI.Container(), groundL = new PIXI.Container(), labelL = new P
 app.stage.addChild(bgL, groundL, labelL, charL, bubbleL, fxL, nightL, glowL, selL);
 fxL.eventMode = "none"; glowL.eventMode = "none"; selL.eventMode = "none";
 const selRing = new PIXI.Graphics(); selL.addChild(selRing); let selectedId = 0;
+const clickMark = new PIXI.Graphics(); selL.addChild(clickMark); clickMark.visible = false; let clickT = 0; // brief ring where you click to walk
 const bios = {}; // id -> one-line persona, for the inspect card
 // warm lamp glows + drifting fireflies, drawn above the night tint so they shine in the dark
 const lampG = new PIXI.Graphics(); const fireG = new PIXI.Graphics(); fireG.blendMode = PIXI.BLEND_MODES.ADD; glowL.addChild(lampG, fireG);
@@ -285,6 +286,12 @@ app.ticker.add(() => {
     const fa = 0.25 + 0.55 * Math.max(0, Math.sin(f.ph));
     fireG.beginFill(0xffe88a, fa).drawCircle(f.x, f.y, 1.7).endFill();
   }
+  // click-to-walk marker: a flat ring that expands and fades at the spot you clicked
+  if (clickT > 0) {
+    clickT -= dt; const t = 1 - Math.max(0, clickT) / 0.5, r = 6 + t * 16;
+    clickMark.clear().lineStyle(2.5, 0xffe07a, Math.max(0, 0.85 * (1 - t))).drawEllipse(0, 0, r, r * 0.5);
+    if (clickT <= 0) clickMark.visible = false;
+  }
   // selection ring + inspect card for a clicked townsperson
   const sel = selectedId && chars.get(selectedId);
   selRing.clear();
@@ -363,7 +370,7 @@ app.view.addEventListener("click", (e) => {
   let hit = 0, hd = 28 * 28;
   for (const [id, v] of chars) { if (id === myId) continue; const d = (v.dx - x) ** 2 + (v.dy - y) ** 2; if (d < hd) { hd = d; hit = id; } }
   if (hit) { selectedId = hit; }
-  else { selectedId = 0; ws && ws.readyState === 1 && ws.send(`go ${x.toFixed(0)} ${y.toFixed(0)}`); }
+  else { selectedId = 0; ws && ws.readyState === 1 && ws.send(`go ${x.toFixed(0)} ${y.toFixed(0)}`); clickMark.position.set(x, y); clickT = 0.5; clickMark.visible = true; }
 });
 $("say").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.value.trim()) { ws && ws.readyState === 1 && ws.send("say " + e.target.value.trim()); e.target.value = ""; }
