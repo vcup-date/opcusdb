@@ -317,7 +317,19 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
             _ => *ai_here.iter().min_by(|a, b| t.chars[a].last_spoke.partial_cmp(&t.chars[b].last_spoke).unwrap())?,
         };
         let c = &t.chars[&speaker];
-        let others: Vec<&str> = present.iter().filter(|&&id| id != speaker).map(|id| t.chars[id].name.as_str()).collect();
+        // mark humans as visitors so residents treat them as guests, not townsfolk
+        let others: Vec<String> = present
+            .iter()
+            .filter(|&&id| id != speaker)
+            .map(|id| {
+                let o = &t.chars[id];
+                if o.human {
+                    format!("a visitor named {}", o.name)
+                } else {
+                    o.name.clone()
+                }
+            })
+            .collect();
         let locname = LOCS[li].0;
         let transcript = if t.transcripts[li].is_empty() {
             "(it has been quiet)".to_string()
