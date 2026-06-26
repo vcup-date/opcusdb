@@ -918,9 +918,10 @@ fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>) {
                         }
                     }
                     "say" => {
-                        // the frame layer allows up to 1MB, far too long for a chat line, so
-                        // cap the visitor's text server-side (the client's 160 limit is bypassable)
-                        // before it becomes a bubble broadcast to everyone and an LLM prompt
+                        // sanitize already caps its output at 160 chars, so the stored line,
+                        // the broadcast bubble, and the prompt are bounded. This pre-cap is a
+                        // cheap guard so a malicious near-1MB frame (the WS limit) does not make
+                        // sanitize scan and allocate over the whole thing before truncating.
                         let capped: String = rest.chars().take(200).collect();
                         let line = sanitize(&capped);
                         if !line.is_empty() {
