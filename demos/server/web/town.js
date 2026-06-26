@@ -133,6 +133,12 @@ function makeSpriteChar(row, isHuman, ringCol) {
 }
 
 // ---- networking -----------------------------------------------------------
+// close the socket cleanly when the tab is refreshed or closed, so the server removes
+// this visitor at once instead of leaving a ghost until the heartbeat reaps it (~35s).
+// leaving also stops the auto-reconnect, since the page is going away.
+let leaving = false;
+addEventListener("pagehide", () => { leaving = true; try { ws && ws.close(); } catch (e) {} });
+
 function connect() {
   ws = new WebSocket(`ws://${location.host}/ws`);
   ws.onmessage = (e) => {
@@ -174,7 +180,7 @@ function connect() {
   };
   // on a reconnect, treat the next snapshot as a fresh load so reconciling the old
   // characters does not fire spurious arrived/left notes
-  ws.onclose = () => { firstSnapDone = false; setTimeout(connect, 1000); };
+  ws.onclose = () => { if (leaving) return; firstSnapDone = false; setTimeout(connect, 1000); };
 }
 
 function setBubble(id, text) {
