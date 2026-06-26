@@ -207,6 +207,7 @@ function addEmote(x, y, txt) {
 // ---- loop -----------------------------------------------------------------
 app.ticker.add(() => {
   const dt = app.ticker.deltaMS / 1000;
+  const speakers = new Set(bubbleL.children.map(b => +b.name.slice(1))); // who is talking right now
   for (const [id, v] of chars) {
     const k = Math.min(1, dt * 9), ox = v.dx, oy = v.dy;
     v.dx += (v.tx - v.dx) * k; v.dy += (v.ty - v.dy) * k;
@@ -216,13 +217,19 @@ app.ticker.add(() => {
     if (moving && Math.abs(vx) > 0.05) v.face = vx < 0 ? -1 : 1; // face the way you travel
     const leanT = moving ? Math.max(-0.14, Math.min(0.14, vx * 0.05)) : 0;
     v.lean = (v.lean || 0) + (leanT - (v.lean || 0)) * Math.min(1, dt * 8); // ease a lean into the motion
-    // when standing, turn to face whoever is nearest so a gathered group faces inward
-    // and reads as a conversation; the speaker also does a little talking bounce
-    const talking = bubbleL.getChildByName("b" + id) != null;
+    // when standing, turn toward the active speaker nearby (so a group attends to whoever
+    // is talking), or the nearest neighbour otherwise; the speaker does a talking bounce
+    const talking = speakers.has(id);
     if (!moving) {
-      let bx = null, bd = 90 * 90;
-      for (const ov of chars.values()) { if (ov === v) continue; const d = (ov.dx - v.dx) ** 2 + (ov.dy - v.dy) ** 2; if (d < bd) { bd = d; bx = ov.dx; } }
-      if (bx != null && Math.abs(bx - v.dx) > 4) v.face = bx < v.dx ? -1 : 1;
+      let bx = null, bd = 90 * 90, sx = null, sd = 90 * 90;
+      for (const [oid, ov] of chars) {
+        if (ov === v) continue;
+        const d = (ov.dx - v.dx) ** 2 + (ov.dy - v.dy) ** 2;
+        if (d < bd) { bd = d; bx = ov.dx; }
+        if (d < sd && speakers.has(oid)) { sd = d; sx = ov.dx; }
+      }
+      const target = sx != null ? sx : bx; // prefer the speaker
+      if (target != null && Math.abs(target - v.dx) > 4) v.face = target < v.dx ? -1 : 1;
       v.talk = talking ? (v.talk || 0) + dt * 9 : 0;
     } else v.talk = 0;
     const p = v.view._p;
