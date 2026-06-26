@@ -864,8 +864,11 @@ fn main() {
             *snap.write().unwrap() = s;
         });
     }
-    let listener = TcpListener::bind(("0.0.0.0", PORT)).expect("bind");
-    println!("opcusdb Hearth (AI town) on http://localhost:{PORT}");
+    // PORT by default, or override with TOWN_PORT (handy for running an isolated second
+    // instance, for example to grab a screenshot without touching a live shared town)
+    let port = std::env::var("TOWN_PORT").ok().and_then(|p| p.parse().ok()).unwrap_or(PORT);
+    let listener = TcpListener::bind(("0.0.0.0", port)).expect("bind");
+    println!("opcusdb Hearth (AI town) on http://localhost:{port}");
     for stream in listener.incoming().flatten() {
         // cap concurrent connections so a flood cannot exhaust threads and wedge the server
         if CONNS.fetch_add(1, Ordering::SeqCst) + 1 > MAX_CONNS {
@@ -1063,8 +1066,13 @@ fn serve_file(stream: &mut TcpStream, head: &str) {
             return;
         }
     };
+    // the big art (background ~1.7MB, sprite atlas ~800KB) rarely changes, so let the
+    // browser cache it: that keeps a refresh from re-downloading 2.5MB every time, which
+    // was a big part of the slow character load. HTML and JS stay no-store so code edits
+    // take effect on the next refresh.
+    let cache = if path.ends_with(".png") { "public, max-age=86400" } else { "no-store" };
     let resp = format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: {ctype}\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-store\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        "HTTP/1.1 200 OK\r\nContent-Type: {ctype}\r\nX-Content-Type-Options: nosniff\r\nCache-Control: {cache}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
         body.len()
     );
     let _ = stream.write_all(resp.as_bytes());

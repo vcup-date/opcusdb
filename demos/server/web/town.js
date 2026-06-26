@@ -82,7 +82,7 @@ function buildScenery() {
   const img = new Image();
   img.onload = () => { if (img.naturalWidth >= 400) { const sp = PIXI.Sprite.from(PIXI.Texture.from(img)); sp.width = W; sp.height = H; bgL.addChild(sp); hasBg = true; groundL.visible = false; } };
   img.onerror = () => {};
-  img.src = "/town-bg.png?v=" + Date.now();
+  img.src = "/town-bg.png"; // no cache-buster, so the browser can cache the 1.7MB art
 })();
 
 // ---- characters -----------------------------------------------------------
@@ -504,7 +504,7 @@ function start() {
   const img = new Image();
   img.onload = () => { atlasBase = PIXI.BaseTexture.from(img); atlasBase.scaleMode = PIXI.SCALE_MODES.NEAREST; afterAtlas(nick); };
   img.onerror = () => afterAtlas(nick);
-  img.src = "/town-sprites.png?v=" + Date.now();
+  img.src = "/town-sprites.png"; // no cache-buster, so the browser can cache the atlas
 }
 $("go").onclick = start;
 $("nick").addEventListener("keydown", (e) => { if (e.key === "Enter") start(); });
