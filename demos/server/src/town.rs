@@ -58,7 +58,7 @@ const RESIDENTS: [(&str, &str, &str, usize, usize); 12] = [
     ("Ravi", "a shrewd, optimistic merchant who is always trying to sell something, and partners with Finn the courier to move goods and news", "merchant", 6, 0),
     ("Nina", "a theatrical, flirty travelling bard who turns everything into a song or drama, and loves to tease grumpy Tomas the smith", "bard", 0, 4),
     ("Otto", "a grumpy, superstitious old fisherman who speaks in short sentences and reads the weather, and grumbles when Pia the healer fusses over him", "fisher", 7, 7),
-    ("Pia", "a kind, slightly anxious healer who worries about everyone's health and herbs, and frets most over stubborn old Otto the fisher", "healer", 3, 5),
+    ("Pia", "a kind, slightly anxious healer who worries about everyone's health and herbs, and frets most over stubborn old Otto the fisher", "healer", 3, 7),
     ("Sol", "an energetic, mischievous child who asks endless questions and runs everywhere, and trails after Lila the gardener", "child", 0, 3),
     ("Greta", "a sarcastic, sharp-witted weaver who judges everyone but means well underneath, and grudgingly respects Yuki the librarian", "weaver", 6, 5),
     ("Finn", "a restless, fast-talking courier who carries rumours and news between towns, and runs deliveries for Ravi the merchant", "courier", 0, 0),
