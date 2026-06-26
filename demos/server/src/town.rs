@@ -366,7 +366,7 @@ fn converse(town: Arc<Mutex<Town>>) {
                 (next_utterance(&t), t.pending.iter().any(|&p| p))
             }
         };
-        thread::sleep(Duration::from_millis(if urgent { 700 } else { 2600 }));
+        thread::sleep(Duration::from_millis(if urgent { 700 } else { 4500 }));
         let Some((speaker, system, user)) = job else { continue };
         let (name, persona, human_facing) = {
             let t = town.lock().unwrap();
@@ -381,7 +381,9 @@ fn converse(town: Arc<Mutex<Town>>) {
         let stub = if human_facing { canned_greet(&name) } else { canned(&name, persona) };
         // throttle real model calls so we stay under the free-tier rate limit and
         // actual AI lines get through; a visitor waiting (human_facing) jumps the queue.
-        let gap = if human_facing { 2.5 } else { 7.0 };
+        // gap is just under the ambient sleep, so most ambient turns make a real call
+        // (canned only shows when the model actually fails); a waiting visitor is quicker
+        let gap = if human_facing { 2.0 } else { 4.0 };
         let do_api;
         {
             let mut t = town.lock().unwrap();
