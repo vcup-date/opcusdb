@@ -65,8 +65,11 @@ function buildScenery() {
   groundL.addChild(g);
   // location signs sit just above each ground stand point (pixel coords)
   for (const l of LOCS) {
-    const t = new PIXI.Text(l.name, { fontFamily: "system-ui", fontSize: 12, fontWeight: "700", fill: 0xfff4d6, stroke: 0x2a1c0a, strokeThickness: 4 });
-    t.anchor.set(0.5, 1); t.position.set(l.x, l.y - 40); t.alpha = 0.9; labelL.addChild(t);
+    // place labels are static reference info, so let them sit on the ground plane and
+    // recede a little: the living residents' name tags (white, above their heads) should
+    // visually dominate, and this keeps the two from stacking muddily at a node
+    const t = new PIXI.Text(l.name, { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: 0xf2e2bd, stroke: 0x2a1c0a, strokeThickness: 4 });
+    t.anchor.set(0.5, 1); t.position.set(l.x, l.y - 30); t.alpha = 0.8; labelL.addChild(t);
   }
   // soft warm lamp glow near each spot, brightest at night
   lampG.clear(); lampG.blendMode = PIXI.BLEND_MODES.ADD;
