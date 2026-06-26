@@ -1072,6 +1072,24 @@ mod tests {
     }
 
     #[test]
+    fn schedule_staggers_so_pals_are_not_in_lockstep() {
+        // two residents identical except their pal offset should not move in perfect
+        // lockstep (the original "clump and move in lockstep" complaint); across a day
+        // their goals diverge at some instant
+        let mk = |pal: u8| Char {
+            x: 0.0, y: 0.0, tx: 0.0, ty: 0.0, name: String::new(), persona: "", role: "",
+            pal, work: 1, fav: 4, here: -1, bubble: String::new(), bubble_t: 0.0,
+            last_spoke: 0.0, facing: 0.0, goal: 0, path: Vec::new(), human: false, mem: Vec::new(),
+        };
+        let (a, b) = (mk(0), mk(7));
+        let diverge = (0..1000).any(|i| {
+            let time = i as f32 * DAY_SECS / 1000.0;
+            schedule(&a, time) != schedule(&b, time)
+        });
+        assert!(diverge, "staggered pals should diverge during the day, not move in lockstep");
+    }
+
+    #[test]
     fn co_located_characters_form_a_scene_with_a_speaker() {
         let mut t = new_town();
         // park everyone at the plaza
