@@ -370,7 +370,13 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
             .map(|id| {
                 let o = &t.chars[id];
                 if o.human {
-                    format!("a visitor named {}", o.name)
+                    // a visitor who set a name is referred to by it; an unnamed one
+                    // (still "Visitor N") is just "a visitor", to avoid "named Visitor 1"
+                    if o.name.starts_with("Visitor ") {
+                        "a visitor".to_string()
+                    } else {
+                        format!("a visitor named {}", o.name)
+                    }
                 } else {
                     o.name.clone()
                 }
