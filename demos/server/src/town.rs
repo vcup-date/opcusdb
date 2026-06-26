@@ -120,6 +120,7 @@ struct Town {
     chars: BTreeMap<u32, Char>,
     transcripts: Vec<Vec<String>>, // per location: recent "Name: line"
     pending: Vec<bool>,            // per location: a human just spoke -> prioritise a reply
+    loc_spoke: Vec<f32>,           // per location: sim-time of its last line, to rotate chatter around town
     time: f32,
     last_api: f32, // sim-time of the last model call, to throttle under the free-tier limit
     next_id: u32,
@@ -192,6 +193,7 @@ fn new_town() -> Town {
         chars,
         transcripts: vec![Vec::new(); LOCS.len()],
         pending: vec![false; LOCS.len()],
+        loc_spoke: vec![0.0; LOCS.len()],
         time: 40.0,
         last_api: 0.0,
         next_id: 100,
@@ -312,19 +314,23 @@ fn chars_at(t: &Town, li: i32) -> Vec<u32> {
 /// Pick a scene + speaker + prompt context for the next AI line.
 /// Returns (speaker_id, system_prompt, user_prompt) or None.
 fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
-    // prefer a location where a human just spoke (pending), then wherever a visitor is
-    // standing (so the live conversation follows the viewer), then everywhere else
+    // Pick which group speaks next by an "overdue" score (lower = speak sooner):
+    // a pending spot jumps the queue, a spot where a visitor stands is favoured (so the
+    // live conversation follows the viewer), and otherwise the quietest spot speaks, so
+    // chatter rotates around the whole town instead of one group monopolising it.
+    let score = |i: usize| -> f32 {
+        let base = t.loc_spoke[i];
+        if t.pending[i] {
+            base - 1e9
+        } else if chars_at(t, i as i32).iter().any(|id| t.chars[id].human) {
+            base - 12.0
+        } else {
+            base
+        }
+    };
     let order: Vec<usize> = {
         let mut v: Vec<usize> = (0..LOCS.len()).collect();
-        v.sort_by_key(|&i| {
-            if t.pending[i] {
-                0
-            } else if chars_at(t, i as i32).iter().any(|id| t.chars[id].human) {
-                1
-            } else {
-                2
-            }
-        });
+        v.sort_by(|&a, &b| score(a).partial_cmp(&score(b)).unwrap());
         v
     };
     for li in order {
@@ -420,6 +426,7 @@ fn current_news(time: f32) -> &'static str {
 }
 
 fn record_line(t: &mut Town, li: usize, name: &str, line: &str) {
+    t.loc_spoke[li] = t.time; // remember when this spot last spoke, so chatter rotates around town
     let entry = format!("{name}: {line}");
     let tr = &mut t.transcripts[li];
     tr.push(entry.clone());
