@@ -213,7 +213,9 @@ fn new_town() -> Town {
 /// drifts to the plaza so small groups form and break up instead of everyone
 /// piling onto one spot and marching in lockstep.
 fn schedule(c: &Char, time: f32) -> usize {
-    let p = (time % DAY_SECS) / DAY_SECS;
+    // a small per-resident time offset so the evening and night transitions trickle in
+    // over several seconds rather than the whole town turning on its heel at once
+    let p = ((time + c.pal as f32 * 0.9) % DAY_SECS) / DAY_SECS;
     if p >= 0.86 {
         return c.work; // night: everyone heads back to their own corner, town goes quiet
     }
