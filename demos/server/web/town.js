@@ -162,13 +162,14 @@ function setBubble(id, text) {
   let b = bubbleL.getChildByName("b" + id);
   if (!b) {
     b = new PIXI.Container(); b.name = "b" + id;
-    b._bg = new PIXI.Graphics(); b._tx = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 12, fill: 0x14171f, wordWrap: true, wordWrapWidth: 150, lineHeight: 15 });
-    b._tx.position.set(8, 6); b.addChild(b._bg, b._tx); bubbleL.addChild(b);
+    b._bg = new PIXI.Graphics(); b._tail = new PIXI.Graphics(); b._tx = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 12, fill: 0x14171f, wordWrap: true, wordWrapWidth: 150, lineHeight: 15 });
+    b._tx.position.set(8, 6); b.addChild(b._bg, b._tail, b._tx); bubbleL.addChild(b);
   }
   if (b._last !== text) {
     b._last = text; b._tx.text = text;
     const w = Math.min(166, b._tx.width + 16), h = b._tx.height + 12;
-    b._bg.clear().beginFill(0xffffff, 0.96).drawRoundedRect(0, 0, w, h, 8).endFill().beginFill(0xffffff, 0.96).moveTo(w / 2 - 6, h).lineTo(w / 2 + 6, h).lineTo(w / 2, h + 7).closePath().endFill();
+    b._bg.clear().beginFill(0xffffff, 0.96).drawRoundedRect(0, 0, w, h, 8).endFill();
+    b._tail.clear().beginFill(0xffffff, 0.96).moveTo(w / 2 - 6, h).lineTo(w / 2 + 6, h).lineTo(w / 2, h + 7).closePath().endFill();
     b._w = w; b._h = h;
   }
 }
@@ -251,10 +252,11 @@ app.ticker.add(() => {
   const bs = bubbleL.children.map(b => ({ b, v: chars.get(+b.name.slice(1)) })).filter(x => x.v).sort((a, z) => a.v.dy - z.v.dy);
   for (const { b, v } of bs) {
     const w = b._w || 80, h = b._h || 24;
-    const bx = v.dx - w / 2; let by = v.dy - 40 - h;
+    const bx = v.dx - w / 2, natural = v.dy - 40 - h; let by = natural;
     let n = 0;
     while (n++ < 8 && placed.some(p => bx < p.x + p.w && bx + w > p.x && by < p.y + p.h && by + h > p.y)) by -= h + 4;
     b.position.set(bx, by); placed.push({ x: bx, y: by, w, h });
+    if (b._tail) b._tail.visible = by >= natural - 0.5; // hide the tail when stacked so it never points at the wrong speaker
   }
   // day/night
   const [col, a] = skyTint(phase); night.tint = col; night.alpha = a;
