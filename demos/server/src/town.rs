@@ -126,6 +126,7 @@ struct Char {
     here: i32,
     bubble: String,
     bubble_t: f32,
+    thinking: bool, // a model call is in flight for this resident (client shows "...")
     last_spoke: f32,
     facing: f32,
     goal: usize,
@@ -219,6 +220,7 @@ fn new_town() -> Town {
                 here: -1,
                 bubble: String::new(),
                 bubble_t: 0.0,
+                thinking: false,
                 last_spoke: 0.0,
                 facing: 0.0,
                 goal: work,
@@ -554,13 +556,21 @@ fn converse(town: Arc<Mutex<Town>>) {
         // up. When it lands it becomes the resident's spoken line and enters the transcript.
         if do_api && INFLIGHT.load(Ordering::Relaxed) < 10 {
             INFLIGHT.fetch_add(1, Ordering::Relaxed);
+            // mark the resident as thinking so the client shows a "..." while DeepSeek
+            // composes, since there is no instant line anymore
+            if let Some(c) = town.lock().unwrap().chars.get_mut(&speaker) {
+                c.thinking = true;
+            }
             let town2 = town.clone();
             let name2 = name.clone();
             thread::spawn(move || {
                 let reply = ai_say(&system, &user);
                 INFLIGHT.fetch_sub(1, Ordering::Relaxed);
+                let mut t = town2.lock().unwrap();
+                if let Some(c) = t.chars.get_mut(&speaker) {
+                    c.thinking = false;
+                }
                 if let Some(real) = reply {
-                    let mut t = town2.lock().unwrap();
                     let here = match t.chars.get(&speaker) {
                         Some(c) if c.here >= 0 => c.here as usize,
                         _ => return,
@@ -753,6 +763,16 @@ fn snapshot(t: &Town) -> String {
         .collect::<Vec<_>>()
         .join(";");
     s.push_str(&format!("b\t{b}\n"));
+    // residents composing a reply (model call in flight, no bubble yet): the client shows
+    // a "..." over them so the wait for a real line reads as thinking, not a freeze
+    let think: String = t
+        .chars
+        .iter()
+        .filter(|(_, c)| c.thinking && c.bubble.is_empty())
+        .map(|(id, _)| id.to_string())
+        .collect::<Vec<_>>()
+        .join(";");
+    s.push_str(&format!("think\t{think}\n"));
     // the day's talk of the town (client logs it and any change to the chatter feed)
     s.push_str(&format!("news\t{}\n", current_news(t.time)));
     s
@@ -849,7 +869,7 @@ fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>, snap: Arc<RwLock<String
                 x: sx, y: sy, tx: sx, ty: sy,
                 name: vname,
                 persona: "", role: "visitor", pal: 99, work: 0, fav: 0, here: 0,
-                bubble: String::new(), bubble_t: 0.0, last_spoke: 0.0, facing: 1.0, goal: 0, path: Vec::new(), human: true, mem: Vec::new(),
+                bubble: String::new(), bubble_t: 0.0, thinking: false, last_spoke: 0.0, facing: 1.0, goal: 0, path: Vec::new(), human: true, mem: Vec::new(),
             },
         );
         t.pending[0] = true; // greet the new arrival promptly instead of after an ambient cycle
@@ -1056,7 +1076,7 @@ mod tests {
         // their goals diverge at some instant
         let mk = |pal: u8| Char {
             x: 0.0, y: 0.0, tx: 0.0, ty: 0.0, name: String::new(), persona: "", role: "",
-            pal, work: 1, fav: 4, here: -1, bubble: String::new(), bubble_t: 0.0,
+            pal, work: 1, fav: 4, here: -1, bubble: String::new(), bubble_t: 0.0, thinking: false,
             last_spoke: 0.0, facing: 0.0, goal: 0, path: Vec::new(), human: false, mem: Vec::new(),
         };
         let (a, b) = (mk(0), mk(7));
@@ -1105,7 +1125,7 @@ mod tests {
                 x: 616.0, y: 410.0, tx: 616.0, ty: 410.0,
                 name: "Wanderer".to_string(),
                 persona: "", role: "visitor", pal: 99, work: 0, fav: 0, here: 4,
-                bubble: String::new(), bubble_t: 0.0, last_spoke: 0.0, facing: 1.0,
+                bubble: String::new(), bubble_t: 0.0, thinking: false, last_spoke: 0.0, facing: 1.0,
                 goal: 0, path: Vec::new(), human: true, mem: Vec::new(),
             },
         );
@@ -1165,7 +1185,7 @@ mod tests {
                 x: 480.0, y: 300.0, tx: 480.0, ty: 300.0,
                 name: "Wanderer".to_string(),
                 persona: "", role: "visitor", pal: 99, work: 0, fav: 0, here: 0,
-                bubble: String::new(), bubble_t: 0.0, last_spoke: 0.0, facing: 1.0,
+                bubble: String::new(), bubble_t: 0.0, thinking: false, last_spoke: 0.0, facing: 1.0,
                 goal: 0, path: Vec::new(), human: true, mem: Vec::new(),
             },
         );

@@ -8,6 +8,7 @@ let ws = null, myId = 0, started = false;
 const chars = new Map();   // id -> view state
 let roster = [];           // [{id,name,kind,act}]
 let phase = 0.25, firstSnapDone = false, townNews = ""; // skip join notes for visitors already present on load
+let thinkingIds = new Set(); // residents the server says are composing a reply (show "...")
 let LOCS = [];
 
 // 12 resident palettes [shirt, hair, skin]; 99 = the human visitor
@@ -29,10 +30,12 @@ $("app").appendChild(app.view);
 function fit() { const s = Math.min(innerWidth / W, innerHeight / H) * 0.98; app.view.style.width = W * s + "px"; app.view.style.height = H * s + "px"; }
 addEventListener("resize", fit); fit();
 
-const bgL = new PIXI.Container(), groundL = new PIXI.Container(), labelL = new PIXI.Container(), charL = new PIXI.Container(), bubbleL = new PIXI.Container(), fxL = new PIXI.Container(), nightL = new PIXI.Container(), glowL = new PIXI.Container(), selL = new PIXI.Container();
+const bgL = new PIXI.Container(), groundL = new PIXI.Container(), labelL = new PIXI.Container(), charL = new PIXI.Container(), bubbleL = new PIXI.Container(), fxL = new PIXI.Container(), nightL = new PIXI.Container(), glowL = new PIXI.Container(), thinkL = new PIXI.Container(), selL = new PIXI.Container();
 // bubbleL sits ABOVE the night tint so speech (the dialogue) stays crisp and readable
-// after dark instead of being multiplied toward blue with the rest of the scene
-app.stage.addChild(bgL, groundL, labelL, charL, fxL, nightL, glowL, bubbleL, selL);
+// after dark instead of being multiplied toward blue with the rest of the scene. thinkL
+// (the "..." indicator) sits with it, above the night tint, so it reads at night too.
+thinkL.eventMode = "none";
+app.stage.addChild(bgL, groundL, labelL, charL, fxL, nightL, glowL, bubbleL, thinkL, selL);
 fxL.eventMode = "none"; glowL.eventMode = "none"; selL.eventMode = "none";
 const selRing = new PIXI.Graphics(); selL.addChild(selRing); let selectedId = 0;
 const clickMark = new PIXI.Graphics(); selL.addChild(clickMark); clickMark.visible = false; let clickT = 0; // brief ring where you click to walk
@@ -182,6 +185,8 @@ function connect() {
         const active = new Set();
         for (const s of rest.split(";")) { if (!s) continue; const j = s.indexOf("|"); const id = +s.slice(0, j), text = s.slice(j + 1); active.add(id); setBubble(id, text); logChatter(id, text); }
         for (const ch of [...bubbleL.children]) { const id = +ch.name.slice(1); if (!active.has(id)) ch._dying = ch._dying || performance.now(); } // mark for fade-out, removed by the loop
+      } else if (tag === "think") {
+        thinkingIds = new Set(rest.split(";").filter(Boolean).map(Number)); // residents composing a reply
       }
     }
   };
@@ -334,6 +339,20 @@ app.ticker.add(() => {
     let a = Math.min(1, (now - (b._born || 0)) / 140);                              // fade in when it appears
     if (b._dying) { a = Math.min(a, Math.max(0, 1 - (now - b._dying) / 140)); if (now - b._dying > 150) bubbleL.removeChild(b); } // fade out when it stops
     b.alpha = a;
+  }
+  // "..." thinking indicator over residents composing a reply (no bubble yet)
+  for (const [id, v] of chars) {
+    const show = thinkingIds.has(id) && !bubbleL.getChildByName("b" + id);
+    let d = thinkL.getChildByName("t" + id);
+    if (!show) { if (d) thinkL.removeChild(d); continue; }
+    if (!d) {
+      d = new PIXI.Container(); d.name = "t" + id;
+      const bg = new PIXI.Graphics().beginFill(0xffffff, 0.92).drawRoundedRect(-15, -19, 30, 18, 8).endFill();
+      const tx = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 16, fontWeight: "800", fill: 0x556070 });
+      tx.anchor.set(0.5, 1); tx.position.set(0, -2); d._tx = tx; d.addChild(bg, tx); thinkL.addChild(d);
+    }
+    d._tx.text = ".".repeat(1 + (Math.floor(performance.now() / 350) % 3)); // 1..3 dots, pulsing
+    d.position.set(v.dx, v.dy - 47);
   }
   // day/night
   const [col, a] = skyTint(phase); night.tint = col; night.alpha = a;
