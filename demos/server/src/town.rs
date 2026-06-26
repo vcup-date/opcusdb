@@ -1037,6 +1037,9 @@ fn header_value(head: &str, name: &str) -> Option<String> {
 fn serve_file(stream: &mut TcpStream, head: &str) {
     let raw = head.lines().next().and_then(|l| l.split_whitespace().nth(1)).unwrap_or("/");
     let path = raw.split('?').next().unwrap_or("/");
+    // assets are compiled in (include_str!/include_bytes!) and matched against this exact
+    // allowlist, with everything else a 404. There is no filesystem read, so a requested
+    // path like /../../etc/passwd cannot traverse anywhere; keep it that way.
     let (ctype, body): (&str, Vec<u8>) = match path {
         "/" | "/index.html" => {
             let html = include_str!("../web/town.html").replace("<script src=\"/town.js\"></script>", &format!("<script>\n{}\n</script>", include_str!("../web/town.js")));
@@ -1051,7 +1054,7 @@ fn serve_file(stream: &mut TcpStream, head: &str) {
         }
     };
     let resp = format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: {ctype}\r\nCache-Control: no-store\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        "HTTP/1.1 200 OK\r\nContent-Type: {ctype}\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-store\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
         body.len()
     );
     let _ = stream.write_all(resp.as_bytes());
