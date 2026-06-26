@@ -389,7 +389,9 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
             .collect();
         let locname = LOCS[li].0;
         let transcript = if t.transcripts[li].is_empty() {
-            "(it has been quiet)".to_string()
+            // not "it has been quiet" (that makes everyone open by remarking on the silence);
+            // invite a fresh opener instead, a greeting, a bit of news, or a word to a friend
+            "(no one has spoken here yet; open with a fresh remark, not a comment about it being quiet)".to_string()
         } else {
             t.transcripts[li].join("\n")
         };
