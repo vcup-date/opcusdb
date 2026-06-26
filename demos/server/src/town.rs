@@ -291,9 +291,11 @@ fn tick(t: &mut Town) {
             }
         }
         c.here = here;
-        // a visitor arriving at a spot nudges that group to speak, so residents
-        // notice you walking up instead of only reacting when you type
-        if human && here >= 0 && here != old_here {
+        // a visitor walking up, or a resident reaching their destination, nudges that
+        // group to speak so people acknowledge a newcomer. Residents only count when
+        // they have actually arrived at their goal, so passing through the plaza hub on
+        // the way somewhere else does not keep re-triggering the square.
+        if here >= 0 && here != old_here && (human || here == c.goal as i32) {
             arrivals.push(here as usize);
         }
     }
