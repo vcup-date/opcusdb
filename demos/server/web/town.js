@@ -218,7 +218,10 @@ app.ticker.add(() => {
     const vx = v.dx - ox, vy = v.dy - oy, spd = Math.hypot(vx, vy);
     v.spd = (v.spd || 0) + (spd - (v.spd || 0)) * Math.min(1, dt * 6); // smoothed pace drives the step cadence
     const moving = spd > 0.15;
-    if (moving && Math.abs(vx) > 0.05) v.face = vx < 0 ? -1 : 1; // face the way you travel
+    // face the way you travel, but only flip when sideways motion is a real component:
+    // a mostly-vertical walk (up or down a path) keeps a stable facing instead of
+    // flickering left and right on tiny horizontal jitter
+    if (moving && Math.abs(vx) > 0.12 && Math.abs(vx) > Math.abs(vy) * 0.35) v.face = vx < 0 ? -1 : 1;
     const leanT = moving ? Math.max(-0.14, Math.min(0.14, vx * 0.05)) : 0;
     v.lean = (v.lean || 0) + (leanT - (v.lean || 0)) * Math.min(1, dt * 8); // ease a lean into the motion
     // when standing, turn toward the active speaker nearby (so a group attends to whoever
