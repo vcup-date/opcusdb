@@ -221,7 +221,7 @@ app.ticker.add(() => {
     if (moving) { v.idle = Math.max(v.idle || 0, 1.5); }
     else {
       v.idle = (v.idle == null ? 2 + Math.random() * 5 : v.idle) - dt;
-      if (v.idle <= 0) { addEmote(v.dx, v.dy - (p.isSprite ? 54 : 40), pickEmote(v)); v.hop = 1; v.idle = 4 + Math.random() * 7; }
+      if (v.idle <= 0) { if (!talking) { addEmote(v.dx, v.dy - (p.isSprite ? 54 : 40), pickEmote(v)); v.hop = 1; } v.idle = 4 + Math.random() * 7; } // no emote puff over a speech bubble
     }
     if (v.hop > 0) v.hop -= dt * 3.2;
     if (p.isSprite) {
