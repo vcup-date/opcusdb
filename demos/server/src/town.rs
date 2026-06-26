@@ -918,7 +918,11 @@ fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>) {
                         }
                     }
                     "say" => {
-                        let line = sanitize(rest);
+                        // the frame layer allows up to 1MB, far too long for a chat line, so
+                        // cap the visitor's text server-side (the client's 160 limit is bypassable)
+                        // before it becomes a bubble broadcast to everyone and an LLM prompt
+                        let capped: String = rest.chars().take(200).collect();
+                        let line = sanitize(&capped);
                         if !line.is_empty() {
                             let mut tt = town.lock().unwrap();
                             let (nm, here) = {
