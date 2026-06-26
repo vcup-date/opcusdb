@@ -39,9 +39,10 @@ const TICK_MS: u64 = 50; // 20 Hz movement
 const DT: f32 = 0.05;
 const DAY_SECS: f32 = 200.0; // a full day cycle
 const SPEED: f32 = 46.0;
-// A free model that fails fast when the free tier is rate-limited (so the town
-// drops to a canned line in about a second) instead of hanging like the 550B id did.
-const MODEL: &str = "meta-llama/llama-3.3-70b-instruct:free";
+// Free models the residents speak through, tried in order until one answers. These
+// were verified to actually return content (many free ids are 404 or fully rate
+// limited). If all are busy the town falls back to canned lines.
+const MODELS: [&str; 2] = ["google/gemma-4-31b-it:free", "nvidia/nemotron-3-nano-30b-a3b:free"];
 
 // (name, persona, role, work-location index, favourite social-location index)
 const RESIDENTS: [(&str, &str, &str, usize, usize); 12] = [
@@ -423,22 +424,30 @@ fn converse(town: Arc<Mutex<Town>>) {
 
 fn ai_say(system: &str, user: &str) -> Option<String> {
     let key = std::env::var("OPENROUTER_API_KEY").ok().filter(|k| !k.is_empty())?;
-    let body = format!(
-        "{{\"model\":\"{MODEL}\",\"max_tokens\":120,\"temperature\":0.9,\"reasoning\":{{\"enabled\":false}},\
-         \"messages\":[{{\"role\":\"system\",\"content\":\"{}\"}},{{\"role\":\"user\",\"content\":\"{}\"}}]}}",
-        json_escape(system),
-        json_escape(user)
-    );
-    let out = Command::new("curl")
-        .args([
-            "-s", "-m", "9", "--connect-timeout", "5", "-X", "POST", "https://openrouter.ai/api/v1/chat/completions",
-            "-H", &format!("Authorization: Bearer {key}"), "-H", "Content-Type: application/json", "-d", &body,
-        ])
-        .output()
-        .ok()?;
-    let resp = String::from_utf8_lossy(&out.stdout);
-    let line = sanitize(&extract_content(&resp)?);
-    if line.is_empty() { None } else { Some(line) }
+    let sys = json_escape(system);
+    let usr = json_escape(user);
+    // try each free model in turn; the first that returns content wins
+    for model in MODELS {
+        let body = format!(
+            "{{\"model\":\"{model}\",\"max_tokens\":120,\"temperature\":0.9,\"reasoning\":{{\"enabled\":false}},\
+             \"messages\":[{{\"role\":\"system\",\"content\":\"{sys}\"}},{{\"role\":\"user\",\"content\":\"{usr}\"}}]}}"
+        );
+        let out = Command::new("curl")
+            .args([
+                "-s", "-m", "9", "--connect-timeout", "5", "-X", "POST", "https://openrouter.ai/api/v1/chat/completions",
+                "-H", &format!("Authorization: Bearer {key}"), "-H", "Content-Type: application/json", "-d", &body,
+            ])
+            .output()
+            .ok()?;
+        let resp = String::from_utf8_lossy(&out.stdout);
+        if let Some(content) = extract_content(&resp) {
+            let line = sanitize(&content);
+            if !line.is_empty() {
+                return Some(line);
+            }
+        }
+    }
+    None
 }
 
 /// Fallback flavour lines when there is no API key / the call fails.
