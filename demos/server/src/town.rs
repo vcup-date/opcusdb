@@ -312,16 +312,30 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
         // scene, so they carry context across the day instead of starting blank
         let here_now: std::collections::HashSet<&String> = t.transcripts[li].iter().collect();
         let memory: Vec<&str> = c.mem.iter().filter(|m| !here_now.contains(m)).map(|s| s.as_str()).collect();
+        // time of day, matching the on-screen clock, so lines fit the hour
+        let hr = 6.0 + (t.time % DAY_SECS) / DAY_SECS * 17.4;
+        let timeword = if hr < 11.0 {
+            "morning"
+        } else if hr < 14.0 {
+            "midday"
+        } else if hr < 17.0 {
+            "afternoon"
+        } else if hr < 20.0 {
+            "evening"
+        } else {
+            "night"
+        };
         let system = format!(
             "You are {}, a resident of the small town of Hearth. {}. \
-             Right now you are at the {} with {}. \
+             It is {} and you are at the {} with {}. \
              Reply with ONE short, natural line (under 22 words) that a real person would actually say here. \
              React to the most recent line, sometimes address someone by name, and vary what you do: share a \
              bit of local news or gossip, give a blunt opinion, tease a friend, ask a question, or mention your \
-             own day and trade. Stay grounded in this town and your character. Do not repeat what was just said. \
-             If a visitor spoke to you, answer them directly and warmly. No emoji, no name label, no quotes.",
+             own day and trade. Fit the time of day. Stay grounded in this town and your character. Do not repeat \
+             what was just said. If a visitor spoke to you, answer them directly and warmly. No emoji, no name label, no quotes.",
             c.name,
             c.persona,
+            timeword,
             locname,
             if others.is_empty() { "no one in particular".to_string() } else { others.join(", ") }
         );
