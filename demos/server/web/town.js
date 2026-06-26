@@ -431,3 +431,4 @@ function start() {
 }
 $("go").onclick = start;
 $("nick").addEventListener("keydown", (e) => { if (e.key === "Enter") start(); });
+$("nick").focus(); // ready to type your name on load; the chat box focuses after you join
