@@ -481,7 +481,9 @@ fn converse(town: Arc<Mutex<Town>>) {
         let (name, persona, human_facing) = {
             let t = town.lock().unwrap();
             let here = t.chars[&speaker].here;
-            let hf = here >= 0 && t.pending[here as usize];
+            // a real visitor must be present (pending can also be a resident arrival, which
+            // should not draw the visitor-greeting fallback or the snap visitor pacing)
+            let hf = here >= 0 && chars_at(&t, here).iter().any(|cid| t.chars[cid].human);
             (t.chars[&speaker].name.clone(), t.chars[&speaker].persona, hf)
         };
         // Show an instant in-character line so the scene is never silent, then fetch
