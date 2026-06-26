@@ -279,7 +279,9 @@ cargo run -p opcusdb-server --bin opcusdb-td   # open http://localhost:9010
 `opcusdb-town` is a small town of **12 LLM residents** (over OpenRouter, with a
 fallback chain of free models) who follow a daily routine (work, market, socialise,
 tavern, home) and **hold short, in-character conversations whenever they share a
-place** (area-of-interest decides who can hear whom). They remember what they heard
+place** (area-of-interest decides who can hear whom). They share a rotating "talk of
+the town" (a bridge repair, a coming festival, wolves in the hills) that changes each
+day, so the gossip stays coherent across the whole map. They remember what they heard
 earlier elsewhere in town, fit their lines to the time of day, and never repeat the
 last thing said. The twist versus a 2023-style "watch the agents" demo: **every
 browser is an embodied visitor.** You walk in, the nearest resident greets you as a
