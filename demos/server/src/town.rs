@@ -481,13 +481,15 @@ fn converse(town: Arc<Mutex<Town>>) {
             4500
         }));
         let Some((speaker, system, user)) = job else { continue };
-        let (name, persona, human_facing) = {
+        let (name, persona, human_facing, human_waiting) = {
             let t = town.lock().unwrap();
             let here = t.chars[&speaker].here;
             // a real visitor must be present (pending can also be a resident arrival, which
-            // should not draw the visitor-greeting fallback or the snap visitor pacing)
+            // should not draw the visitor-greeting fallback). human_waiting also requires the
+            // scene pending, meaning the visitor actually spoke or just walked up.
             let hf = here >= 0 && chars_at(&t, here).iter().any(|cid| t.chars[cid].human);
-            (t.chars[&speaker].name.clone(), t.chars[&speaker].persona, hf)
+            let hw = hf && t.pending[here as usize];
+            (t.chars[&speaker].name.clone(), t.chars[&speaker].persona, hf, hw)
         };
         // Show an instant in-character line so the scene is never silent, then fetch
         // the real reply in a detached thread that upgrades the bubble when it lands.
@@ -497,8 +499,10 @@ fn converse(town: Arc<Mutex<Town>>) {
         // throttle real model calls so we stay under the free-tier rate limit and
         // actual AI lines get through; a visitor waiting (human_facing) jumps the queue.
         // gap is just under the ambient sleep, so most ambient turns make a real call
-        // (canned only shows when the model actually fails); a waiting visitor is quicker
-        let gap = if human_facing { 2.0 } else { 4.0 };
+        // (canned only shows when the model actually fails). Only a visitor who actually
+        // spoke or arrived (human_waiting) gets the fast 2s pace; passively watching keeps
+        // the 4s pace so a watched group does not burn through the free-tier rate limit.
+        let gap = if human_waiting { 2.0 } else { 4.0 };
         let do_api;
         {
             let mut t = town.lock().unwrap();
