@@ -50,13 +50,14 @@ const TICK_MS: u64 = 50; // 20 Hz movement
 const DT: f32 = 0.05;
 const DAY_SECS: f32 = 200.0; // a full day cycle
 const SPEED: f32 = 46.0;
-// Free models the residents speak through, tried in order until one answers. These
-// were verified to actually return content (many free ids are 404 or fully rate
-// limited). If all are busy the town falls back to canned lines.
+// Models the residents speak through, tried in order until one answers. DeepSeek V4 Flash
+// is the primary: cheap, fast, and (unlike the free models) not subject to the shared
+// free-tier daily cap, so the town actually gets live AI dialogue. The rest are fallbacks
+// if it is briefly unavailable; only if all fail does the town drop to canned lines.
 const MODELS: [&str; 3] = [
+    "deepseek/deepseek-v4-flash",
+    "deepseek/deepseek-chat-v3.1",
     "google/gemma-4-31b-it:free",
-    "nvidia/nemotron-3-nano-30b-a3b:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
 ];
 
 // (name, persona, role, work-location index, favourite social-location index)
