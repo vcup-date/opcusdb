@@ -927,19 +927,29 @@ fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>, snap: Arc<RwLock<String
     let _ = ws::write_text(&mut stream, &bio_line());
 
     let mut writer = stream.try_clone().expect("clone");
-    let writer_handle = thread::spawn(move || loop {
-        thread::sleep(Duration::from_millis(TICK_MS * 3)); // ~7 Hz snapshots
-        let s = snap.read().unwrap().clone(); // shared, already built; no town lock
-        if s.is_empty() {
-            continue;
-        }
-        if ws::write_text(&mut writer, &s).is_err() {
-            return;
+    let writer_handle = thread::spawn(move || {
+        let mut beat = 0u32;
+        loop {
+            thread::sleep(Duration::from_millis(TICK_MS * 3)); // ~7 Hz snapshots
+            beat += 1;
+            // send a heartbeat ping about every 20s; the browser pongs automatically, so
+            // the read loop sees a frame and knows the peer is alive
+            let ping_failed = beat % 160 == 0 && ws::write_ping(&mut writer).is_err();
+            let s = snap.read().unwrap().clone(); // shared, already built; no town lock
+            let snap_failed = !s.is_empty() && ws::write_text(&mut writer, &s).is_err();
+            if ping_failed || snap_failed {
+                // the peer is gone: shut the socket so the read loop unblocks at once and
+                // removes this character, instead of the reader blocking until its timeout
+                let _ = writer.shutdown(Shutdown::Both);
+                return;
+            }
         }
     });
 
-    // handshake is done; a connected viewer may sit idle for minutes, so drop the timeout
-    let _ = stream.set_read_timeout(None);
+    // handshake is done. A viewer may sit idle, but the heartbeat ping keeps real pongs
+    // flowing, so bound the read: if nothing arrives for 35s (no pong, peer vanished
+    // without a clean close), the loop ends and the character is removed (no ghost).
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(35)));
     loop {
         match ws::read_frame(&mut stream) {
             Ok(Some(ws::Msg::Text(t))) => {

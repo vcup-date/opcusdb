@@ -144,6 +144,12 @@ pub fn write_text<W: Write>(s: &mut W, text: &str) -> io::Result<()> {
     write_frame(s, 0x1, text.as_bytes())
 }
 
+/// Write a ping frame. Browsers reply with a pong automatically, so the server can use
+/// this as a heartbeat to detect a peer that vanished without a clean close.
+pub fn write_ping<W: Write>(s: &mut W) -> io::Result<()> {
+    write_frame(s, 0x9, &[])
+}
+
 fn write_frame<W: Write>(s: &mut W, opcode: u8, payload: &[u8]) -> io::Result<()> {
     let mut frame = vec![0x80 | opcode]; // FIN + opcode
     let n = payload.len();
