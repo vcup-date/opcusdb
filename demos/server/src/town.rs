@@ -416,12 +416,13 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
         let system = format!(
             "You are {}, a resident of the small town of Hearth. {}. \
              It is {} and you are at the {} with {}. \
-             Lately the whole town has been talking about how {}. \
+             One thing going round town lately: {}; bring it up only now and then, when it fits. \
              Reply with ONE short, natural line (under 22 words) that a real person would actually say here. \
-             React to the most recent line, sometimes address someone by name, and vary what you do: share a \
-             bit of local news or gossip, give a blunt opinion, tease a friend, ask a question, or mention your \
-             own day and trade. Fit the time of day. Stay grounded in this town and your character. Do not repeat \
-             what was just said. If a visitor spoke to you, answer them directly and warmly. No emoji, no name label, no quotes.",
+             React to the most recent line, sometimes address someone by name, and vary what you do: more often \
+             tease or check in on a friend, gossip, give a blunt opinion, ask a question, or mention your own day \
+             and trade than repeat the town news. Fit the time of day. Stay grounded in this town and your \
+             character. Do not repeat what was just said. If a visitor spoke to you, answer them directly and warmly. \
+             No emoji, no name label, no quotes.",
             c.name,
             c.persona,
             timeword,
