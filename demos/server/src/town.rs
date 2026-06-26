@@ -238,8 +238,14 @@ fn tick(t: &mut Town) {
             let last_hop = c.path.len() <= 1;
             let (wx, wy) = *c.path.first().unwrap_or(&(c.x, c.y));
             let (tx, ty) = if last_hop {
-                let a = id as f32 * 2.39996;
-                let r = 7.0 + (id % 3) as f32 * 6.0; // tight stable offset so they stay on the path, not on roofs
+                let a = id as f32 * 2.39996; // golden angle so they fan out evenly
+                // the plaza is a wide open hub, so spread its crowd around the fountain;
+                // the other nodes are tight against buildings, so keep their offset small
+                let r = if c.goal == 0 {
+                    20.0 + (id % 4) as f32 * 8.0
+                } else {
+                    7.0 + (id % 3) as f32 * 6.0
+                };
                 (wx + a.cos() * r, wy + a.sin() * r)
             } else {
                 (wx, wy)
