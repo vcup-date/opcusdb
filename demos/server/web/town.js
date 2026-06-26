@@ -331,6 +331,10 @@ function renderRoster() {
     const me = r.id === myId ? " (you)" : "";
     return `<div class="rrow${r.id === selectedId ? " sel" : ""}" data-id="${r.id}"><span class="dot" style="background:${col}"></span><span class="nm">${esc(r.name)}${me}</span><span class="ac">${esc(r.act)}</span></div>`;
   }).join("");
+  // surface how many humans share the town (the demo's whole point)
+  const visitors = roster.filter(r => r.kind === "you/visitor").length;
+  const h = document.querySelector("#roster h4");
+  if (h) h.textContent = visitors > 1 ? `Townsfolk · ${visitors} visitors here` : "Townsfolk";
 }
 // click a roster row to select that resident (rings them in the world + shows the card)
 $("rlist").addEventListener("click", (e) => { const row = e.target.closest(".rrow"); if (row && row.dataset.id) { selectedId = +row.dataset.id; renderRoster(); } });
