@@ -273,11 +273,13 @@ app.ticker.add(() => {
   const bs = bubbleL.children.map(b => ({ b, v: chars.get(+b.name.slice(1)) })).filter(x => x.v).sort((a, z) => a.v.dy - z.v.dy);
   for (const { b, v } of bs) {
     const w = b._w || 80, h = b._h || 24;
-    const bx = v.dx - w / 2, natural = v.dy - 40 - h; let by = natural;
+    const bx = Math.max(2, Math.min(W - w - 2, v.dx - w / 2)), natural = v.dy - 40 - h; let by = natural; // keep on-screen horizontally
     let n = 0;
     while (n++ < 8 && placed.some(p => bx < p.x + p.w && bx + w > p.x && by < p.y + p.h && by + h > p.y)) by -= h + 4;
+    by = Math.max(4, by); // never let a stacked bubble run off the top edge
     b.position.set(bx, by); placed.push({ x: bx, y: by, w, h });
-    if (b._tail) b._tail.visible = by >= natural - 0.5; // hide the tail when stacked so it never points at the wrong speaker
+    // show the tail only when the bubble is at its natural spot and centered on the speaker
+    if (b._tail) b._tail.visible = by >= natural - 0.5 && Math.abs(bx + w / 2 - v.dx) < 6;
     const now = performance.now();
     let a = Math.min(1, (now - (b._born || 0)) / 140);                              // fade in when it appears
     if (b._dying) { a = Math.min(a, Math.max(0, 1 - (now - b._dying) / 140)); if (now - b._dying > 150) bubbleL.removeChild(b); } // fade out when it stops
