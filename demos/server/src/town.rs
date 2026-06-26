@@ -308,6 +308,10 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
         } else {
             t.transcripts[li].join("\n")
         };
+        // what this resident remembers from earlier, minus what is already in this
+        // scene, so they carry context across the day instead of starting blank
+        let here_now: std::collections::HashSet<&String> = t.transcripts[li].iter().collect();
+        let memory: Vec<&str> = c.mem.iter().filter(|m| !here_now.contains(m)).map(|s| s.as_str()).collect();
         let system = format!(
             "You are {}, a resident of the small town of Hearth. {}. \
              Right now you are at the {} with {}. \
@@ -321,7 +325,11 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
             locname,
             if others.is_empty() { "no one in particular".to_string() } else { others.join(", ") }
         );
-        let user = format!("Recent talk at the {locname}:\n{transcript}\n\nReply as {} (one short line):", c.name);
+        let mut user = String::new();
+        if !memory.is_empty() {
+            user.push_str(&format!("Earlier today you heard around town:\n{}\n\n", memory.join("\n")));
+        }
+        user.push_str(&format!("Recent talk at the {locname}:\n{transcript}\n\nReply as {} (one short line):", c.name));
         return Some((speaker, system, user));
     }
     None
