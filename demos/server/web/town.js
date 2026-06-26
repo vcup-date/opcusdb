@@ -102,7 +102,7 @@ function makeChar(pal, isHuman, palIdx, ringCol) {
   head.beginFill(hair).arc(0, -15, 8.5, Math.PI, 0).endFill();                         // hair cap
   head.beginFill(0x1a1a22).drawCircle(-3, -15, 1.4).drawCircle(3, -15, 1.4).endFill(); // eyes
   body.addChild(legL, legR, torso, head);
-  const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: isHuman ? (ringCol || 0xffe07a) : 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
+  const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: isHuman ? (ringCol || 0xffe07a) : 0xffffff, stroke: 0x10131c, strokeThickness: 4 });
   nm.anchor.set(0.5, 0); nm.position.set(0, -38); c.addChild(nm); // name above the head
   c._p = { body, legL, legR, head, nm, ring, walk: Math.random() * 6 };
   charL.addChild(c);
@@ -118,7 +118,7 @@ function makeSpriteChar(row, isHuman, ringCol) {
   const spr = new PIXI.Sprite(new PIXI.Texture(atlasBase, new PIXI.Rectangle(0, row * 128, 96, 128)));
   spr.anchor.set(0.5, 1); const sc = 50 / 128; spr.scale.set(sc); spr.position.set(0, 19);
   c.addChild(spr);
-  const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: isHuman ? (ringCol || 0xffe07a) : 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
+  const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: isHuman ? (ringCol || 0xffe07a) : 0xffffff, stroke: 0x10131c, strokeThickness: 4 });
   nm.anchor.set(0.5, 0); nm.position.set(0, -56); c.addChild(nm); // name above the head
   c._p = { spr, nm, sc, isSprite: true, bob: Math.random() * 6, shadow, ring };
   charL.addChild(c);
