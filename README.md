@@ -295,8 +295,8 @@ any townsperson to see who they are.
 </div>
 
 <div align="center">
-<img src="assets/town-bg-test.png" width="380"/> <img src="assets/sprite_demo.png" width="380"/><br/>
-<i>The town map, and a resident's walk-cycle frames.</i>
+<img src="assets/town-night.png" width="380"/> <img src="assets/sprite_demo.png" width="380"/><br/>
+<i>The same town after dark: a deep blue grade, lamp glows and fireflies, residents headed home. Right: a resident's sprite frames.</i>
 </div>
 
 ```sh
