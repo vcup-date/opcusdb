@@ -1134,6 +1134,20 @@ mod tests {
     }
 
     #[test]
+    fn route_between_outer_nodes_hubs_through_the_plaza() {
+        // bakery (1) to tavern (4): two outer nodes, so the path detours via the plaza hub,
+        // keeping residents on the roads instead of cutting diagonally over grass and roofs
+        let path = route(1, 4);
+        assert_eq!(path.len(), 2, "an outer-to-outer trip has two legs");
+        assert_eq!(path[0], loc_stand(0), "first leg heads to the plaza hub");
+        assert_eq!(path[1], loc_stand(4), "second leg heads to the destination");
+        // a trip that already touches the plaza takes no detour
+        assert_eq!(route(0, 4), vec![loc_stand(4)], "plaza to a node is one leg");
+        assert_eq!(route(4, 0), vec![loc_stand(0)], "a node to the plaza is one leg");
+        assert_eq!(route(4, 4), vec![loc_stand(4)], "staying put is one leg");
+    }
+
+    #[test]
     fn visitor_just_asked_tracks_the_latest_speaker() {
         let mut t = new_town();
         for c in t.chars.values_mut() {
