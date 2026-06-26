@@ -69,7 +69,9 @@ function buildScenery() {
     // recede a little: the living residents' name tags (white, above their heads) should
     // visually dominate, and this keeps the two from stacking muddily at a node
     const t = new PIXI.Text(l.name, { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: 0xf2e2bd, stroke: 0x2a1c0a, strokeThickness: 4 });
-    t.anchor.set(0.5, 1); t.position.set(l.x, l.y - 30); t.alpha = 0.8; labelL.addChild(t);
+    t.anchor.set(0.5, 1); t.position.set(l.x, l.y - 30); t.alpha = 0.8;
+    t._nx = l.x; t._ny = l.y; // node centre, so the ticker can fade this label when occupied
+    labelL.addChild(t);
   }
   // soft warm lamp glow near each spot, brightest at night
   lampG.clear(); lampG.blendMode = PIXI.BLEND_MODES.ADD;
@@ -294,6 +296,15 @@ app.ticker.add(() => {
     let above = 0;
     for (const [oid, ov] of chars) { if (oid >= id) continue; const dx = ov.dx - v.dx, dy = ov.dy - v.dy; if (dx * dx + dy * dy < 26 * 26) above++; }
     p.nm.y = (p.isSprite ? -56 : -38) - Math.min(above, 4) * 13;
+  }
+  // fade a place label when a resident is standing at that node, so the place name and
+  // the person's name tag do not stack muddily; restore it when the node is clear
+  for (const t of labelL.children) {
+    if (t._nx === undefined) continue;
+    let occupied = false;
+    for (const v of chars.values()) { const dx = v.dx - t._nx, dy = v.dy - t._ny; if (dx * dx + dy * dy < 36 * 36) { occupied = true; break; } }
+    const target = occupied ? 0.12 : 0.8;
+    t.alpha += (target - t.alpha) * Math.min(1, dt * 6);
   }
   // animate emote puffs: rise and fade
   for (const e of [...fxL.children]) { e.y -= dt * 24; e.life -= dt; e.alpha = Math.max(0, Math.min(1, e.life * 1.6)); e.scale.set(1 + (1.2 - e.life) * 0.25); if (e.life <= 0) fxL.removeChild(e); }
