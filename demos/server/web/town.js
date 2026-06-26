@@ -307,13 +307,30 @@ app.ticker.add(() => {
 });
 // returns [tintColor, alpha]; applied as a MULTIPLY layer so the scene darkens and
 // shifts hue naturally instead of being veiled by a flat overlay.
+// keyframes (phase, tint color, multiply alpha) interpolated continuously, so the sky
+// grades smoothly through dawn, day, sunset, dusk and night with no banding or pops
+const SKY_KEYS = [
+  [0.00, 0x2c3a66, 0.58], // deep night (wraps to 1.00)
+  [0.10, 0x33456f, 0.32], // dawn lifting
+  [0.16, 0xffffff, 0.0],  // day breaks
+  [0.50, 0xffffff, 0.0],  // midday, untinted
+  [0.62, 0xffd2a0, 0.22], // afternoon, warm
+  [0.74, 0xff9a5a, 0.40], // sunset, orange
+  [0.83, 0x7d6a8f, 0.50], // dusk, orange fading to violet
+  [0.92, 0x36436f, 0.58], // early night
+  [1.00, 0x2c3a66, 0.58], // deep night
+];
+function lerpColor(c0, c1, t) {
+  const r = ((c0 >> 16) & 255) + (((c1 >> 16) & 255) - ((c0 >> 16) & 255)) * t;
+  const g = ((c0 >> 8) & 255) + (((c1 >> 8) & 255) - ((c0 >> 8) & 255)) * t;
+  const b = (c0 & 255) + ((c1 & 255) - (c0 & 255)) * t;
+  return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b);
+}
 function skyTint(p) {
-  if (p < 0.20) { const k = (0.20 - p) / 0.20; return [0x33456f, 0.5 * k]; }            // pre-dawn lifting into day
-  if (p < 0.46) return [0xffffff, 0.0];                                                  // full day, untinted
-  if (p < 0.62) { const k = (p - 0.46) / 0.16; return [0xffd2a0, 0.30 * k]; }            // afternoon, warm
-  if (p < 0.78) { const k = (p - 0.62) / 0.16; return [0xff9a5a, 0.30 + 0.18 * k]; }     // sunset, orange
-  if (p < 0.90) { const k = (p - 0.78) / 0.12; return [0x6b5e92, 0.30 + 0.28 * k]; }     // dusk into violet-blue
-  const k = Math.min(1, (p - 0.90) / 0.10); return [0x2c3a66, 0.58 + 0.10 * k];          // night, deep blue
+  let i = 0; while (i < SKY_KEYS.length - 1 && p >= SKY_KEYS[i + 1][0]) i++;
+  const a = SKY_KEYS[i], b = SKY_KEYS[Math.min(i + 1, SKY_KEYS.length - 1)];
+  const t = b[0] > a[0] ? (p - a[0]) / (b[0] - a[0]) : 0;
+  return [lerpColor(a[1], b[1], t), a[2] + (b[2] - a[2]) * t];
 }
 let lastClk = -1;
 function updateClock() {
