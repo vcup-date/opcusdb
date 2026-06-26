@@ -30,7 +30,9 @@ function fit() { const s = Math.min(innerWidth / W, innerHeight / H) * 0.98; app
 addEventListener("resize", fit); fit();
 
 const bgL = new PIXI.Container(), groundL = new PIXI.Container(), labelL = new PIXI.Container(), charL = new PIXI.Container(), bubbleL = new PIXI.Container(), fxL = new PIXI.Container(), nightL = new PIXI.Container(), glowL = new PIXI.Container(), selL = new PIXI.Container();
-app.stage.addChild(bgL, groundL, labelL, charL, bubbleL, fxL, nightL, glowL, selL);
+// bubbleL sits ABOVE the night tint so speech (the dialogue) stays crisp and readable
+// after dark instead of being multiplied toward blue with the rest of the scene
+app.stage.addChild(bgL, groundL, labelL, charL, fxL, nightL, glowL, bubbleL, selL);
 fxL.eventMode = "none"; glowL.eventMode = "none"; selL.eventMode = "none";
 const selRing = new PIXI.Graphics(); selL.addChild(selRing); let selectedId = 0;
 const clickMark = new PIXI.Graphics(); selL.addChild(clickMark); clickMark.visible = false; let clickT = 0; // brief ring where you click to walk
