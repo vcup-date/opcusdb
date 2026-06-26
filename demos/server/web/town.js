@@ -231,6 +231,9 @@ app.ticker.add(() => {
   for (const [id, v] of chars) {
     const k = Math.min(1, dt * 9), ox = v.dx, oy = v.dy;
     v.dx += (v.tx - v.dx) * k; v.dy += (v.ty - v.dy) * k;
+    // never let a character drift to a non-finite position (which would make it vanish):
+    // recover to its target, or the plaza centre if that is bad too
+    if (!Number.isFinite(v.dx) || !Number.isFinite(v.dy)) { v.dx = Number.isFinite(v.tx) ? v.tx : 480; v.dy = Number.isFinite(v.ty) ? v.ty : 300; }
     const vx = v.dx - ox, vy = v.dy - oy, spd = Math.hypot(vx, vy);
     v.spd = (v.spd || 0) + (spd - (v.spd || 0)) * Math.min(1, dt * 6); // smoothed pace drives the step cadence
     const moving = spd > 0.15;
