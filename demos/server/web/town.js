@@ -18,6 +18,9 @@ const PAL = [
   [0xe8b54a, 0xc25a2a, 0xf2d0aa], [0x8a8f5a, 0x2a2a2a, 0xe6b98e], [0x4a90e2, 0x6b4a2a, 0xf0c9a0],
 ];
 const humanPal = [0xffd24a, 0x3a2418, 0xf0c9a0];
+// distinct ring colors so visitors who share the town can be told apart; "you" is gold
+const VIS_RINGS = [0x6ad1ff, 0xff7ab0, 0x8aff6a, 0xc79bff, 0xffae5b, 0x5bffd0, 0xff6a6a];
+const visitorColor = (id) => VIS_RINGS[id % VIS_RINGS.length];
 
 const app = new PIXI.Application({ width: W, height: H, backgroundColor: 0x223021, antialias: true });
 $("app").appendChild(app.view);
@@ -71,15 +74,15 @@ function buildScenery() {
 
 // ---- characters -----------------------------------------------------------
 let atlasBase = null; // generated sprite atlas (12 rows x 4 frames, 96x128)
-function makeChar(pal, isHuman, palIdx) {
+function makeChar(pal, isHuman, palIdx, ringCol) {
   // everyone uses a generated sprite when the atlas is loaded; the human "you" is
-  // the traveler in row 12 with a gold ring. Crafted shapes are only a fallback.
-  if (atlasBase) return makeSpriteChar(isHuman ? 12 : (palIdx % 12), isHuman);
+  // the traveler in row 12 with a gold ring (other visitors get their own color).
+  if (atlasBase) return makeSpriteChar(isHuman ? 12 : (palIdx % 12), isHuman, ringCol);
   const c = new PIXI.Container();
   const [shirt, hair, skin] = pal;
   const shadow = new PIXI.Graphics().beginFill(0x000000, 0.28).drawEllipse(0, 17, 11, 4.5).endFill(); c.addChild(shadow);
   let ring = null;
-  if (isHuman) { ring = new PIXI.Graphics().lineStyle(2.5, 0xffe07a, 0.9).drawEllipse(0, 16, 14, 6); c.addChild(ring); }
+  if (isHuman) { ring = new PIXI.Graphics().lineStyle(2.5, ringCol || 0xffe07a, 0.9).drawEllipse(0, 16, 14, 6); c.addChild(ring); }
   const body = new PIXI.Container(); c.addChild(body);
   const legL = new PIXI.Graphics().beginFill(0x33302c).drawRoundedRect(-2, 0, 4, 9, 2).endFill(); legL.pivot.set(0, 0); legL.position.set(-3.5, 7);
   const legR = new PIXI.Graphics().beginFill(0x33302c).drawRoundedRect(-2, 0, 4, 9, 2).endFill(); legR.position.set(3.5, 7);
@@ -89,23 +92,23 @@ function makeChar(pal, isHuman, palIdx) {
   head.beginFill(hair).arc(0, -15, 8.5, Math.PI, 0).endFill();                         // hair cap
   head.beginFill(0x1a1a22).drawCircle(-3, -15, 1.4).drawCircle(3, -15, 1.4).endFill(); // eyes
   body.addChild(legL, legR, torso, head);
-  const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: isHuman ? 0xffe07a : 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
+  const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: isHuman ? (ringCol || 0xffe07a) : 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
   nm.anchor.set(0.5, 0); nm.position.set(0, -38); c.addChild(nm); // name above the head
   c._p = { body, legL, legR, head, nm, ring, walk: Math.random() * 6 };
   charL.addChild(c);
   return c;
 }
-function makeSpriteChar(row, isHuman) {
+function makeSpriteChar(row, isHuman, ringCol) {
   const c = new PIXI.Container();
   const shadow = new PIXI.Graphics().beginFill(0x000000, 0.30).drawEllipse(0, 16, 12, 4.5).endFill(); c.addChild(shadow);
   let ring = null;
-  if (isHuman) { ring = new PIXI.Graphics().lineStyle(2.5, 0xffe07a, 0.9).drawEllipse(0, 16, 15, 6); c.addChild(ring); }
+  if (isHuman) { ring = new PIXI.Graphics().lineStyle(2.5, ringCol || 0xffe07a, 0.9).drawEllipse(0, 16, 15, 6); c.addChild(ring); }
   // one clean frame, animated procedurally (bob + sway + squash): reads as a real
   // walk and avoids the jitter of cycling four inconsistent generated frames
   const spr = new PIXI.Sprite(new PIXI.Texture(atlasBase, new PIXI.Rectangle(0, row * 128, 96, 128)));
   spr.anchor.set(0.5, 1); const sc = 50 / 128; spr.scale.set(sc); spr.position.set(0, 19);
   c.addChild(spr);
-  const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: isHuman ? 0xffe07a : 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
+  const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: isHuman ? (ringCol || 0xffe07a) : 0xffffff, stroke: 0x10131c, strokeThickness: 3 });
   nm.anchor.set(0.5, 0); nm.position.set(0, -56); c.addChild(nm); // name above the head
   c._p = { spr, nm, sc, isSprite: true, bob: Math.random() * 6, shadow, ring };
   charL.addChild(c);
@@ -131,7 +134,7 @@ function connect() {
           if (!s) continue; const a = s.split(","); const id = +a[0], x = +a[1], y = +a[2], pal = +a[3], face = +a[4], you = +a[5];
           seen.add(id);
           let v = chars.get(id);
-          if (!v) { v = { dx: x, dy: y, tx: x, ty: y, face: 1, pal, view: makeChar(pal === 99 ? humanPal : PAL[pal % 12], pal === 99 || you === 1, pal) }; chars.set(id, v); }
+          if (!v) { const human = pal === 99 || you === 1; const ringCol = human ? (you === 1 ? 0xffe07a : visitorColor(id)) : null; v = { dx: x, dy: y, tx: x, ty: y, face: 1, pal, view: makeChar(pal === 99 ? humanPal : PAL[pal % 12], human, pal, ringCol) }; chars.set(id, v); }
           v.tx = x; v.ty = y; v.tface = face === 0 ? -1 : 1;
         }
         for (const [id, v] of chars) if (!seen.has(id)) { charL.removeChild(v.view); chars.delete(id); const b = bubbleL.getChildByName("b" + id); if (b) bubbleL.removeChild(b); }
