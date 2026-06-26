@@ -260,7 +260,7 @@ app.ticker.add(() => {
     else {
       v.idle = (v.idle == null ? 2 + Math.random() * 5 : v.idle) - dt;
       // residents (NPCs) emote on their own; a human's avatar should not act autonomously
-      if (v.idle <= 0) { if (!talking && v.pal !== 99) { addEmote(v.dx, v.dy - (p.isSprite ? 54 : 40), pickEmote(v)); v.hop = 1; } v.idle = 4 + Math.random() * 7; }
+      if (v.idle <= 0) { if (!talking && v.pal !== 99) { addEmote(v.dx, v.dy - (p.isSprite ? 62 : 40), pickEmote(v)); v.hop = 1; } v.idle = 4 + Math.random() * 7; }
     }
     if (v.hop > 0) v.hop -= dt * 3.2;
     if (p.isSprite) {
@@ -303,7 +303,7 @@ app.ticker.add(() => {
   const bs = bubbleL.children.map(b => ({ b, v: chars.get(+b.name.slice(1)) })).filter(x => x.v).sort((a, z) => a.v.dy - z.v.dy);
   for (const { b, v } of bs) {
     const w = b._w || 80, h = b._h || 24;
-    const bx = Math.max(2, Math.min(W - w - 2, v.dx - w / 2)), natural = v.dy - 40 - h; let by = natural; // keep on-screen horizontally
+    const bx = Math.max(2, Math.min(W - w - 2, v.dx - w / 2)), natural = v.dy - 47 - h; let by = natural; // float above the (now larger) head, keep on-screen horizontally
     let n = 0;
     while (n++ < 8 && placed.some(p => bx < p.x + p.w && bx + w > p.x && by < p.y + p.h && by + h > p.y)) by -= h + 4;
     by = Math.max(4, by); // never let a stacked bubble run off the top edge
