@@ -342,8 +342,10 @@ app.ticker.add(() => {
   selRing.clear();
   const insp = $("inspect");
   if (sel) {
-    const pr = 17 + Math.sin(performance.now() / 240) * 2;
-    selRing.lineStyle(2.5, 0xffe07a, 0.9).drawEllipse(sel.dx, sel.dy + 14, pr, pr * 0.42);
+    // the ring lives in its own layer (not the scaled character container), so scale its
+    // foot offset and radius by CHAR_SCALE to sit correctly around the larger resident
+    const pr = (17 + Math.sin(performance.now() / 240) * 2) * CHAR_SCALE;
+    selRing.lineStyle(2.5, 0xffe07a, 0.9).drawEllipse(sel.dx, sel.dy + 14 * CHAR_SCALE, pr, pr * 0.42);
     const r = roster.find(rr => rr.id === selectedId);
     if (r && insp) { insp.style.display = "block"; const where = r.act === "walking" ? "walking" : "at the " + r.act; const kind = r.kind === "you/visitor" ? "a visitor" : r.kind; const said = lastLine.get(selectedId); const saidHtml = said ? `<div class="rl" style="max-width:260px;margin-top:3px;font-style:italic;opacity:.85">“${esc(said)}”</div>` : ""; const bio = bios[selectedId] ? `<div class="rl" style="max-width:260px;margin-top:3px">${esc(bios[selectedId])}</div>` : ""; insp.innerHTML = `<div class="nm">${esc(r.name)}</div><div class="rl">${esc(kind)}, ${esc(where)}</div>${saidHtml}${bio}`; }
   } else if (insp) { insp.style.display = "none"; }
