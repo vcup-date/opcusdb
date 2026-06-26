@@ -320,18 +320,21 @@ fn chars_at(t: &Town, li: i32) -> Vec<u32> {
 /// Pick a scene + speaker + prompt context for the next AI line.
 /// Returns (speaker_id, system_prompt, user_prompt) or None.
 fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
-    // Pick which group speaks next by an "overdue" score (lower = speak sooner):
-    // a pending spot jumps the queue, a spot where a visitor stands is favoured (so the
-    // live conversation follows the viewer), and otherwise the quietest spot speaks, so
-    // chatter rotates around the whole town instead of one group monopolising it.
+    // Pick which group speaks next by an "overdue" score (lower = speak sooner), in tiers:
+    // a visitor who just spoke or arrived is answered first, then wherever a visitor is
+    // watching (so the live conversation follows the viewer), then a spot a resident just
+    // arrived at, then the quietest spot, so chatter still rotates around the whole town.
     let score = |i: usize| -> f32 {
         let base = t.loc_spoke[i];
-        if t.pending[i] {
-            base - 1e9
-        } else if chars_at(t, i as i32).iter().any(|id| t.chars[id].human) {
-            base - 12.0
+        let human = chars_at(t, i as i32).iter().any(|id| t.chars[id].human);
+        if t.pending[i] && human {
+            base - 1e9 // a visitor spoke or walked up here, respond now
+        } else if human {
+            base - 14.0 // a visitor is here watching, keep this group lively
+        } else if t.pending[i] {
+            base - 7.0 // a resident just arrived at this group, acknowledge them
         } else {
-            base
+            base // ambient, rotate to the quietest group
         }
     };
     let order: Vec<usize> = {
