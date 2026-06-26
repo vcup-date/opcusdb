@@ -65,8 +65,8 @@ function buildScenery() {
   groundL.addChild(g);
   // location signs sit just above each ground stand point (pixel coords)
   for (const l of LOCS) {
-    const t = new PIXI.Text(l.name, { fontFamily: "system-ui", fontSize: 12, fontWeight: "700", fill: 0xfff4d6, stroke: 0x2a1c0a, strokeThickness: 3 });
-    t.anchor.set(0.5, 1); t.position.set(l.x, l.y - 40); t.alpha = 0.85; labelL.addChild(t);
+    const t = new PIXI.Text(l.name, { fontFamily: "system-ui", fontSize: 12, fontWeight: "700", fill: 0xfff4d6, stroke: 0x2a1c0a, strokeThickness: 4 });
+    t.anchor.set(0.5, 1); t.position.set(l.x, l.y - 40); t.alpha = 0.9; labelL.addChild(t);
   }
   // soft warm lamp glow near each spot, brightest at night
   lampG.clear(); lampG.blendMode = PIXI.BLEND_MODES.ADD;
