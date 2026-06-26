@@ -359,6 +359,8 @@ app.view.addEventListener("click", (e) => {
 $("say").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.value.trim()) { ws && ws.readyState === 1 && ws.send("say " + e.target.value.trim()); e.target.value = ""; }
 });
+// Escape dismisses an inspected resident and unfocuses the chat box
+addEventListener("keydown", (e) => { if (e.key === "Escape") { selectedId = 0; if (document.activeElement === $("say")) $("say").blur(); } });
 // name who is within earshot so it is clear walking up to someone starts a chat
 setInterval(() => {
   const me = chars.get(myId), say = $("say"); if (!started || !me || !say || document.activeElement === say) return;
