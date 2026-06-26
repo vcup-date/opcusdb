@@ -83,7 +83,7 @@ function buildScenery() {
 })();
 
 // ---- characters -----------------------------------------------------------
-let atlasBase = null; // generated sprite atlas (12 rows x 4 frames, 96x128)
+let atlasBase = null; // generated sprite atlas: 13 rows (12 residents + 1 traveler) x 4 frames, 96x128 each
 function makeChar(pal, isHuman, palIdx, ringCol) {
   // everyone uses a generated sprite when the atlas is loaded; the human "you" is
   // the traveler in row 12 with a gold ring (other visitors get their own color).
