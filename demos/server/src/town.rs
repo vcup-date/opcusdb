@@ -50,7 +50,7 @@ const MODELS: [&str; 3] = [
 
 // (name, persona, role, work-location index, favourite social-location index)
 const RESIDENTS: [(&str, &str, &str, usize, usize); 12] = [
-    ("Mara", "a warm, gossipy baker who knows everyone's business and talks about bread, the oven, and her neighbours", "baker", 1, 0),
+    ("Mara", "a warm, gossipy baker who knows everyone's business and talks about bread, the oven, and her neighbours", "baker", 1, 4),
     ("Tomas", "a gruff, practical blacksmith who complains about iron prices and distrusts new ideas", "smith", 2, 4),
     ("Lila", "a dreamy, shy gardener who loves her plants and notices small beautiful things", "gardener", 3, 3),
     ("Bran", "a jovial, loud tavern keeper who tells tall tales and pours strong drinks", "tavernkeep", 4, 4),
@@ -58,9 +58,9 @@ const RESIDENTS: [(&str, &str, &str, usize, usize); 12] = [
     ("Ravi", "a shrewd, optimistic merchant who is always trying to sell something", "merchant", 6, 0),
     ("Nina", "a theatrical, flirty travelling bard who turns everything into a song or drama", "bard", 0, 4),
     ("Otto", "a grumpy, superstitious old fisherman who speaks in short sentences and reads the weather", "fisher", 7, 7),
-    ("Pia", "a kind, slightly anxious healer who worries about everyone's health and herbs", "healer", 0, 5),
+    ("Pia", "a kind, slightly anxious healer who worries about everyone's health and herbs", "healer", 3, 5),
     ("Sol", "an energetic, mischievous child who asks endless questions and runs everywhere", "child", 0, 3),
-    ("Greta", "a sarcastic, sharp-witted weaver who judges everyone but means well underneath", "weaver", 6, 0),
+    ("Greta", "a sarcastic, sharp-witted weaver who judges everyone but means well underneath", "weaver", 6, 5),
     ("Finn", "a restless, fast-talking courier who carries rumours and news between towns", "courier", 0, 0),
 ];
 
