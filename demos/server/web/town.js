@@ -161,7 +161,7 @@ function connect() {
       } else if (tag === "b") {
         const active = new Set();
         for (const s of rest.split(";")) { if (!s) continue; const j = s.indexOf("|"); const id = +s.slice(0, j), text = s.slice(j + 1); active.add(id); setBubble(id, text); logChatter(id, text); }
-        for (const ch of [...bubbleL.children]) { const id = +ch.name.slice(1); if (!active.has(id)) bubbleL.removeChild(ch); }
+        for (const ch of [...bubbleL.children]) { const id = +ch.name.slice(1); if (!active.has(id)) ch._dying = ch._dying || performance.now(); } // mark for fade-out, removed by the loop
       }
     }
   };
@@ -175,6 +175,7 @@ function setBubble(id, text) {
     b._bg = new PIXI.Graphics(); b._tail = new PIXI.Graphics(); b._tx = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 12, fill: 0x14171f, wordWrap: true, wordWrapWidth: 150, lineHeight: 15 });
     b._tx.position.set(8, 6); b.addChild(b._bg, b._tail, b._tx); bubbleL.addChild(b);
   }
+  b._dying = 0; // active again, cancel any fade-out
   if (b._last !== text) {
     b._last = text; b._tx.text = text;
     const w = Math.min(166, b._tx.width + 16), h = b._tx.height + 12;
@@ -277,7 +278,10 @@ app.ticker.add(() => {
     while (n++ < 8 && placed.some(p => bx < p.x + p.w && bx + w > p.x && by < p.y + p.h && by + h > p.y)) by -= h + 4;
     b.position.set(bx, by); placed.push({ x: bx, y: by, w, h });
     if (b._tail) b._tail.visible = by >= natural - 0.5; // hide the tail when stacked so it never points at the wrong speaker
-    b.alpha = Math.min(1, (performance.now() - (b._born || 0)) / 140); // brief fade-in when a bubble first appears
+    const now = performance.now();
+    let a = Math.min(1, (now - (b._born || 0)) / 140);                              // fade in when it appears
+    if (b._dying) { a = Math.min(a, Math.max(0, 1 - (now - b._dying) / 140)); if (now - b._dying > 150) bubbleL.removeChild(b); } // fade out when it stops
+    b.alpha = a;
   }
   // day/night
   const [col, a] = skyTint(phase); night.tint = col; night.alpha = a;
