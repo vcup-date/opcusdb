@@ -171,7 +171,7 @@ function connect() {
 function setBubble(id, text) {
   let b = bubbleL.getChildByName("b" + id);
   if (!b) {
-    b = new PIXI.Container(); b.name = "b" + id;
+    b = new PIXI.Container(); b.name = "b" + id; b._born = performance.now(); // for a brief fade-in
     b._bg = new PIXI.Graphics(); b._tail = new PIXI.Graphics(); b._tx = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 12, fill: 0x14171f, wordWrap: true, wordWrapWidth: 150, lineHeight: 15 });
     b._tx.position.set(8, 6); b.addChild(b._bg, b._tail, b._tx); bubbleL.addChild(b);
   }
@@ -277,6 +277,7 @@ app.ticker.add(() => {
     while (n++ < 8 && placed.some(p => bx < p.x + p.w && bx + w > p.x && by < p.y + p.h && by + h > p.y)) by -= h + 4;
     b.position.set(bx, by); placed.push({ x: bx, y: by, w, h });
     if (b._tail) b._tail.visible = by >= natural - 0.5; // hide the tail when stacked so it never points at the wrong speaker
+    b.alpha = Math.min(1, (performance.now() - (b._born || 0)) / 140); // brief fade-in when a bubble first appears
   }
   // day/night
   const [col, a] = skyTint(phase); night.tint = col; night.alpha = a;
