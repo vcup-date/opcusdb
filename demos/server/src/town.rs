@@ -547,6 +547,17 @@ fn sanitize(s: &str) -> String {
     t.trim().chars().take(160).collect()
 }
 
+/// A visitor-chosen name, with the snapshot delimiters (`|` `;` tab newline) and
+/// control characters stripped, so one visitor cannot corrupt the shared roster.
+fn clean_name(s: &str) -> String {
+    s.chars()
+        .filter(|c| !c.is_control() && *c != '|' && *c != ';')
+        .take(14)
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
 fn json_escape(s: &str) -> String {
     let mut o = String::with_capacity(s.len() + 8);
     for c in s.chars() {
@@ -738,8 +749,8 @@ fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>) {
                 let (cmd, rest) = t.split_once(' ').unwrap_or((t.as_str(), ""));
                 match cmd {
                     "name" => {
-                        let nm: String = rest.chars().filter(|c| !c.is_control()).take(14).collect();
-                        if !nm.trim().is_empty() {
+                        let nm = clean_name(rest);
+                        if !nm.is_empty() {
                             if let Some(c) = town.lock().unwrap().chars.get_mut(&id) {
                                 c.name = nm;
                             }
@@ -883,6 +894,15 @@ mod tests {
         assert!(sys.contains("at the Plaza"), "prompt names the place");
         assert!(sys.contains("with "), "prompt lists present company");
         assert!(user.contains("Recent talk"), "user prompt carries the scene transcript");
+    }
+
+    #[test]
+    fn clean_name_strips_protocol_delimiters() {
+        // a crafted name must not be able to inject snapshot delimiters
+        let n = clean_name("Bob;evil|x\tz");
+        assert!(!n.contains('|') && !n.contains(';') && !n.contains('\t'), "delimiters stripped");
+        assert_eq!(n, "Bobevilxz");
+        assert!(clean_name("abcdefghijklmnopqrstuvwxyz").len() <= 14, "length capped");
     }
 
     #[test]
