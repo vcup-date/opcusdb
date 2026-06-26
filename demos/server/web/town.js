@@ -246,6 +246,14 @@ app.ticker.add(() => {
     }
     v.view.zIndex = v.dy;
   }
+  // de-overlap name tags within a cluster: stack each label above the lower-id ones
+  // nearby, so a group's names stay readable without moving the characters
+  for (const [id, v] of chars) {
+    const p = v.view._p; if (!p.nm) continue;
+    let above = 0;
+    for (const [oid, ov] of chars) { if (oid >= id) continue; const dx = ov.dx - v.dx, dy = ov.dy - v.dy; if (dx * dx + dy * dy < 26 * 26) above++; }
+    p.nm.y = (p.isSprite ? -56 : -38) - Math.min(above, 4) * 13;
+  }
   // animate emote puffs: rise and fade
   for (const e of [...fxL.children]) { e.y -= dt * 24; e.life -= dt; e.alpha = Math.max(0, Math.min(1, e.life * 1.6)); e.scale.set(1 + (1.2 - e.life) * 0.25); if (e.life <= 0) fxL.removeChild(e); }
   charL.children.sort((a, b) => a.zIndex - b.zIndex);
