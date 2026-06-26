@@ -529,7 +529,7 @@ fn converse(town: Arc<Mutex<Town>>) {
             4500
         }));
         let Some((speaker, system, user)) = job else { continue };
-        let (name, persona, human_facing, human_waiting, human_spoke) = {
+        let (name, persona, human_facing, human_waiting, human_spoke, rot) = {
             let t = town.lock().unwrap();
             let here = t.chars[&speaker].here;
             // a real visitor must be present (pending can also be a resident arrival, which
@@ -539,7 +539,11 @@ fn converse(town: Arc<Mutex<Town>>) {
             let hf = here >= 0 && chars_at(&t, here).iter().any(|cid| t.chars[cid].human);
             let hw = hf && t.pending[here as usize];
             let hs = here >= 0 && visitor_just_asked(&t, here as usize);
-            (t.chars[&speaker].name.clone(), t.chars[&speaker].persona, hf, hw, hs)
+            // a slowly advancing salt so a resident's canned line rotates over time (every
+            // ~6s) instead of repeating the same one, which matters when the model is
+            // rate-limited and the town runs on canned lines for a while
+            let rot = (t.time / 6.0) as usize;
+            (t.chars[&speaker].name.clone(), t.chars[&speaker].persona, hf, hw, hs, rot)
         };
         // Show an instant in-character line so the scene is never silent, then fetch
         // the real reply in a detached thread that upgrades the bubble when it lands.
@@ -547,11 +551,11 @@ fn converse(town: Arc<Mutex<Town>>) {
         // how slow or rate-limited the model is. If a visitor just asked something, the
         // fallback acknowledges the question rather than greeting them as if they arrived.
         let stub = if human_spoke {
-            canned_reply(&name)
+            canned_reply(&name, rot)
         } else if human_facing {
-            canned_greet(&name)
+            canned_greet(&name, rot)
         } else {
-            canned(&name, persona)
+            canned(&name, persona, rot)
         };
         // throttle real model calls so we stay under the free-tier rate limit and
         // actual AI lines get through; a visitor waiting (human_facing) jumps the queue.
@@ -645,8 +649,9 @@ fn ai_say(system: &str, user: &str) -> Option<String> {
     None
 }
 
-/// Fallback flavour lines when there is no API key / the call fails.
-fn canned(name: &str, persona: &str) -> String {
+/// Fallback flavour lines when there is no API key / the call fails. `rot` advances over
+/// time so a resident cycles through lines instead of repeating one.
+fn canned(name: &str, persona: &str, rot: usize) -> String {
     let base = [
         "Lovely weather for it, isn't it?",
         "Did you hear what happened by the market?",
@@ -667,13 +672,13 @@ fn canned(name: &str, persona: &str) -> String {
         "Bit of a chill in the air, wrap up warm.",
         "Tell me, what brings you our way?",
     ];
-    let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 7 + persona.len() * 3;
+    let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 7 + persona.len() * 3 + rot;
     base[h % base.len()].to_string()
 }
 
 /// Visitor-facing fallback: used when a human is present but the model is unavailable,
 /// so newcomers are still greeted rather than ignored.
-fn canned_greet(name: &str) -> String {
+fn canned_greet(name: &str, rot: usize) -> String {
     let base = [
         "Welcome, stranger. Make yourself at home.",
         "Good to see a new face. What brings you our way?",
@@ -684,13 +689,13 @@ fn canned_greet(name: &str) -> String {
         "Mind the cobbles, friend, and stay a while.",
         "Hello, hello. Come, tell me your story.",
     ];
-    let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 5 + 3;
+    let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 5 + 3 + rot;
     base[h % base.len()].to_string()
 }
 
 /// Fallback when a visitor has just asked something but the model is unavailable: a
 /// deflection that acknowledges the question rather than greeting them as a newcomer.
-fn canned_reply(name: &str) -> String {
+fn canned_reply(name: &str, rot: usize) -> String {
     let base = [
         "Hm, good question. You might ask around the square.",
         "That I could not say for certain, friend.",
@@ -701,7 +706,7 @@ fn canned_reply(name: &str) -> String {
         "Now there is a question. Anyone know?",
         "Could not tell you offhand, but you are welcome here.",
     ];
-    let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 11 + 7;
+    let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 11 + 7 + rot;
     base[h % base.len()].to_string()
 }
 
