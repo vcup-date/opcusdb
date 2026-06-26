@@ -860,6 +860,20 @@ mod tests {
     }
 
     #[test]
+    fn prompt_carries_time_place_and_company() {
+        let mut t = new_town();
+        for c in t.chars.values_mut() {
+            c.here = 0; // gather everyone at the plaza so a scene forms
+        }
+        let (_, sys, user) = next_utterance(&t).expect("a full plaza yields a scene");
+        let times = ["morning", "midday", "afternoon", "evening", "night"];
+        assert!(times.iter().any(|w| sys.contains(w)), "prompt states the time of day");
+        assert!(sys.contains("at the Plaza"), "prompt names the place");
+        assert!(sys.contains("with "), "prompt lists present company");
+        assert!(user.contains("Recent talk"), "user prompt carries the scene transcript");
+    }
+
+    #[test]
     fn sanitize_cleans_ai_slop() {
         let out = sanitize("the waterwheel—it still spins");
         assert!(!out.contains('—'), "em-dash removed");
