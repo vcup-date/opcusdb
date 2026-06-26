@@ -7,7 +7,7 @@ const $ = (id) => document.getElementById(id);
 let ws = null, myId = 0, started = false;
 const chars = new Map();   // id -> view state
 let roster = [];           // [{id,name,kind,act}]
-let phase = 0.25, firstSnapDone = false; // skip join notes for visitors already present on load
+let phase = 0.25, firstSnapDone = false, townNews = ""; // skip join notes for visitors already present on load
 let LOCS = [];
 
 // 12 resident palettes [shirt, hair, skin]; 99 = the human visitor
@@ -148,6 +148,8 @@ function connect() {
         renderRoster();
       } else if (tag === "bio") {
         for (const s of rest.split(";")) { if (!s) continue; const j = s.indexOf("|"); bios[+s.slice(0, j)] = s.slice(j + 1); }
+      } else if (tag === "news") {
+        if (rest && rest !== townNews) { townNews = rest; logSystem("Talk of the town: " + rest); } // log on join and at each day's change
       } else if (tag === "b") {
         const active = new Set();
         for (const s of rest.split(";")) { if (!s) continue; const j = s.indexOf("|"); const id = +s.slice(0, j), text = s.slice(j + 1); active.add(id); setBubble(id, text); logChatter(id, text); }

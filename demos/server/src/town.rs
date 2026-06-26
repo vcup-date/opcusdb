@@ -367,7 +367,7 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
         } else {
             "night"
         };
-        let news = TOWN_NEWS[((t.time / DAY_SECS) as usize) % TOWN_NEWS.len()];
+        let news = current_news(t.time);
         let system = format!(
             "You are {}, a resident of the small town of Hearth. {}. \
              It is {} and you are at the {} with {}. \
@@ -392,6 +392,11 @@ fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
         return Some((speaker, system, user));
     }
     None
+}
+
+/// The current talk of the town, changing with each in-game day.
+fn current_news(time: f32) -> &'static str {
+    TOWN_NEWS[((time / DAY_SECS) as usize) % TOWN_NEWS.len()]
 }
 
 fn record_line(t: &mut Town, li: usize, name: &str, line: &str) {
@@ -702,6 +707,8 @@ fn snapshot(t: &Town, you: u32) -> String {
         .collect::<Vec<_>>()
         .join(";");
     s.push_str(&format!("b\t{b}\n"));
+    // the day's talk of the town (client logs it and any change to the chatter feed)
+    s.push_str(&format!("news\t{}\n", current_news(t.time)));
     s
 }
 
