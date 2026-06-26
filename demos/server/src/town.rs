@@ -312,10 +312,19 @@ fn chars_at(t: &Town, li: i32) -> Vec<u32> {
 /// Pick a scene + speaker + prompt context for the next AI line.
 /// Returns (speaker_id, system_prompt, user_prompt) or None.
 fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
-    // prefer a location where a human just spoke
+    // prefer a location where a human just spoke (pending), then wherever a visitor is
+    // standing (so the live conversation follows the viewer), then everywhere else
     let order: Vec<usize> = {
         let mut v: Vec<usize> = (0..LOCS.len()).collect();
-        v.sort_by_key(|&i| if t.pending[i] { 0 } else { 1 });
+        v.sort_by_key(|&i| {
+            if t.pending[i] {
+                0
+            } else if chars_at(t, i as i32).iter().any(|id| t.chars[id].human) {
+                1
+            } else {
+                2
+            }
+        });
         v
     };
     for li in order {
