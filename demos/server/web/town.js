@@ -192,8 +192,9 @@ app.ticker.add(() => {
   for (const [id, v] of chars) {
     const k = Math.min(1, dt * 9), ox = v.dx, oy = v.dy;
     v.dx += (v.tx - v.dx) * k; v.dy += (v.ty - v.dy) * k;
-    const vx = v.dx - ox, vy = v.dy - oy;
-    const moving = Math.hypot(vx, vy) > 0.15;
+    const vx = v.dx - ox, vy = v.dy - oy, spd = Math.hypot(vx, vy);
+    v.spd = (v.spd || 0) + (spd - (v.spd || 0)) * Math.min(1, dt * 6); // smoothed pace drives the step cadence
+    const moving = spd > 0.15;
     if (moving && Math.abs(vx) > 0.05) v.face = vx < 0 ? -1 : 1; // face the way you travel
     const leanT = moving ? Math.max(-0.14, Math.min(0.14, vx * 0.05)) : 0;
     v.lean = (v.lean || 0) + (leanT - (v.lean || 0)) * Math.min(1, dt * 8); // ease a lean into the motion
@@ -217,7 +218,7 @@ app.ticker.add(() => {
     if (p.isSprite) {
       p.spr.scale.x = p.sc * v.face;
       if (moving) {
-        p.bob += dt * 11;
+        p.bob += Math.min(0.4, v.spd * 0.32);                // step cadence tracks distance moved, not wall time
         const s = Math.sin(p.bob);
         p.spr.y = 19 - Math.abs(s) * 4.5;                 // hop while walking
         p.spr.rotation = s * 0.06 * v.face + (v.lean || 0); // sway plus a lean into the direction of travel
@@ -232,7 +233,7 @@ app.ticker.add(() => {
       if (p.ring) p.ring.alpha = 0.5 + 0.4 * Math.sin(performance.now() / 300);
     } else {
       p.body.scale.x = v.face;
-      if (moving) { p.walk += dt * 12; p.legL.rotation = Math.sin(p.walk) * 0.6; p.legR.rotation = -Math.sin(p.walk) * 0.6; p.body.y = -Math.abs(Math.sin(p.walk)) * 1.5; }
+      if (moving) { p.walk += Math.min(0.45, v.spd * 0.36); p.legL.rotation = Math.sin(p.walk) * 0.6; p.legR.rotation = -Math.sin(p.walk) * 0.6; p.body.y = -Math.abs(Math.sin(p.walk)) * 1.5; }
       else { p.legL.rotation *= 0.7; p.legR.rotation *= 0.7; p.body.y = -Math.max(0, v.hop) * 6; }
       if (p.ring) { p.ring.alpha = 0.5 + 0.4 * Math.sin(performance.now() / 300); }
     }
