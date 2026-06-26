@@ -412,10 +412,14 @@ function startMusic() {
   }
   setTimeout(pluck, 1200);
   audio = { ctx, master, filt, pad };
-  setMusic(true);
+  setMusic(lsGet("hearth_muted") !== "1"); // honour a saved mute preference
 }
+// small, failure-safe localStorage helpers (private mode can throw)
+const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } };
 function setMusic(on) {
   musicOn = on;
+  lsSet("hearth_muted", on ? "0" : "1");
   if (audio) audio.master.gain.setTargetAtTime(on ? 0.85 : 0.0, audio.ctx.currentTime, 0.4);
   const b = $("mute"); if (b) b.textContent = on ? "🔊" : "🔈";
 }
@@ -423,6 +427,7 @@ $("mute").onclick = () => { if (!audio) startMusic(); else setMusic(!musicOn); }
 
 function start() {
   const nick = $("nick").value.trim();
+  lsSet("hearth_nick", nick); // remember the name for next time
   started = true; $("join").style.display = "none";
   startMusic();
   const img = new Image();
@@ -432,4 +437,5 @@ function start() {
 }
 $("go").onclick = start;
 $("nick").addEventListener("keydown", (e) => { if (e.key === "Enter") start(); });
+{ const sn = lsGet("hearth_nick"); if (sn) $("nick").value = sn; } // prefill the remembered name
 $("nick").focus(); // ready to type your name on load; the chat box focuses after you join
