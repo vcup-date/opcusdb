@@ -83,7 +83,7 @@ const LOCS: [(&str, f32, f32, &str); 9] = [
 /// A rotating "talk of the town", shared by every resident so the day's gossip is
 /// coherent across the whole town instead of each group inventing its own topic. The
 /// current one changes with each in-game day.
-const TOWN_NEWS: [&str; 8] = [
+const TOWN_NEWS: [&str; 14] = [
     "the old stone bridge at the east crossing is finally being repaired",
     "a traveling troupe of players is said to be coming for the festival",
     "someone has been leaving baskets of apples on doorsteps before dawn",
@@ -92,6 +92,12 @@ const TOWN_NEWS: [&str; 8] = [
     "wolves have been heard up in the hills since the first frost",
     "the harvest came in early this year and the granary is full",
     "a peddler is selling little charms he claims keep the rain away",
+    "a strange green comet has hung low over the hills two nights running",
+    "the well in the square has run sweeter than honey since spring",
+    "young Pell has gone and got himself betrothed to the miller's daughter",
+    "a caravan of merchants is expected in time for the midsummer market",
+    "the old oak by the chapel dropped a branch the size of a cart",
+    "folk swear they have seen lights dancing out in the marsh after dark",
 ];
 
 struct Char {
