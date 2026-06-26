@@ -38,12 +38,17 @@ const bios = {}; // id -> one-line persona, for the inspect card
 // warm lamp glows + drifting fireflies, drawn above the night tint so they shine in the dark
 const lampG = new PIXI.Graphics(); const fireG = new PIXI.Graphics(); fireG.blendMode = PIXI.BLEND_MODES.ADD; glowL.addChild(lampG, fireG);
 const fireflies = Array.from({ length: 38 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, ph: Math.random() * 6 }));
+// lamp-glow / firefly / music-dim intensity, interpolated continuously and aligned
+// with the sky keyframes so the glows ramp in and out without popping at dawn
+const NIGHT_KEYS = [
+  [0.00, 0.85], [0.10, 0.45], [0.16, 0.0], [0.50, 0.0],
+  [0.62, 0.15], [0.74, 0.40], [0.83, 0.68], [0.92, 0.90], [1.00, 0.85],
+];
 function nightAmt(p) {
-  if (p < 0.20) return 0.85 - p / 0.20 * 0.6;
-  if (p < 0.50) return 0.0;
-  if (p < 0.72) return (p - 0.50) / 0.22 * 0.22;
-  if (p < 0.85) return 0.22 + (p - 0.72) / 0.13 * 0.46;
-  return 0.68 + (p - 0.85) / 0.15 * 0.32;
+  let i = 0; while (i < NIGHT_KEYS.length - 1 && p >= NIGHT_KEYS[i + 1][0]) i++;
+  const a = NIGHT_KEYS[i], b = NIGHT_KEYS[Math.min(i + 1, NIGHT_KEYS.length - 1)];
+  const t = b[0] > a[0] ? (p - a[0]) / (b[0] - a[0]) : 0;
+  return a[1] + (b[1] - a[1]) * t;
 }
 let hasBg = false;
 const night = new PIXI.Graphics().beginFill(0xffffff).drawRect(0, 0, W, H).endFill();
