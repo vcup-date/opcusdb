@@ -874,7 +874,15 @@ fn main() {
     // PORT by default, or override with TOWN_PORT (handy for running an isolated second
     // instance, for example to grab a screenshot without touching a live shared town)
     let port = std::env::var("TOWN_PORT").ok().and_then(|p| p.parse().ok()).unwrap_or(PORT);
-    let listener = TcpListener::bind(("0.0.0.0", port)).expect("bind");
+    let listener = match TcpListener::bind(("0.0.0.0", port)) {
+        Ok(l) => l,
+        Err(e) => {
+            // a clear message beats a raw panic: usually the port is already taken by
+            // another instance (kill it with: lsof -ti:<port> | xargs kill)
+            eprintln!("could not bind port {port}: {e}. Is another instance already running on it?");
+            std::process::exit(1);
+        }
+    };
     println!("opcusdb Hearth (AI town) on http://localhost:{port}");
     for stream in listener.incoming().flatten() {
         // cap concurrent connections so a flood cannot exhaust threads and wedge the server
