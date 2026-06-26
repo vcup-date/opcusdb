@@ -21,7 +21,7 @@ use opcusdb_server::ws;
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -595,13 +595,22 @@ fn ai_say(system: &str, user: &str) -> Option<String> {
             "{{\"model\":\"{model}\",\"max_tokens\":120,\"temperature\":0.9,\"reasoning\":{{\"enabled\":false}},\
              \"messages\":[{{\"role\":\"system\",\"content\":\"{sys}\"}},{{\"role\":\"user\",\"content\":\"{usr}\"}}]}}"
         );
-        let out = Command::new("curl")
+        // pass the API key through curl's stdin config, never as an argv argument, so the
+        // secret does not show up in the process list (ps) to other users on the host
+        let mut child = Command::new("curl")
             .args([
                 "-s", "-m", "7", "--connect-timeout", "4", "-X", "POST", "https://openrouter.ai/api/v1/chat/completions",
-                "-H", &format!("Authorization: Bearer {key}"), "-H", "Content-Type: application/json", "-d", &body,
+                "-H", "Content-Type: application/json", "-d", &body, "--config", "-",
             ])
-            .output()
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
             .ok()?;
+        if let Some(mut sin) = child.stdin.take() {
+            let _ = sin.write_all(format!("header = \"Authorization: Bearer {key}\"\n").as_bytes());
+        }
+        let out = child.wait_with_output().ok()?;
         let resp = String::from_utf8_lossy(&out.stdout);
         if let Some(content) = extract_content(&resp) {
             let line = sanitize(&content);
