@@ -313,7 +313,7 @@ app.ticker.add(() => {
     const pr = 17 + Math.sin(performance.now() / 240) * 2;
     selRing.lineStyle(2.5, 0xffe07a, 0.9).drawEllipse(sel.dx, sel.dy + 14, pr, pr * 0.42);
     const r = roster.find(rr => rr.id === selectedId);
-    if (r && insp) { insp.style.display = "block"; const where = r.act === "walking" ? "walking" : "at the " + r.act; const bio = bios[selectedId] ? `<div class="rl" style="max-width:260px;margin-top:3px">${esc(bios[selectedId])}</div>` : ""; insp.innerHTML = `<div class="nm">${esc(r.name)}</div><div class="rl">${esc(r.kind)}, ${esc(where)}</div>${bio}`; }
+    if (r && insp) { insp.style.display = "block"; const where = r.act === "walking" ? "walking" : "at the " + r.act; const kind = r.kind === "you/visitor" ? "a visitor" : r.kind; const bio = bios[selectedId] ? `<div class="rl" style="max-width:260px;margin-top:3px">${esc(bios[selectedId])}</div>` : ""; insp.innerHTML = `<div class="nm">${esc(r.name)}</div><div class="rl">${esc(kind)}, ${esc(where)}</div>${bio}`; }
   } else if (insp) { insp.style.display = "none"; }
   updateClock();
 });
@@ -356,7 +356,11 @@ function updateClock() {
 }
 function renderRoster() {
   $("rlist").innerHTML = roster.map(r => {
-    const col = r.kind === "you/visitor" ? "#ffd24a" : "#" + (PAL[(r.id - 1) % 12] ? PAL[(r.id - 1) % 12][0].toString(16).padStart(6, "0") : "888888");
+    const hex = (n) => "#" + (n >>> 0).toString(16).padStart(6, "0");
+    // visitors: gold for you, their own ring colour for others, matching the world
+    const col = r.kind === "you/visitor"
+      ? (r.id === myId ? "#ffd24a" : hex(visitorColor(r.id)))
+      : hex(PAL[(r.id - 1) % 12] ? PAL[(r.id - 1) % 12][0] : 0x888888);
     const me = r.id === myId ? " (you)" : "";
     return `<div class="rrow${r.id === selectedId ? " sel" : ""}" data-id="${r.id}"><span class="dot" style="background:${col}"></span><span class="nm">${esc(r.name)}${me}</span><span class="ac">${esc(r.act)}</span></div>`;
   }).join("");
