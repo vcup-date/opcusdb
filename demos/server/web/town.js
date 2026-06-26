@@ -7,7 +7,7 @@ const $ = (id) => document.getElementById(id);
 let ws = null, myId = 0, started = false;
 const chars = new Map();   // id -> view state
 let roster = [];           // [{id,name,kind,act}]
-let phase = 0.25;
+let phase = 0.25, firstSnapDone = false; // skip join notes for visitors already present on load
 let LOCS = [];
 
 // 12 resident palettes [shirt, hair, skin]; 99 = the human visitor
@@ -134,10 +134,12 @@ function connect() {
           if (!s) continue; const a = s.split(","); const id = +a[0], x = +a[1], y = +a[2], pal = +a[3], face = +a[4], you = +a[5];
           seen.add(id);
           let v = chars.get(id);
-          if (!v) { const human = pal === 99 || you === 1; const ringCol = human ? (you === 1 ? 0xffe07a : visitorColor(id)) : null; v = { dx: x, dy: y, tx: x, ty: y, face: 1, pal, view: makeChar(pal === 99 ? humanPal : PAL[pal % 12], human, pal, ringCol) }; chars.set(id, v); }
+          if (!v) { const human = pal === 99 || you === 1; const ringCol = human ? (you === 1 ? 0xffe07a : visitorColor(id)) : null; v = { dx: x, dy: y, tx: x, ty: y, face: 1, pal, view: makeChar(pal === 99 ? humanPal : PAL[pal % 12], human, pal, ringCol) }; chars.set(id, v);
+            if (firstSnapDone && pal === 99 && you !== 1) logSystem("A traveler walked into Hearth."); } // notice friends arriving
           v.tx = x; v.ty = y; v.tface = face === 0 ? -1 : 1;
         }
-        for (const [id, v] of chars) if (!seen.has(id)) { charL.removeChild(v.view); chars.delete(id); const b = bubbleL.getChildByName("b" + id); if (b) bubbleL.removeChild(b); }
+        for (const [id, v] of chars) if (!seen.has(id)) { if (v.pal === 99) logSystem(nameOf(id) + " left Hearth."); charL.removeChild(v.view); chars.delete(id); const b = bubbleL.getChildByName("b" + id); if (b) bubbleL.removeChild(b); }
+        firstSnapDone = true;
       } else if (tag === "r") {
         roster = rest.split(";").filter(Boolean).map(s => { const a = s.split("|"); return { id: +a[0], name: a[1], kind: a[2], act: a[3] }; });
         for (const e of roster) { const v = chars.get(e.id); if (v && v.view._p.nm) v.view._p.nm.text = e.name; }
@@ -324,7 +326,17 @@ function logChatter(id, text) {
   // line, so replace the entry in place rather than logging a duplicate
   if (last && last.id === id && now - last.t < 4000) { last.text = text; last.t = now; }
   else { chatter.push({ id, name: nameOf(id), text, t: now }); if (chatter.length > 9) chatter.shift(); }
-  const el = $("chatter"); if (el) el.innerHTML = chatter.map(c => `<div class="cl"><b>${esc(c.name)}</b> ${esc(c.text)}</div>`).join("");
+  renderChatter();
+}
+// arrivals and departures of other visitors, so a shared town feels populated
+function logSystem(text) {
+  chatter.push({ id: -1, text, t: performance.now(), sys: true });
+  if (chatter.length > 9) chatter.shift();
+  renderChatter();
+}
+function renderChatter() {
+  const el = $("chatter"); if (!el) return;
+  el.innerHTML = chatter.map(c => c.sys ? `<div class="cl sys"><i>${esc(c.text)}</i></div>` : `<div class="cl"><b>${esc(c.name)}</b> ${esc(c.text)}</div>`).join("");
 }
 
 // ---- input ----------------------------------------------------------------
