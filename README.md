@@ -305,7 +305,7 @@ any townsperson to see who they are.
 </div>
 
 ```sh
-export OPENROUTER_API_KEY=sk-...                  # residents use canned lines without it
+export OPENROUTER_API_KEY=sk-...                  # required: all resident dialogue is from the model
 cargo run -p opcusdb-server --bin opcusdb-town    # open http://localhost:9011 (more tabs = more visitors)
 # click to walk · type to talk to whoever's nearby
 ```

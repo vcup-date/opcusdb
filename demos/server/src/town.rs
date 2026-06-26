@@ -10,8 +10,8 @@
 //!
 //! The server is the authoritative simulation; the AI calls go out via system
 //! `curl` (no HTTP/TLS dependency). The key is read from `OPENROUTER_API_KEY` and
-//! never stored. Without a key, residents fall back to canned ambient lines so the
-//! town still feels alive.
+//! never stored. All resident dialogue comes from the model; without a working key the
+//! residents simply stay quiet (there is no scripted dialogue).
 //!
 //! Run: `OPENROUTER_API_KEY=sk-... cargo run -p opcusdb-server --bin opcusdb-town`
 //! then open http://localhost:9011 (open several tabs to wander together).
@@ -53,7 +53,7 @@ const SPEED: f32 = 46.0;
 // Models the residents speak through, tried in order until one answers. DeepSeek V4 Flash
 // is the primary: cheap, fast, and (unlike the free models) not subject to the shared
 // free-tier daily cap, so the town actually gets live AI dialogue. The rest are fallbacks
-// if it is briefly unavailable; only if all fail does the town drop to canned lines.
+// if it is briefly unavailable; if all fail, the resident just stays quiet that turn.
 const MODELS: [&str; 3] = [
     "deepseek/deepseek-v4-flash",
     "deepseek/deepseek-chat-v3.1",
@@ -761,7 +761,7 @@ fn snapshot(t: &Town) -> String {
 fn main() {
     let town = Arc::new(Mutex::new(new_town()));
     if std::env::var("OPENROUTER_API_KEY").map_or(true, |k| k.is_empty()) {
-        eprintln!("WARNING: OPENROUTER_API_KEY not set, residents will use canned lines.");
+        eprintln!("WARNING: OPENROUTER_API_KEY not set, residents will have nothing to say.");
     }
     {
         let town = town.clone();
@@ -1141,29 +1141,6 @@ mod tests {
         assert_eq!(route(0, 4), vec![loc_stand(4)], "plaza to a node is one leg");
         assert_eq!(route(4, 0), vec![loc_stand(0)], "a node to the plaza is one leg");
         assert_eq!(route(4, 4), vec![loc_stand(4)], "staying put is one leg");
-    }
-
-    #[test]
-    fn visitor_just_asked_tracks_the_latest_speaker() {
-        let mut t = new_town();
-        for c in t.chars.values_mut() {
-            c.here = -1;
-        }
-        t.chars.get_mut(&1).unwrap().here = 0; // a resident at the plaza
-        t.chars.insert(
-            200,
-            Char {
-                x: 480.0, y: 300.0, tx: 480.0, ty: 300.0,
-                name: "Wanderer".to_string(),
-                persona: "", role: "visitor", pal: 99, work: 0, fav: 0, here: 0,
-                bubble: String::new(), bubble_t: 0.0, last_spoke: 0.0, facing: 1.0,
-                goal: 0, path: Vec::new(), human: true, mem: Vec::new(),
-            },
-        );
-        record_line(&mut t, 0, "Wanderer", "where is the bakery?");
-        assert!(visitor_just_asked(&t, 0), "the visitor's line is the latest, so they just asked");
-        record_line(&mut t, 0, "Mara", "just down the lane, friend");
-        assert!(!visitor_just_asked(&t, 0), "a resident has since replied, so it is no longer a fresh question");
     }
 
     #[test]
