@@ -6,10 +6,14 @@ The Hearth sprite atlas is 13 rows (12 residents + 1 traveler), 4 frames each,
 background. This checks every row for that whole class of problem so a future
 regeneration can be verified before it ships:
 
-  - fully transparent cell borders (no silhouette clipped at or bleeding past a
-    frame boundary)
   - no opaque magenta/purple residue (the old key color)
-  - no faint partial-alpha magenta halo around the silhouette edges
+  - no silhouette bleeding across the TOP or BOTTOM cell edge, where the row above
+    or below would composite the wrong character (the client stacks rows vertically
+    and draws frame 0 in a fixed 96x128 rect)
+
+A silhouette touching the LEFT or RIGHT edge is reported as a note, not a failure:
+horizontally adjacent frames (the other walk-cycle frames) are never drawn together,
+so edge-touch there cannot bleed or clip in game.
 
 Run from anywhere:  python3 demos/server/web/audit_sprites.py
 Exits non-zero if any row looks unclean, so it can gate an asset update.
@@ -42,28 +46,27 @@ def main():
     for r in range(rows):
         y0 = r * FH
         magenta = 0
-        border = 0
         for yy in range(y0, y0 + FH):
             for xx in range(FW):
                 R, G, B, A = px[xx, yy]
                 if is_magenta(R, G, B, A):
                     magenta += 1
-        for xx in range(FW):
-            if px[xx, y0][3] > 0 or px[xx, y0 + FH - 1][3] > 0:
-                border += 1
-        for yy in range(y0, y0 + FH):
-            if px[0, yy][3] > 0 or px[FW - 1, yy][3] > 0:
-                border += 1
+        # top/bottom edges: real bleed risk between vertically stacked rows
+        vbleed = sum(1 for xx in range(FW)
+                     if px[xx, y0][3] > 0 or px[xx, y0 + FH - 1][3] > 0)
+        # left/right edges: cosmetic only (horizontal frames never composite together)
+        hedge = sum(1 for yy in range(y0, y0 + FH)
+                    if px[0, yy][3] > 0 or px[FW - 1, yy][3] > 0)
         name = NAMES[r] if r < len(NAMES) else f"row{r}"
-        bad = magenta > 10 or border > 8
+        bad = magenta > 10 or vbleed > 4
         if bad:
             problems += 1
-        flag = "  <-- CHECK" if bad else "ok"
-        print(f"row {r:2d} {name:9s} magenta={magenta:4d} border-opaque={border:3d}  {flag}")
+        flag = "  <-- CHECK" if bad else ("  (touches side edge, cosmetic)" if hedge > 4 else "ok")
+        print(f"row {r:2d} {name:9s} magenta={magenta:4d} v-bleed={vbleed:2d} side-edge={hedge:3d}  {flag}")
     if problems:
-        print(f"\n{problems} row(s) look unclean")
+        print(f"\n{problems} row(s) have magenta residue or top/bottom bleed")
         return 1
-    print("\nall rows cleanly keyed")
+    print("\nall rows cleanly keyed (no magenta, no row-to-row bleed)")
     return 0
 
 
