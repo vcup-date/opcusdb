@@ -86,6 +86,7 @@ function buildScenery() {
 })();
 
 // ---- characters -----------------------------------------------------------
+const CHAR_SCALE = 1.18; // residents a touch larger so they read against the big buildings
 let atlasBase = null; // generated sprite atlas: 13 rows (12 residents + 1 traveler) x 4 frames, 96x128 each
 function makeChar(pal, isHuman, palIdx, ringCol) {
   // everyone uses a generated sprite when the atlas is loaded; the human "you" is
@@ -127,6 +128,10 @@ function makeSpriteChar(row, isHuman, ringCol) {
   c.addChild(spr);
   const nm = new PIXI.Text("", { fontFamily: "system-ui", fontSize: 11, fontWeight: "700", fill: isHuman ? (ringCol || 0xffe07a) : 0xffffff, stroke: 0x10131c, strokeThickness: 4 });
   nm.anchor.set(0.5, 0); nm.position.set(0, -56); c.addChild(nm); // name above the head
+  // make the residents a bit more present against the large buildings: scale the whole
+  // character (sprite, shadow, ring, and the name tag's height above the head all stay
+  // aligned), but counter-scale the name tag so its text stays crisp at its own size
+  c.scale.set(CHAR_SCALE); nm.scale.set(1 / CHAR_SCALE);
   c._p = { spr, nm, sc, isSprite: true, bob: Math.random() * 6, shadow, ring };
   charL.addChild(c);
   return c;
