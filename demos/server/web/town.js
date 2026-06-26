@@ -140,7 +140,7 @@ function connect() {
             if (firstSnapDone && pal === 99 && you !== 1) logSystem("A traveler walked into Hearth."); } // notice friends arriving
           v.tx = x; v.ty = y; v.tface = face === 0 ? -1 : 1;
         }
-        for (const [id, v] of chars) if (!seen.has(id)) { if (v.pal === 99) logSystem(nameOf(id) + " left Hearth."); charL.removeChild(v.view); chars.delete(id); const b = bubbleL.getChildByName("b" + id); if (b) bubbleL.removeChild(b); }
+        for (const [id, v] of chars) if (!seen.has(id)) { if (v.pal === 99) logSystem(nameOf(id) + " left Hearth."); charL.removeChild(v.view); chars.delete(id); lastLine.delete(id); if (selectedId === id) selectedId = 0; const b = bubbleL.getChildByName("b" + id); if (b) bubbleL.removeChild(b); }
         firstSnapDone = true;
       } else if (tag === "r") {
         roster = rest.split(";").filter(Boolean).map(s => { const a = s.split("|"); return { id: +a[0], name: a[1], kind: a[2], act: a[3] }; });
