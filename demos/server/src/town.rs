@@ -258,14 +258,19 @@ fn schedule(c: &Char, time: f32) -> usize {
     if p >= 0.72 {
         return c.fav; // evening: gather at your favourite social spot (matches the sunset)
     }
-    // daytime: a per-resident-staggered three-way rotation so small groups form and
-    // break up at different places (plaza, your workplace, and a favourite social spot).
-    // The ~20s period lets a settled group hold a real multi-turn chat before reshuffling.
-    let slot = (time / 20.0) as u64 + c.work as u64 + c.fav as u64 + c.pal as u64;
-    match slot % 3 {
-        0 => 0,      // the plaza
+    // daytime: a per-resident rotation so small groups form and break up at different
+    // places. The slot is driven by pal alone (which is 0..11, so uniform mod 4) with a
+    // per-resident phase offset, which does two things: the plaza (a single node, while
+    // work and fav spread across many) gets only a quarter of the residents instead of a
+    // synchronized pile, and each resident reshuffles at a different time rather than the
+    // whole town turning on its heel at once. The ~18s period keeps a settled group
+    // together long enough to hold a real multi-turn chat before drifting.
+    let slot = ((time + c.pal as f32 * 6.0) / 18.0) as u64;
+    match slot % 4 {
+        0 => 0,      // the plaza (a quarter of the time, so it stays a small group)
         1 => c.work, // your own workplace
-        _ => c.fav,  // a favourite spot, so the tavern, library, garden, and dock get visitors too
+        2 => c.fav,  // a favourite spot, so tavern, library, garden, and dock get visitors
+        _ => c.work, // mostly back to your own corner, which spreads the town out
     }
 }
 
