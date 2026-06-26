@@ -727,6 +727,7 @@ fn handle(mut stream: TcpStream, town: Arc<Mutex<Town>>) {
                 bubble: String::new(), bubble_t: 0.0, last_spoke: 0.0, facing: 1.0, goal: 0, path: Vec::new(), human: true, mem: Vec::new(),
             },
         );
+        t.pending[0] = true; // greet the new arrival promptly instead of after an ambient cycle
         id
     };
     let _ = ws::write_text(&mut stream, &format!("w\t{id}"));
