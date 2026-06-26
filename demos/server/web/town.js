@@ -257,6 +257,9 @@ app.ticker.add(() => {
   // lamp glow + fireflies fade in as it gets dark
   const na = nightAmt(phase);
   glowL.alpha = na;
+  // the score breathes with the cycle: darker filter and softer pad after dark
+  musicNight = na;
+  if (audio) { audio.filt.frequency.value = 950 - 470 * na; audio.pad.gain.value = 0.16 - 0.05 * na; }
   fireG.clear();
   for (const f of fireflies) {
     f.x += f.vx * dt; f.y += f.vy * dt; f.ph += dt * 2.2;
@@ -352,7 +355,7 @@ function afterAtlas(nick) {
 // ---- ambient music (generated live with Web Audio, no asset, no dependency) ----
 // A soft evolving pad plus a slow pentatonic music box, so the town has a cosy
 // score. Starts on the first user gesture (the join click) to satisfy autoplay.
-let audio = null, musicOn = true;
+let audio = null, musicOn = true, musicNight = 0; // musicNight 0..1 dims the score at night
 function startMusic() {
   if (audio) return;
   const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
@@ -372,13 +375,14 @@ function startMusic() {
       const f = scale[(Math.random() * scale.length) | 0];
       const o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = f;
       const g = ctx.createGain(); const t = ctx.currentTime;
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+      const peak = 0.09 - 0.05 * musicNight;                              // softer after dark
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
       o.connect(g); g.connect(pad); o.start(t); o.stop(t + 1.7);
     }
-    setTimeout(pluck, 2200 + Math.random() * 3600);
+    setTimeout(pluck, (2200 + Math.random() * 3600) * (1 + 1.3 * musicNight)); // sparser at night
   }
   setTimeout(pluck, 1200);
-  audio = { ctx, master };
+  audio = { ctx, master, filt, pad };
   setMusic(true);
 }
 function setMusic(on) {
