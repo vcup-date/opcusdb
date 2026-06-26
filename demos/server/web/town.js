@@ -433,9 +433,14 @@ addEventListener("keydown", (e) => { if (e.key === "Escape") { selectedId = 0; i
 // name who is within earshot so it is clear walking up to someone starts a chat
 setInterval(() => {
   const me = chars.get(myId), say = $("say"); if (!started || !me || !say || document.activeElement === say) return;
+  // match the server's grouping (within 70px of a location stand point) so the hint only
+  // names people who will actually answer, not someone walking past or at the next node
+  const R2 = 70 * 70;
+  let myNode = -1;
+  for (let i = 0; i < LOCS.length; i++) { if ((me.dx - LOCS[i].x) ** 2 + (me.dy - LOCS[i].y) ** 2 < R2) { myNode = i; break; } }
   const near = [];
-  for (const [id, v] of chars) { if (id === myId) continue; if ((v.dx - me.dx) ** 2 + (v.dy - me.dy) ** 2 < 92 * 92) near.push(nameOf(id)); }
-  say.placeholder = near.length ? ("talk to " + near.slice(0, 3).join(", ") + (near.length > 3 ? " and others nearby" : " nearby")) : "walk up to someone, then type to talk to them";
+  if (myNode >= 0) for (const [id, v] of chars) { if (id === myId) continue; if ((v.dx - LOCS[myNode].x) ** 2 + (v.dy - LOCS[myNode].y) ** 2 < R2) near.push(nameOf(id)); }
+  say.placeholder = near.length ? ("talk to " + near.slice(0, 3).join(", ") + (near.length > 3 ? " and others here" : " here")) : "walk up to someone, then type to talk to them";
 }, 600);
 function afterAtlas(nick) {
   connect();
