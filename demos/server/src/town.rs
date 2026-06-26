@@ -102,6 +102,7 @@ struct Town {
     transcripts: Vec<Vec<String>>, // per location: recent "Name: line"
     pending: Vec<bool>,            // per location: a human just spoke -> prioritise a reply
     time: f32,
+    last_api: f32, // sim-time of the last model call, to throttle under the free-tier limit
     next_id: u32,
     next_client: u32,
     humans: usize,
@@ -173,6 +174,7 @@ fn new_town() -> Town {
         transcripts: vec![Vec::new(); LOCS.len()],
         pending: vec![false; LOCS.len()],
         time: 40.0,
+        last_api: 0.0,
         next_id: 100,
         next_client: 1,
         humans: 0,
@@ -368,6 +370,10 @@ fn converse(town: Arc<Mutex<Town>>) {
         // The loop itself only paces on the sleep, so the town stays chatty no matter
         // how slow or rate-limited the model is.
         let stub = if human_facing { canned_greet(&name) } else { canned(&name, persona) };
+        // throttle real model calls so we stay under the free-tier rate limit and
+        // actual AI lines get through; a visitor waiting (human_facing) jumps the queue.
+        let gap = if human_facing { 2.5 } else { 7.0 };
+        let do_api;
         {
             let mut t = town.lock().unwrap();
             let li = t.chars[&speaker].here;
@@ -375,6 +381,10 @@ fn converse(town: Arc<Mutex<Town>>) {
                 continue;
             }
             let now = t.time;
+            do_api = now - t.last_api >= gap;
+            if do_api {
+                t.last_api = now;
+            }
             t.pending[li as usize] = false;
             // the stub is shown as a bubble but NOT written to the transcript, so the
             // model builds on the real conversation, not on filler
@@ -383,9 +393,9 @@ fn converse(town: Arc<Mutex<Town>>) {
             c.bubble_t = 6.0;
             c.last_spoke = now;
         }
-        // fetch the real reply off the loop, but only if we are not already saturated
-        // with calls (keeps concurrent curl subprocesses bounded under load)
-        if INFLIGHT.load(Ordering::Relaxed) < 4 {
+        // fetch the real reply off the loop, throttled, and bounded so concurrent curl
+        // subprocesses cannot pile up under load
+        if do_api && INFLIGHT.load(Ordering::Relaxed) < 4 {
             INFLIGHT.fetch_add(1, Ordering::Relaxed);
             let town2 = town.clone();
             let name2 = name.clone();
