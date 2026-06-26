@@ -313,7 +313,7 @@ app.ticker.add(() => {
     const pr = 17 + Math.sin(performance.now() / 240) * 2;
     selRing.lineStyle(2.5, 0xffe07a, 0.9).drawEllipse(sel.dx, sel.dy + 14, pr, pr * 0.42);
     const r = roster.find(rr => rr.id === selectedId);
-    if (r && insp) { insp.style.display = "block"; const bio = bios[selectedId] ? `<div class="rl" style="max-width:260px;margin-top:3px">${esc(bios[selectedId])}</div>` : ""; insp.innerHTML = `<div class="nm">${esc(r.name)}</div><div class="rl">${esc(r.kind)}, at the ${esc(r.act)}</div>${bio}`; }
+    if (r && insp) { insp.style.display = "block"; const where = r.act === "walking" ? "walking" : "at the " + r.act; const bio = bios[selectedId] ? `<div class="rl" style="max-width:260px;margin-top:3px">${esc(bios[selectedId])}</div>` : ""; insp.innerHTML = `<div class="nm">${esc(r.name)}</div><div class="rl">${esc(r.kind)}, ${esc(where)}</div>${bio}`; }
   } else if (insp) { insp.style.display = "none"; }
   updateClock();
 });
