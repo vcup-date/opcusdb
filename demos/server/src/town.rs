@@ -50,18 +50,18 @@ const MODELS: [&str; 3] = [
 
 // (name, persona, role, work-location index, favourite social-location index)
 const RESIDENTS: [(&str, &str, &str, usize, usize); 12] = [
-    ("Mara", "a warm, gossipy baker who knows everyone's business and talks about bread, the oven, and her neighbours", "baker", 1, 4),
-    ("Tomas", "a gruff, practical blacksmith who complains about iron prices and distrusts new ideas", "smith", 2, 4),
-    ("Lila", "a dreamy, shy gardener who loves her plants and notices small beautiful things", "gardener", 3, 3),
-    ("Bran", "a jovial, loud tavern keeper who tells tall tales and pours strong drinks", "tavernkeep", 4, 4),
-    ("Yuki", "a precise, curious librarian who quotes books and corrects people gently", "librarian", 5, 5),
-    ("Ravi", "a shrewd, optimistic merchant who is always trying to sell something", "merchant", 6, 0),
-    ("Nina", "a theatrical, flirty travelling bard who turns everything into a song or drama", "bard", 0, 4),
-    ("Otto", "a grumpy, superstitious old fisherman who speaks in short sentences and reads the weather", "fisher", 7, 7),
-    ("Pia", "a kind, slightly anxious healer who worries about everyone's health and herbs", "healer", 3, 5),
-    ("Sol", "an energetic, mischievous child who asks endless questions and runs everywhere", "child", 0, 3),
-    ("Greta", "a sarcastic, sharp-witted weaver who judges everyone but means well underneath", "weaver", 6, 5),
-    ("Finn", "a restless, fast-talking courier who carries rumours and news between towns", "courier", 0, 0),
+    ("Mara", "a warm, gossipy baker who knows everyone's business and talks about bread, the oven, and her neighbours, and trades the day's gossip with her old friend Bran the tavernkeep", "baker", 1, 4),
+    ("Tomas", "a gruff, practical blacksmith who complains about iron prices and distrusts new ideas, and has no patience for Nina the bard's theatrics", "smith", 2, 4),
+    ("Lila", "a dreamy, shy gardener who loves her plants and notices small beautiful things, and has a soft spot for young Sol who trails after her", "gardener", 3, 3),
+    ("Bran", "a jovial, loud tavern keeper who tells tall tales and pours strong drinks, and is old friends with Mara the baker", "tavernkeep", 4, 4),
+    ("Yuki", "a precise, curious librarian who quotes books and corrects people gently, and trades sharp opinions with Greta the weaver", "librarian", 5, 5),
+    ("Ravi", "a shrewd, optimistic merchant who is always trying to sell something, and partners with Finn the courier to move goods and news", "merchant", 6, 0),
+    ("Nina", "a theatrical, flirty travelling bard who turns everything into a song or drama, and loves to tease grumpy Tomas the smith", "bard", 0, 4),
+    ("Otto", "a grumpy, superstitious old fisherman who speaks in short sentences and reads the weather, and grumbles when Pia the healer fusses over him", "fisher", 7, 7),
+    ("Pia", "a kind, slightly anxious healer who worries about everyone's health and herbs, and frets most over stubborn old Otto the fisher", "healer", 3, 5),
+    ("Sol", "an energetic, mischievous child who asks endless questions and runs everywhere, and trails after Lila the gardener", "child", 0, 3),
+    ("Greta", "a sarcastic, sharp-witted weaver who judges everyone but means well underneath, and grudgingly respects Yuki the librarian", "weaver", 6, 5),
+    ("Finn", "a restless, fast-talking courier who carries rumours and news between towns, and runs deliveries for Ravi the merchant", "courier", 0, 0),
 ];
 
 // (name, tile_x, tile_y, tile_w, tile_h, kind), kind drives client rendering
