@@ -351,16 +351,6 @@ fn chars_at(t: &Town, li: i32) -> Vec<u32> {
     t.chars.iter().filter(|(_, c)| c.here == li).map(|(id, _)| *id).collect()
 }
 
-/// True when the most recent line at `li` was spoken by a visitor present there, meaning
-/// a visitor just asked or said something (so a fallback should acknowledge it).
-fn visitor_just_asked(t: &Town, li: usize) -> bool {
-    t.transcripts[li].last().is_some_and(|line| {
-        chars_at(t, li as i32)
-            .iter()
-            .any(|cid| t.chars[cid].human && line.starts_with(&format!("{}:", t.chars[cid].name)))
-    })
-}
-
 /// Pick a scene + speaker + prompt context for the next AI line.
 /// Returns (speaker_id, system_prompt, user_prompt) or None.
 fn next_utterance(t: &Town) -> Option<(u32, String, String)> {
@@ -525,46 +515,26 @@ fn converse(town: Arc<Mutex<Town>>) {
         thread::sleep(Duration::from_millis(if idle {
             800
         } else if urgent {
-            700
+            500
         } else {
-            4500
+            2200
         }));
         let Some((speaker, system, user)) = job else { continue };
-        let (name, persona, human_facing, human_waiting, human_spoke, rot) = {
+        let (name, human_waiting) = {
             let t = town.lock().unwrap();
             let here = t.chars[&speaker].here;
-            // a real visitor must be present (pending can also be a resident arrival, which
-            // should not draw the visitor-greeting fallback). human_waiting also requires the
-            // scene pending, meaning the visitor actually spoke or just walked up. human_spoke
-            // is stronger: the latest line here is a visitor's, so they asked something.
-            let hf = here >= 0 && chars_at(&t, here).iter().any(|cid| t.chars[cid].human);
-            let hw = hf && t.pending[here as usize];
-            let hs = here >= 0 && visitor_just_asked(&t, here as usize);
-            // a slowly advancing salt so a resident's canned line rotates over time (every
-            // ~6s) instead of repeating the same one, which matters when the model is
-            // rate-limited and the town runs on canned lines for a while
-            let rot = (t.time / 6.0) as usize;
-            (t.chars[&speaker].name.clone(), t.chars[&speaker].persona, hf, hw, hs, rot)
+            // human_waiting: a visitor is here and the scene is pending (they just spoke or
+            // walked up), so this resident should reply quickly
+            let hw = here >= 0
+                && t.pending[here as usize]
+                && chars_at(&t, here).iter().any(|cid| t.chars[cid].human);
+            (t.chars[&speaker].name.clone(), hw)
         };
-        // Show an instant in-character line so the scene is never silent, then fetch
-        // the real reply in a detached thread that upgrades the bubble when it lands.
-        // The loop itself only paces on the sleep, so the town stays chatty no matter
-        // how slow or rate-limited the model is. If a visitor just asked something, the
-        // fallback acknowledges the question rather than greeting them as if they arrived.
-        let stub = if human_spoke {
-            canned_reply(&name, rot)
-        } else if human_facing {
-            canned_greet(&name, rot)
-        } else {
-            canned(&name, persona, rot)
-        };
-        // throttle real model calls so we stay under the free-tier rate limit and
-        // actual AI lines get through; a visitor waiting (human_facing) jumps the queue.
-        // gap is just under the ambient sleep, so most ambient turns make a real call
-        // (canned only shows when the model actually fails). Only a visitor who actually
-        // spoke or arrived (human_waiting) gets the fast 2s pace; passively watching keeps
-        // the 4s pace so a watched group does not burn through the free-tier rate limit.
-        let gap = if human_waiting { 2.0 } else { 4.0 };
+        // Residents speak ONLY through the model, there is no scripted dialogue. Pace the
+        // calls (DeepSeek Flash is paid and cheap): a visitor who just spoke gets an almost
+        // immediate reply, ambient chatter a little slower. Nothing is shown until the real
+        // line lands, and if the model fails this turn the resident simply says nothing.
+        let gap = if human_waiting { 0.3 } else { 1.0 };
         let do_api;
         {
             let mut t = town.lock().unwrap();
@@ -578,16 +548,11 @@ fn converse(town: Arc<Mutex<Town>>) {
                 t.last_api = now;
             }
             t.pending[li as usize] = false;
-            // the stub is shown as a bubble but NOT written to the transcript, so the
-            // model builds on the real conversation, not on filler
-            let c = t.chars.get_mut(&speaker).unwrap();
-            c.bubble = stub;
-            c.bubble_t = 6.0;
-            c.last_spoke = now;
+            t.chars.get_mut(&speaker).unwrap().last_spoke = now;
         }
-        // fetch the real reply off the loop, throttled, and bounded so concurrent curl
-        // subprocesses cannot pile up under load
-        if do_api && INFLIGHT.load(Ordering::Relaxed) < 4 {
+        // fetch the reply off the loop, bounded so concurrent curl subprocesses cannot pile
+        // up. When it lands it becomes the resident's spoken line and enters the transcript.
+        if do_api && INFLIGHT.load(Ordering::Relaxed) < 10 {
             INFLIGHT.fetch_add(1, Ordering::Relaxed);
             let town2 = town.clone();
             let name2 = name.clone();
@@ -600,7 +565,7 @@ fn converse(town: Arc<Mutex<Town>>) {
                         Some(c) if c.here >= 0 => c.here as usize,
                         _ => return,
                     };
-                    record_line(&mut t, here, &name2, &real); // only real replies enter the history
+                    record_line(&mut t, here, &name2, &real);
                     if let Some(c) = t.chars.get_mut(&speaker) {
                         c.bubble = real;
                         c.bubble_t = 6.0;
@@ -648,67 +613,6 @@ fn ai_say(system: &str, user: &str) -> Option<String> {
         }
     }
     None
-}
-
-/// Fallback flavour lines when there is no API key / the call fails. `rot` advances over
-/// time so a resident cycles through lines instead of repeating one.
-fn canned(name: &str, persona: &str, rot: usize) -> String {
-    let base = [
-        "Lovely weather for it, isn't it?",
-        "Did you hear what happened by the market?",
-        "Too much to do and too little time today.",
-        "Sit a while, no need to rush off.",
-        "Prices again, everything costs more these days.",
-        "Have you eaten? You look a little hungry.",
-        "Quiet morning, just how I like it.",
-        "I keep meaning to fix that fence by the well.",
-        "They say it might rain before evening.",
-        "Otto swears the fish are biting again.",
-        "My back is not what it used to be.",
-        "Have you been down to the garden lately?",
-        "The tavern was lively last night, I hear.",
-        "Mind how you go on those cobbles.",
-        "I could do with a hot cup of something.",
-        "New faces in town, always good to see.",
-        "Bit of a chill in the air, wrap up warm.",
-        "Tell me, what brings you our way?",
-    ];
-    let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 7 + persona.len() * 3 + rot;
-    base[h % base.len()].to_string()
-}
-
-/// Visitor-facing fallback: used when a human is present but the model is unavailable,
-/// so newcomers are still greeted rather than ignored.
-fn canned_greet(name: &str, rot: usize) -> String {
-    let base = [
-        "Welcome, stranger. Make yourself at home.",
-        "Good to see a new face. What brings you our way?",
-        "Hello there. Lovely day to wander, isn't it?",
-        "Pull up a spot, traveler. What's on your mind?",
-        "Ah, a visitor. How can I help you today?",
-        "You're new here, aren't you? Welcome to Hearth.",
-        "Mind the cobbles, friend, and stay a while.",
-        "Hello, hello. Come, tell me your story.",
-    ];
-    let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 5 + 3 + rot;
-    base[h % base.len()].to_string()
-}
-
-/// Fallback when a visitor has just asked something but the model is unavailable: a
-/// deflection that acknowledges the question rather than greeting them as a newcomer.
-fn canned_reply(name: &str, rot: usize) -> String {
-    let base = [
-        "Hm, good question. You might ask around the square.",
-        "That I could not say for certain, friend.",
-        "Let me think on that a moment.",
-        "Hard to say, but someone here is bound to know.",
-        "Ah, you will find your way soon enough.",
-        "Good of you to ask. Stick around a while.",
-        "Now there is a question. Anyone know?",
-        "Could not tell you offhand, but you are welcome here.",
-    ];
-    let h: usize = name.bytes().map(|b| b as usize).sum::<usize>() * 11 + 7 + rot;
-    base[h % base.len()].to_string()
 }
 
 fn sanitize(s: &str) -> String {
