@@ -854,16 +854,38 @@ function renderLadder() {
   $$("#modal .ltab").forEach((b) => b.onclick = () => { ladderTab = b.dataset.tab; renderLadder(); });
 }
 $("#ic-settings").onclick = () => {
+  const mv = window.GA ? Math.round(GA.musicVol() * 100) : 70;
+  const sv = window.GA ? Math.round(GA.sfxVol() * 100) : 100;
+  const rm = localStorage.getItem("gr_reducemotion") === "1";
+  const muted = window.GA && GA.isMuted();
   showModal(`<div class="ph">${ic("gear")} The Steward <span class="x">&times;</span></div><div class="bd">
     ${S.counsel ? `<div class="counsel">${ic("scroll")}<div><div class="ck">Your steward counsels</div>&ldquo;${esc(S.counsel)}&rdquo;</div></div>` : ""}
-    <div class="statline"><span class="k">Lord</span><span class="v">${esc(S.name)}</span></div>
-    <div class="statline"><span class="k">Coordinates</span><span class="v">(${S.coords.x} | ${S.coords.y})</span></div>
-    ${S.allyTag ? `<div class="statline"><span class="k">Banner</span><span class="v">${esc(S.allyTag)}</span></div>` : ""}
-    <div class="modal-actions" style="margin-top:14px;gap:8px"><button class="gbtn" id="open-chron">Chronicle of the Fallen</button><button class="gbtn ox" id="logout">Leave the realm</button></div></div>`);
+    <div class="setsec"><div class="seth">${ic("soundOn")} Sound</div>
+      <div class="setrow"><span class="setk">Music</span><input type="range" min="0" max="100" value="${mv}" id="set-music" class="slider"/><span class="setv" id="set-music-v">${mv}</span></div>
+      <div class="setrow"><span class="setk">Effects</span><input type="range" min="0" max="100" value="${sv}" id="set-sfx" class="slider"/><span class="setv" id="set-sfx-v">${sv}</span></div>
+      <div class="setrow toggle" id="set-mute"><span class="setk">Mute all</span><span class="tog ${muted ? "on" : ""}"><span class="knob"></span></span></div>
+    </div>
+    <div class="setsec"><div class="seth">${ic("gear")} Display</div>
+      <div class="setrow toggle" id="set-motion"><span class="setk">Reduce motion <small>fewer animations</small></span><span class="tog ${rm ? "on" : ""}"><span class="knob"></span></span></div>
+    </div>
+    <div class="setsec"><div class="seth">${ic("shield")} Your hold</div>
+      <div class="statline"><span class="k">Lord</span><span class="v">${esc(S.name)}</span></div>
+      <div class="statline"><span class="k">Coordinates</span><span class="v">(${S.coords.x} | ${S.coords.y})</span></div>
+      ${S.allyTag ? `<div class="statline"><span class="k">Banner</span><span class="v">${esc(S.allyTag)}</span></div>` : ""}
+    </div>
+    <div class="modal-actions" style="gap:8px"><button class="gbtn" id="open-chron">Chronicle of the Fallen</button><button class="gbtn ox" id="logout">Leave the realm</button></div></div>`);
+  modalOpen = null;
+  const music = $("#set-music"), sfx = $("#set-sfx");
+  music.oninput = () => { $("#set-music-v").textContent = music.value; if (window.GA) GA.setMusicVol(music.value / 100); };
+  sfx.oninput = () => { $("#set-sfx-v").textContent = sfx.value; if (window.GA) GA.setSfxVol(sfx.value / 100); };
+  sfx.onchange = () => { if (window.GA && !GA.isMuted()) GA.sfx("click"); }; // preview the new effects level
+  $("#set-mute").onclick = () => { if (!audioStarted) kickAudio(); if (window.GA) { GA.toggle(); updateMuteIcon(); $("#set-mute .tog").classList.toggle("on", GA.isMuted()); } };
+  $("#set-motion").onclick = () => { const on = !document.body.classList.contains("reduce-motion"); document.body.classList.toggle("reduce-motion", on); localStorage.setItem("gr_reducemotion", on ? "1" : "0"); $("#set-motion .tog").classList.toggle("on", on); };
   $("#open-chron").onclick = openChronicle;
   $("#logout").onclick = () => { localStorage.removeItem("gr_token"); location.reload(); };
-  modalOpen = null;
 };
+// apply the saved reduce-motion preference at boot
+if (localStorage.getItem("gr_reducemotion") === "1") document.body.classList.add("reduce-motion");
 function openChronicle() {
   const entries = (S.chronicle || []).map((e) => `<div class="chron"><div class="cht">${esc(e.t)}</div><div class="chb">${esc(e.b)}</div></div>`).join("");
   showModal(`<div class="ph">${ic("ruin")} Chronicle of the Fallen <span class="x">&times;</span></div><div class="bd"><div class="chronwrap">${entries}</div></div>`);

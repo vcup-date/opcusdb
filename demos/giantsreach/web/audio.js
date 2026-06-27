@@ -7,6 +7,12 @@ const GA = (() => {
   let started = false;
   let muted = localStorage.getItem("gr_muted") === "1";
   let chordTimer = null, chordI = 0;
+  // per-channel volume (0..1), persisted; the sliders in Settings drive these
+  const clamp01 = (v) => Math.max(0, Math.min(1, isNaN(v) ? 1 : v));
+  let musicVol = clamp01(parseFloat(localStorage.getItem("gr_musicvol")));
+  let sfxVol = clamp01(parseFloat(localStorage.getItem("gr_sfxvol")));
+  const SFX_BASE = 0.5, MUSIC_BED = 0.18, CUE_BASE = 0.85, CUE_DUCK = 0.10;
+  let cuePlaying = false;
 
   // A minor / modal warm progression (root midi, chord intervals). i - VI - III - VII.
   const PROG = [
@@ -30,10 +36,10 @@ const GA = (() => {
     delay = ctx.createDelay(); delay.delayTime.value = 0.42;
     const fb = ctx.createGain(); fb.gain.value = 0.32; delay.connect(fb); fb.connect(delay);
     const wet = ctx.createGain(); wet.gain.value = 0.5; delay.connect(wet); wet.connect(master);
-    musicGain = ctx.createGain(); musicGain.gain.value = 0.18;
+    musicGain = ctx.createGain(); musicGain.gain.value = MUSIC_BED * musicVol;
     lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 950; lp.Q.value = 0.6;
     musicGain.connect(lp); lp.connect(master); lp.connect(delay);
-    sfxGain = ctx.createGain(); sfxGain.gain.value = 0.5; sfxGain.connect(master); sfxGain.connect(delay);
+    sfxGain = ctx.createGain(); sfxGain.gain.value = SFX_BASE * sfxVol; sfxGain.connect(master); sfxGain.connect(delay);
   }
 
   function playChord() {
@@ -105,7 +111,7 @@ const GA = (() => {
   function startTheme() {
     try {
       musicEl = new Audio("audio/theme.mp3"); musicEl.loop = true; musicEl.preload = "auto";
-      try { const src = ctx.createMediaElementSource(musicEl); themeGain = ctx.createGain(); themeGain.gain.value = THEME_VOL; src.connect(themeGain); themeGain.connect(master); }
+      try { const src = ctx.createMediaElementSource(musicEl); themeGain = ctx.createGain(); themeGain.gain.value = THEME_VOL * musicVol; src.connect(themeGain); themeGain.connect(master); }
       catch (e) { musicEl.volume = muted ? 0 : 0.5; }
       musicEl.addEventListener("canplay", () => { themeOk = true; if (!muted) musicEl.play().catch(() => {}); }, { once: true });
       musicEl.addEventListener("error", () => { if (!themeOk) startProcedural(); }, { once: true });
@@ -127,14 +133,15 @@ const GA = (() => {
   function cue() {
     if (muted || !ctx) return;
     if (!cueEl) startCue();
-    if (themeGain) themeGain.gain.setTargetAtTime(0.10, ctx.currentTime, 0.15); // duck the theme
-    if (cueEl) { try { cueEl.currentTime = 0; } catch (e) {} cueEl.play().catch(() => {}); if (cueGain) cueGain.gain.setTargetAtTime(0.85, ctx.currentTime, 0.05); }
+    cuePlaying = true;
+    if (themeGain) themeGain.gain.setTargetAtTime(CUE_DUCK * musicVol, ctx.currentTime, 0.15); // duck the theme
+    if (cueEl) { try { cueEl.currentTime = 0; } catch (e) {} cueEl.play().catch(() => {}); if (cueGain) cueGain.gain.setTargetAtTime(CUE_BASE * musicVol, ctx.currentTime, 0.05); }
   }
   function cueStop() {
-    if (!ctx) return;
+    if (!ctx) return; cuePlaying = false;
     if (cueGain) cueGain.gain.setTargetAtTime(0, ctx.currentTime, 0.4);
     if (cueEl) setTimeout(() => { try { cueEl.pause(); } catch (e) {} }, 700);
-    if (themeGain) themeGain.gain.setTargetAtTime(muted ? 0 : THEME_VOL, ctx.currentTime, 0.6); // restore the theme
+    if (themeGain) themeGain.gain.setTargetAtTime(muted ? 0 : THEME_VOL * musicVol, ctx.currentTime, 0.6); // restore the theme
   }
   function start() {
     if (started) return; started = true;
@@ -148,12 +155,26 @@ const GA = (() => {
     if (musicEl) { if (m) musicEl.pause(); else if (themeOk) musicEl.play().catch(() => {}); musicEl.volume = m ? 0 : musicEl.volume; }
     if (m && cueEl) { try { cueEl.pause(); } catch (e) {} }
   }
+  function setMusicVol(v) {
+    musicVol = clamp01(v); localStorage.setItem("gr_musicvol", "" + musicVol);
+    if (!ctx) return; const t = ctx.currentTime;
+    if (musicGain) musicGain.gain.setTargetAtTime(MUSIC_BED * musicVol, t, 0.05);
+    if (themeGain && !muted) themeGain.gain.setTargetAtTime((cuePlaying ? CUE_DUCK : THEME_VOL) * musicVol, t, 0.05);
+    if (cueGain && cuePlaying) cueGain.gain.setTargetAtTime(CUE_BASE * musicVol, t, 0.05);
+  }
+  function setSfxVol(v) {
+    sfxVol = clamp01(v); localStorage.setItem("gr_sfxvol", "" + sfxVol);
+    if (sfxGain && ctx) sfxGain.gain.setTargetAtTime(SFX_BASE * sfxVol, ctx.currentTime, 0.05);
+  }
   return {
     start, isMuted: () => muted, setMuted,
     toggle: () => { setMuted(!muted); return muted; },
     sfx: (k) => { try { if (SFX[k]) SFX[k](); } catch (e) {} },
     cue: () => { try { cue(); } catch (e) {} },
     cueStop: () => { try { cueStop(); } catch (e) {} },
+    musicVol: () => musicVol, sfxVol: () => sfxVol,
+    setMusicVol: (v) => { try { setMusicVol(v); } catch (e) {} },
+    setSfxVol: (v) => { try { setSfxVol(v); } catch (e) {} },
   };
 })();
 window.GA = GA;

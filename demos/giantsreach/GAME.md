@@ -392,6 +392,21 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 30: SETTINGS + ACCESSIBILITY)
+- There was only a mute toggle and no real settings. Built a proper Settings panel in the Steward (gear).
+- SOUND: independent Music and Effects volume sliders (0-100) and a Mute-all toggle. audio.js gained per-channel
+  volume (musicVol/sfxVol, persisted) that scales every music node (the baked theme, the procedural bed, and
+  the battle cue, including its ducking) and the sfx bus respectively; the Effects slider previews a click on
+  release. The settings mute toggle stays in sync with the top-bar mute icon.
+- DISPLAY: a Reduce-motion toggle for accessibility. It adds body.reduce-motion (persisted, re-applied at boot)
+  which a CSS block uses to kill the splash Ken Burns drift, the tutorial pulse, and all keyframe animations
+  (durations collapse to ~0), while leaving the timed cinematic phases functional.
+- YOUR HOLD: the lord, coordinates and banner, plus the existing Chronicle and Leave actions.
+- Verified END TO END: the panel renders the gold sliders and pill toggles in the locked carved-oak style;
+  moving the Music slider set GA.musicVol() to 0.35 and persisted gr_musicvol; the Reduce-motion toggle set
+  the body class and gr_reducemotion, and after a reload the class was re-applied and the splash animation
+  computed to "none". Screenshot settings.png. No JS errors, no regression.
+
 ## DONE (iteration 29: THE COUNCIL, a returning-player recap)
 - A time-based game leaves you returning after hours to scattered glowing badges. Added a "Council" digest
   shown once per session to RETURNING lords (tutorial >= 1; brand-new players still get the Welcome instead).
@@ -611,9 +626,8 @@ NEXT STEPS list below; none are blocking.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime. Future:
    per-building flavor, named barbarian warlords, event log narration.
-10. [DONE] MOBILE LAYOUT pass (iteration 12). Remaining: SERVER SELECT (one realm) screen, settings,
-    accessibility, push-style in-game alerts ("a host marches on you"). Next best step is likely
-    ALLIANCES (item 8), the offline AI flavor text (item 9), or PRODUCTION HARDENING + README (item 11).
+10. [DONE] MOBILE LAYOUT pass (iteration 12); [DONE] SETTINGS + accessibility (reduce motion, volume) (iteration
+    30). Remaining (optional): a SERVER SELECT (one realm) screen, push-style in-game alerts.
 11. PRODUCTION HARDENING: rate-limiting, input validation, save integrity, error states,
     a real README, and only THEN a git checkpoint.
 
