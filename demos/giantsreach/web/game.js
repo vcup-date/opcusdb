@@ -460,28 +460,19 @@ async function openLadderDeeds() { try { LADDER = await api("leaderboard"); ladd
 function renderObjective() {
   const o = objective();
   $("#obj-title").textContent = o.t; $("#obj-desc").textContent = o.d;
-  // tutorial spotlight + coach bubble only during early game (and not while a modal or the welcome is up)
-  const tut = $("#tutorial"); const early = (keepLv() < 5 || (S.tutorial || 0) < 6) && (S.tutorial || 0) >= 1;
-  const target = o.sel && $(o.sel);
-  if (early && target && !modalOpen && $("#modal").classList.contains("hidden")) {
-    tut.classList.remove("hidden");
-    const r = target.getBoundingClientRect();
-    const vw = innerWidth, vh = innerHeight, bw = Math.min(260, vw - 24);
-    // place the bubble on the roomy side of the highlighted element, clamped to the viewport
-    let left, top, arrow;
-    if (r.left > vw * 0.55) { left = r.left - bw - 16; top = r.top; arrow = "r"; }        // element on the right -> bubble left
-    else if (r.right < vw * 0.45) { left = r.right + 16; top = r.top; arrow = "l"; }       // element on the left -> bubble right
-    else if (r.top > vh * 0.5) { left = r.left + r.width / 2 - bw / 2; top = r.top - 120; arrow = "d"; } // bottom -> bubble above
-    else { left = r.left + r.width / 2 - bw / 2; top = r.bottom + 14; arrow = "u"; }
-    left = Math.max(12, Math.min(vw - bw - 12, left)); top = Math.max(70, Math.min(vh - 150, top));
-    tut.innerHTML = `<div class="ring" style="left:${r.left - 6}px;top:${r.top - 6}px;width:${r.width + 12}px;height:${r.height + 12}px"></div>
-      <div class="bubble a-${arrow}" style="left:${left}px;top:${top}px;width:${bw}px"><h4>${esc(o.t)}</h4><p>${esc(o.d)}</p></div>`;
-  } else tut.classList.add("hidden");
+  // the bottom objective panel is the guide; no floating spotlight overlay (it overlapped the UI and nagged)
+  const tut = $("#tutorial"); if (tut) { tut.classList.add("hidden"); tut.innerHTML = ""; }
 }
 
 // ---- modal framework ----
 function showModal(html) { const m = $("#modal"); const t = $("#tutorial"); if (t) t.classList.add("hidden"); m.classList.remove("hidden"); m.innerHTML = `<div class="sheet panel">${html}</div>`; const x = m.querySelector(".x"); if (x) x.onclick = closeModal; m.onclick = (e) => { if (e.target === m) closeModal(); }; }
 function closeModal() { $("#modal").classList.add("hidden"); $("#modal").innerHTML = ""; modalOpen = null; if (S) renderObjective(); }
+// Esc dismisses any open dialog
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!$("#modal").classList.contains("hidden")) { closeModal(); return; }
+  const bd = $("#battle #b-done"); if (bd) bd.click();       // also close the battle cinematic (cleanly, stopping its cue)
+});
 function refreshModal() { if (modalOpen) modalOpen(); }
 
 // building upgrade modal

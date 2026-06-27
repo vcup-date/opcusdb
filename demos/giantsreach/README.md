@@ -26,6 +26,32 @@ node server/server.js
 
 Requirements: Node.js (any modern version). Nothing to install.
 
+## Configuration
+
+The game itself needs no configuration and makes ZERO AI calls at runtime: it only serves pre-baked static
+assets. There is no AI API to wire up for playing or hosting the game.
+
+Runtime settings (environment variables):
+
+- `PORT` sets the server port (default `8787`), for example `PORT=9000 node server/server.js`.
+- `RALLY_MUSTER` sets the alliance rally muster window in seconds (default `180`); useful for testing.
+
+The only place an "API" is involved is the OFFLINE asset-baking toolchain, which is run by hand when you want to
+regenerate the painterly art or the music. It is never touched while the game is running. The bake scripts (kept in
+the build notes) talk to two local services:
+
+- Art: a ComfyUI server running Qwen-Image, expected at `http://127.0.0.1:8188`. To point the bakers at a different
+  host or port, edit the `S = "127.0.0.1:8188"` line at the top of each bake script (for example
+  `bld_bake.py`, `bld_tier_bake.py`, `fort_bake.py`), and run them with your Python that has the ComfyUI client
+  deps, for example `python bld_bake.py`. Source images are pushed to ComfyUI through its `/upload/image` endpoint,
+  so no shared input folder needs configuring. The locked recipe is the slow high-quality pass: Qwen-Image, no
+  Lightning LoRA, about 24 to 26 steps, cfg 3.5.
+- Music: ACE-Step, run locally to render the theme and battle cue, then loudness-normalized and encoded to mp3 with
+  ffmpeg. SFX are procedural Web Audio and need nothing.
+
+Re-baking is entirely optional. The repository already ships every baked asset under `web/img/` and `web/audio/`,
+so the game is complete and playable as-is with no services running.
+
 ## What is in it
 
 Economy and building
