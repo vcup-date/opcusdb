@@ -392,6 +392,20 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 33: ADVERSARIAL SWEEP, prototype-key hardening)
+- Ran a systematic adversarial sweep of every state-mutating route with hostile inputs (negative and huge
+  numbers, out-of-range indices, bogus ids, no auth, prototype keys). Most rejected cleanly and state stayed
+  intact, but the sweep surfaced one real bug.
+- BUG FIXED: build and train looked up the client key directly (BUILD[bid], UNITS[unit]). A key like
+  "__proto__" or "constructor" returns a truthy object from the prototype chain, so the `if (!BUILD[bid])`
+  guard passed and the route then operated on garbage (a 500 error, and a risk of polluting p.b with a NaN
+  "constructor" level). Added a has(obj, k) own-property helper and used it in both guards.
+- Verified: build/train with __proto__ or constructor now return a clean "no such building" / "no such unit"
+  (no 500, no pollution; p.b still holds only the nine real building keys), while legitimate build/train work
+  and the server logs zero errors. The rest of the sweep (speedup/cancel out-of-range, buygems bad pack,
+  season out-of-range, achv bogus, scout-self, alliancehelp with no banner, missing auth) all rejected and
+  left gems/troops/resources untouched. Clean-db guest smoke renders with no JS errors.
+
 ## DONE (iteration 32: SECURITY FIX + README refresh, the production capstone)
 - Audited the routes added since the iteration-15 hardening pass. Found and fixed a real EXPLOIT: the march /
   attack / reinforce routes deducted troops with `p.t[u] -= troops[u]` on unsanitized input, so a NEGATIVE

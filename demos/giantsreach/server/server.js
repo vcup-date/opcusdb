@@ -128,6 +128,8 @@ const LOOTABLE = ["grain", "timber", "stone", "iron"];
 function unitsCount(t) { let n = 0; for (const k in t) n += t[k] || 0; return n; }
 // sanitize a client troop selection: only known units, non-negative integers (blocks negative-count duplication)
 function cleanTroops(t) { const out = {}; if (t && typeof t === "object") for (const u in UNITS) { const n = Math.floor(Number(t[u]) || 0); if (n > 0) out[u] = n; } return out; }
+// safe own-property lookup so a client key like "__proto__" or "constructor" can never index the prototype chain
+function has(obj, k) { return typeof k === "string" && Object.prototype.hasOwnProperty.call(obj, k); }
 function ihash(x, y) { let h = ((x * 73856093) ^ (y * 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; h = (h * 1274126177) >>> 0; return h; }
 function tileAt(x, y) {
   const h = ihash(x, y);
@@ -742,7 +744,7 @@ const ROUTES = {
   "POST /api/build": async (req, res, b) => {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
     const p = db.players[n]; resolve(p);
-    const bid = b.b; if (!BUILD[bid]) return send(res, 400, { err: "no such building" });
+    const bid = b.b; if (!has(BUILD, bid)) return send(res, 400, { err: "no such building" });
     if ((p.queue || []).length >= BUILD_SLOTS) return send(res, 400, { err: "All build queues are busy." });
     const lv = p.b[bid] || 0;
     if (lv >= BUILD[bid].max) return send(res, 400, { err: "Already at maximum level." });
@@ -776,7 +778,7 @@ const ROUTES = {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
     const p = db.players[n]; resolve(p);
     const unit = b.unit; const num = Math.max(1, Math.min(500, b.n | 0));
-    if (!UNITS[unit]) return send(res, 400, { err: "no such unit" });
+    if (!has(UNITS, unit)) return send(res, 400, { err: "no such unit" });
     if ((p.b.barracks || 0) < 1) return send(res, 400, { err: "Build a Barracks first." });
     const c = UNITS[unit].cost;
     for (const k of Object.keys(c)) if ((p.r[k] || 0) < c[k] * num) return send(res, 400, { err: "Not enough resources for " + num + "." });
