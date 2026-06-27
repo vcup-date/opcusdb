@@ -120,6 +120,12 @@ svg{width:18px;height:18px;vertical-align:middle}
 .objc .q{width:46px;height:46px;border-radius:10px;background:radial-gradient(circle at 38% 30%,#5d471f,#1d1206);border:1.5px solid var(--gold);display:grid;place-items:center;font-size:23px;flex:none;box-shadow:0 0 14px #f6e2a044}
 .objc .ch{font-family:'Cinzel';font-weight:700;letter-spacing:1px;font-size:12px;color:var(--gold2)}
 .objc .ds{font-size:14px;color:#e7d6ae}
+#realmdeed{display:flex;align-items:center;gap:8px;margin-top:6px;padding:5px 12px;border:1px solid #3a2d14;border-radius:8px;background:linear-gradient(90deg,#160d05cc,#1a100699);cursor:pointer;backdrop-filter:blur(2px);overflow:hidden;white-space:nowrap}
+#realmdeed:hover{border-color:var(--gold)}
+#realmdeed .rdi{flex:none}#realmdeed .rdi svg{width:13px;height:13px;stroke:var(--gold2)}
+#realmdeed .rdlabel{font-family:'Cinzel';font-weight:700;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a7448;flex:none}
+#realmdeed .rdtext{color:#d8c08a;font-size:12px;overflow:hidden;text-overflow:ellipsis;transition:opacity .26s ease}
+#realmdeed.fading .rdtext{opacity:0}
 
 /* modal */
 #modal{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:#05030199;backdrop-filter:blur(2px)}

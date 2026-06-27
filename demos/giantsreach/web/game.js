@@ -214,7 +214,7 @@ function applyState(v) {
     const diff = v.res[k] - (local[k] || 0);
     if (Math.abs(diff) > Math.max(50, v.rate[k] * 6)) local[k] = v.res[k]; // big drift (spend/build) -> snap
   }
-  renderTop(); renderHot(); renderQueue(); renderTrain(); renderMarches(); renderTownSpots(); renderObjective(); setCityTier();
+  renderTop(); renderHot(); renderQueue(); renderTrain(); renderMarches(); renderTownSpots(); renderObjective(); setCityTier(); renderRealmDeed();
   $("#rl-daily-bdg").classList.toggle("hidden", v.login && v.login.claimed === Math.floor(v.now / 86400));
   const taskClaim = (v.tasks && v.tasks.chests.some((c) => c.ready && !c.claimed)) || (v.chest && v.chest.ready);
   const tb = $("#rl-tasks-bdg"); if (tb) tb.classList.toggle("hidden", !taskClaim);
@@ -438,6 +438,25 @@ function objective() {
   if (b("wall").level < 3) return { t: "Raise your Wall", d: "Stone ramparts multiply your defense. Raise the Wall to III.", sel: '.slot[data-b="wall"]' };
   return { t: "Grow your might", d: "Keep raising buildings and training your host. Climb the realm ladder.", sel: "#ic-board" };
 }
+// an ambient ticker of the realm's latest deeds, rotating gently in the bottom bar
+let deedIdx = 0, deedTimer = null;
+function renderRealmDeed() {
+  const box = $("#realmdeed"); if (!box) return;
+  const d = (S && S.deeds) || [];
+  if (!d.length) { box.classList.add("hidden"); return; }
+  box.classList.remove("hidden");
+  if (deedIdx >= d.length) deedIdx = 0;
+  const t = $("#rd-text"); if (t && !box.classList.contains("fading")) t.textContent = d[deedIdx].text;
+  box.onclick = openLadderDeeds;
+  if (!deedTimer) deedTimer = setInterval(() => {
+    const dd = (S && S.deeds) || []; const tt = $("#rd-text"), bx = $("#realmdeed");
+    if (!dd.length || !tt || !bx || bx.classList.contains("hidden")) return;
+    deedIdx = (deedIdx + 1) % dd.length;
+    bx.classList.add("fading");
+    setTimeout(() => { tt.textContent = dd[deedIdx % dd.length].text; bx.classList.remove("fading"); }, 260);
+  }, 6500);
+}
+async function openLadderDeeds() { try { LADDER = await api("leaderboard"); ladderTab = "deeds"; renderLadder(); modalOpen = null; } catch (e) { toast(e.message, true); } }
 function renderObjective() {
   const o = objective();
   $("#obj-title").textContent = o.t; $("#obj-desc").textContent = o.d;

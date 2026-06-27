@@ -1010,6 +1010,7 @@ function view(p) {
     seasonEnded: p.seasonEnded ? Object.assign({}, p.seasonEnded, { standing: lordStanding(p), maxLevel: SEASON_LEVELS, flavor: pick(FLAVOR.seasonturn, (hstr(p.name) ^ p.seasonEnded.id) >>> 0) }) : null,
     alliance: allianceView(p), allyTag: p.alliance || null, rally: rallyView(p, NOW()),
     counsel: pick(FLAVOR.counsel, hstr(p.name) ^ curDay()), chronicle: FLAVOR.chronicle,
+    deeds: (db.chronicle || []).slice(0, 3),
   };
 }
 

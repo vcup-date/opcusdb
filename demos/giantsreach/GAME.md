@@ -392,6 +392,19 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 60: THE DEEDS TICKER, the living realm on the home screen)
+- The realm chronicle (iteration 59) was valuable but buried in a ladder tab, so the living world was invisible during
+  normal play. Surfaced it as an ambient ticker in the main loop at near-zero cost.
+- Server: the state view now also returns the latest three deeds (as "deeds", distinct from the existing lore
+  "chronicle" field), so the home screen needs no extra request.
+- Client: a slim "Deeds of the Reach" ticker sits below the objective in the bottom bar, showing the most recent deed
+  and rotating gently through the latest three every 6.5s with a soft cross-fade; it hides when the realm has no deeds
+  and taps through to the ladder's Deeds tab. Carved-oak styling, unobtrusive.
+- Verified END TO END: the ticker showed "Hero founded the banner Hawks of the Reach [HWK]." and, after one interval,
+  cross-faded to "Rax of Ravens razed Wolves's stronghold to the ground."; it renders subtly under the hotbar in the
+  locked style and hides when empty. Screenshot deed-ticker2.png. No JS errors, guest smoke clean (no regression),
+  no em-dashes.
+
 ## DONE (iteration 59: THE REALM CHRONICLE, shared deeds of the Reach)
 - The single realm generated dramatic events (banners founded, strongholds raised and razed, named warlords felled)
   but nothing surfaced them as shared news, so the world felt like a set of private games. Added a realm-wide chronicle.
