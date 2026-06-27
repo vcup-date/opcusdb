@@ -665,3 +665,21 @@ body.reduce-motion #tutorial .ring{animation:none !important;box-shadow:0 0 14px
 .delvereward .rwc svg{width:20px;height:20px}
 .delvelabel{font-family:'Cinzel';font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#caa86a;margin-bottom:4px}
 .epitaph{font-style:italic;color:#cbb88f;font-size:14px;line-height:1.55;max-width:440px;margin:14px auto;border-top:1px solid #4a3a1c;border-bottom:1px solid #4a3a1c;padding:12px 0}
+
+/* ---- relic salvage / reforge ---- */
+.relic{flex-direction:column;align-items:stretch;gap:6px}
+.relic .rico,.relic .rmid{display:inline}
+.relic > .rico{position:absolute;top:9px;right:10px;opacity:.5}
+.racts{display:flex;gap:5px;margin-top:2px}
+.ract{flex:1;font-family:'Cinzel';font-weight:700;font-size:10px;letter-spacing:.3px;color:#caa86a;background:#1c1206;border:1px solid #4a3a1c;border-radius:6px;padding:4px 5px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:2px}
+.ract svg{width:11px;height:11px}
+.ract:hover{border-color:var(--gold);color:var(--gold2)}
+.ract.eq{color:#11250a;background:linear-gradient(#a6e07a,#5d9e36);border-color:var(--grnln)}
+.ract.eq:hover{filter:brightness(1.08);color:#11250a}
+.ract.sv{color:#caa86a}
+.ract.sv:hover{border-color:var(--ox);color:var(--ox2)}
+.salvbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:9px;padding:7px 10px;background:#140d05;border:1px solid #4a3a1c;border-radius:9px}
+.salvbar .tg{color:#8a7858;font-size:12px;margin-right:auto}
+.salvbar .ract{flex:none;padding:5px 11px;font-size:11px}
+.eqacts{display:flex;gap:8px;justify-content:center;margin-top:5px}
+.eqacts .eqx{cursor:pointer}.eqacts .eqx[data-reforge]:hover{color:var(--gold2)}

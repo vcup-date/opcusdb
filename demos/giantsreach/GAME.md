@@ -392,6 +392,22 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 35: RELIC SALVAGE + REFORGE, depth for the Forge)
+- The Forge gacha and now ruin delving both grant relics, so the stash fills with duplicates and junk that had
+  no use. Added the two grounded gacha levers (on the roadmap as "relic salvage/fusion"): salvage and reforge.
+- /api/salvage: melt a stash relic down for shards by tier (Common 5 / Rare 15 / Epic 40 / Legendary 100), as
+  a single {seed} or in bulk {maxTier} (all stash relics up to a tier, for decluttering). Equipped relics are
+  protected from salvage. /api/reforge {seed}: spend 45 shards to re-roll a relic's value within its tier
+  range (works on stash OR equipped relics; it can come up better or worse, which is the gamble). Both costs
+  are in /api/state.
+- Client: each stash relic now offers Equip / Reforge (with the shard cost) / Salvage (with the tier payout),
+  a "Clear the clutter: Salvage all Common / up to Rare" bulk bar, and equipped relics gain a reforge link
+  beside unequip. The toast reports whether a reforge came up stronger or weaker.
+- Verified END TO END: forged 8 relics, salvaged one (Common -> +5 shards), bulk-salvaged Common+Rare (6
+  relics -> 40 shards), reforged an EQUIPPED relic (+7 to +4, the gamble), and confirmed an equipped relic
+  cannot be salvaged. The Forge stash renders 9 salvage + 9 reforge buttons and the bulk bar with correct
+  per-tier payouts (Epic +40, Rare +15, Common +5). Screenshot forge_salvage.png. No JS errors, no regression.
+
 ## DONE (iteration 34: DELVING THE FALLEN GIANTS, ruins become explorable)
 - The world is named for the fallen giants, but their RUINS on the map were purely decorative. Now they are
   explorable points of interest that finally pay off the central theme and reward exploring the big map.
@@ -680,9 +696,9 @@ NEXT STEPS list below; none are blocking.
    milestones (iteration 8); [DONE] VIP track (iteration 9); [DONE] 30-day season/battle pass with
    free + gold tracks (iteration 10). Remaining: returning-player rewards. The retention suite is now
    broad; next best step is likely ALLIANCES (item 8) or a full MOBILE LAYOUT pass (item 10).
-7. [DONE] EQUIPMENT + HEROES (iteration 7): a hero with a gear loadout, deterministic Forge gacha
-   with a transparent pity counter, hero buffs to combat/loot/march. Future: relic salvage/fusion
-   to upgrade tiers, a second hero slot, set bonuses, hero skills.
+7. [DONE] EQUIPMENT + HEROES (iteration 7): a hero with a gear loadout, deterministic Forge gacha with a
+   transparent pity counter, hero buffs to combat/loot/march; [DONE] relic salvage + reforge (iteration 35).
+   Future: a second hero slot, set bonuses, hero skills, tier-up fusion.
 8. [DONE] ALLIANCES (banners) (iteration 13): create/join/leave/browse, timer-shaving help (max(1%,60s),
    20 per order), +1%/member production bonus, War Table chat; [DONE] reinforcement (iteration 27): garrison
    a member's hold, join their defense, recall. Future: a shared map territory, joint rally marches, member ranks.

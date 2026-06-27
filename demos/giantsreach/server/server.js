@@ -418,6 +418,8 @@ const TIER_WEIGHT = [60, 28, 9, 3];
 const AFFIX_RANGE = { atk: [[3, 6], [7, 12], [13, 20], [22, 34]], def: [[3, 6], [7, 12], [13, 20], [22, 34]], speed: [[4, 8], [9, 15], [16, 24], [26, 40]], gold: [[5, 10], [12, 20], [22, 34], [36, 55]] };
 const FORGE_COST = 60;   // shards per draw
 const PITY = 10;         // a guaranteed Epic or better every 10 draws (shown to the player)
+const SALVAGE = [5, 15, 40, 100]; // shards returned when a relic is melted down, by tier
+const REFORGE_COST = 45;          // shards to re-roll a relic's value within its tier
 function prng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function hstr(s) { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function rollRelic(seed, minTier) {
@@ -696,7 +698,7 @@ function view(p) {
     equipped: Object.fromEntries(SLOTS.map((s) => { const it = p.equipped && p.equipped[s]; return [s, it ? { seed: it.seed, slot: it.slot, slotName: SLOT_NAME[it.slot], tier: it.tier, tierName: TIERS[it.tier], aff: it.aff, affName: AFFIX_NAME[it.aff], val: it.val } : null]; })),
     slots: SLOTS, slotNames: SLOT_NAME, affNames: AFFIX_NAME, tierNames: TIERS,
     hero: { level: p.hero.level, xp: p.hero.xp, xpNeed: p.hero.level * 100 },
-    heroBonus: heroBonusOf(p), pity: p.pity, pityMax: PITY, forgeCost: FORGE_COST,
+    heroBonus: heroBonusOf(p), pity: p.pity, pityMax: PITY, forgeCost: FORGE_COST, reforgeCost: REFORGE_COST, salvageVals: SALVAGE,
     achievements: achvView(p), achvClaim: achvClaimable(p),
     vip: vipView(p), season: seasonView(p),
     alliance: allianceView(p), allyTag: p.alliance || null,
@@ -1018,6 +1020,39 @@ const ROUTES = {
     const cur = p.equipped[slot]; if (!cur) return send(res, 400, { err: "nothing equipped" });
     p.equipped[slot] = null; p.relics.push(cur);
     save(); send(res, 200, view(p));
+  },
+  // ---- melt a relic (or every stash relic up to a tier) down for shards ----
+  "POST /api/salvage": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p); p.relics = p.relics || [];
+    let gained = 0, count = 0;
+    if (b.maxTier != null) { // bulk: salvage all stash relics up to a tier
+      const mt = Math.max(0, Math.min(3, b.maxTier | 0)); const keep = [];
+      for (const it of p.relics) { if (it.tier <= mt) { gained += SALVAGE[it.tier] || 0; count++; } else keep.push(it); }
+      if (!count) return send(res, 400, { err: "No relics of that tier to salvage." });
+      p.relics = keep;
+    } else { // single by seed (equipped relics are protected)
+      const seed = b.seed >>> 0; const idx = p.relics.findIndex((it) => it.seed === seed);
+      if (idx < 0) return send(res, 400, { err: "No such relic in the stash (equipped relics cannot be salvaged)." });
+      gained = SALVAGE[p.relics[idx].tier] || 0; count = 1; p.relics.splice(idx, 1);
+    }
+    p.gems += gained;
+    save(); send(res, 200, Object.assign({ gained, count }, view(p)));
+  },
+  // ---- reforge: re-roll a relic's value within its tier, for shards (stash or equipped) ----
+  "POST /api/reforge": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p);
+    const seed = b.seed >>> 0;
+    let it = (p.relics || []).find((x) => x.seed === seed);
+    if (!it) for (const s of SLOTS) { if (p.equipped[s] && p.equipped[s].seed === seed) { it = p.equipped[s]; break; } }
+    if (!it) return send(res, 400, { err: "no such relic" });
+    if (p.gems < REFORGE_COST) return send(res, 400, { err: "Not enough shards. Reforging costs " + REFORGE_COST + "." });
+    p.gems -= REFORGE_COST; p.reforgeN = (p.reforgeN || 0) + 1;
+    const [lo, hi] = AFFIX_RANGE[it.aff][it.tier];
+    const r = prng((hstr(p.name) ^ Math.imul(p.reforgeN, 0x85ebca6b) ^ seed) >>> 0);
+    const old = it.val; it.val = lo + Math.floor(r() * (hi - lo + 1));
+    save(); send(res, 200, Object.assign({ old, val: it.val }, view(p)));
   },
   // ---- achievements: claim every newly-earned tier of one milestone ----
   "POST /api/achv": async (req, res, b) => {

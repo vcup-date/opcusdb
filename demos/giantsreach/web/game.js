@@ -580,13 +580,19 @@ function renderForge() {
     const it = S.equipped[s];
     return `<div class="eqslot ${it ? "t" + it.tier : "empty"}" data-slot="${s}">
       <div class="eqlabel">${S.slotNames[s]}</div>
-      ${it ? `<div class="rico big">${ic(SLOT_ICON[s])}</div><div class="rv">+${it.val}${AFF_SUFFIX[it.aff]}</div><div class="eqx" data-uneq="${s}">unequip</div>`
+      ${it ? `<div class="rico big">${ic(SLOT_ICON[s])}</div><div class="rv">+${it.val}${AFF_SUFFIX[it.aff]}</div><div class="eqacts"><span class="eqx" data-reforge="${it.seed >>> 0}">reforge</span><span class="eqx" data-uneq="${s}">unequip</span></div>`
             : `<div class="rico big dim">${ic(SLOT_ICON[s])}</div><div class="rv dim">empty</div>`}</div>`;
   }).join("");
   const bonusLine = [["atk", "Attack"], ["def", "Defense"], ["speed", "March"], ["gold", "Spoils"]]
     .map(([k, n]) => `<span class="hb">${n} <b>+${hb[k]}%</b></span>`).join("");
-  const stash = (S.relics || []).slice().sort((a, b) => b.tier - a.tier || b.val - a.val)
-    .map((it) => relicChip(it, `data-equip="${it.seed >>> 0}"`)).join("") || `<div class="empty">No relics in the stash. Work the Forge to draw one.</div>`;
+  const sv = S.salvageVals || [5, 15, 40, 100]; const rfc = S.reforgeCost || 45;
+  const stashRelics = (S.relics || []).slice().sort((a, b) => b.tier - a.tier || b.val - a.val);
+  const stash = stashRelics.map((it) => `<div class="relic t${it.tier}">
+    <div class="rico">${ic(SLOT_ICON[it.slot])}</div>
+    <div class="rmid"><div class="rn">${it.slotName} <span class="rt">${it.tierName}</span></div><div class="rv">+${it.val}${AFF_SUFFIX[it.aff]}</div></div>
+    <div class="racts"><button class="ract eq" data-equip="${it.seed >>> 0}">Equip</button><button class="ract" data-reforge="${it.seed >>> 0}" title="re-roll within tier">${ICON.gem}${rfc}</button><button class="ract sv" data-salvage="${it.seed >>> 0}" title="melt for shards">salvage +${sv[it.tier]}</button></div></div>`).join("") || `<div class="empty">No relics in the stash. Work the Forge to draw one, or delve a ruin.</div>`;
+  const hasLow = stashRelics.some((it) => it.tier <= 1);
+  const bulkBar = hasLow ? `<div class="salvbar"><span class="tg">Clear the clutter:</span><button class="ract sv" data-salvageall="0">Salvage all Common</button><button class="ract sv" data-salvageall="1">Salvage up to Rare</button></div>` : "";
   const canForge = S.gems >= S.forgeCost;
   showModalWide(`<div class="ph">${ic("anvil")} The Forge &amp; the Hero <span class="x">&times;</span></div>
     <div class="bd">
@@ -603,6 +609,7 @@ function renderForge() {
                    : `<button class="gbtn" disabled>${ic("gem")} ${S.forgeCost} needed</button>`}
       </div>
       <div class="ph" style="border:0;padding:8px 0 4px">The Stash</div>
+      ${bulkBar}
       <div class="stash">${stash}</div>
     </div>`);
   const f = $("#do-forge"); if (f) f.onclick = async () => {
@@ -616,6 +623,17 @@ function renderForge() {
   $$("#modal [data-uneq]").forEach((c) => c.onclick = async (e) => {
     e.stopPropagation();
     try { const v = await api("unequip", { slot: c.dataset.uneq }); applyState(v); sfx("click"); renderForge(); } catch (e) { toast(e.message, true); }
+  });
+  $$("#modal [data-reforge]").forEach((c) => c.onclick = async (e) => {
+    e.stopPropagation();
+    try { const v = await api("reforge", { seed: +c.dataset.reforge >>> 0 }); sfx(v.val > v.old ? "level" : "coin"); toast(v.val > v.old ? `Reforged stronger: +${v.old} to +${v.val}` : (v.val < v.old ? `Reforged weaker: +${v.old} to +${v.val}` : `Reforged: still +${v.val}`), v.val < v.old); applyState(v); renderForge(); } catch (e) { toast(e.message, true); }
+  });
+  $$("#modal [data-salvage]").forEach((c) => c.onclick = async (e) => {
+    e.stopPropagation();
+    try { const v = await api("salvage", { seed: +c.dataset.salvage >>> 0 }); sfx("coin"); toast(`Salvaged for ${fmt(v.gained)} shards`); applyState(v); renderForge(); } catch (e) { toast(e.message, true); }
+  });
+  $$("#modal [data-salvageall]").forEach((c) => c.onclick = async () => {
+    try { const v = await api("salvage", { maxTier: +c.dataset.salvageall }); sfx("coin"); toast(`Salvaged ${v.count} relics for ${fmt(v.gained)} shards`); applyState(v); renderForge(); } catch (e) { toast(e.message, true); }
   });
 }
 
