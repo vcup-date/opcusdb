@@ -446,7 +446,7 @@ function newPlayer(name) {
     r: Object.assign({}, START_RES), gems: 120, resTick: NOW(),
     b: { keep: 1, granary: 1, sawmill: 1, quarry: 1, mine: 1, market: 0, barracks: 1, wall: 0, watchtower: 0 },
     queue: [], t: { spearman: 0, swordsman: 0, archer: 0, knight: 0 }, train: [], wounded: { spearman: 0, swordsman: 0, archer: 0, knight: 0 },
-    tutorial: 0, login: { streak: 0, lastDay: 0, claimed: -1 }, boughtStarter: false,
+    tutorial: 0, portrait: 0, login: { streak: 0, lastDay: 0, claimed: -1 }, boughtStarter: false,
     x: 400 + Math.floor(Math.random() * 80) - 40, y: 400 + Math.floor(Math.random() * 80) - 40,
     marches: [], reports: [], cleared: {}, intel: {},
     tasks: { day: 0, counts: {}, claimed: [] }, chest: { last: 0 },
@@ -617,7 +617,7 @@ function view(p) {
   const queue = (p.queue || []).map((q) => ({ b: q.b, name: BUILD[q.b].name, icon: BUILD[q.b].icon, to: q.to, finish: q.finish, total: q.finish - q.start }));
   const train = (p.train || []).map((t) => ({ unit: t.unit, name: UNITS[t.unit].name, n: t.n, done: t.done, finish: t.start + t.per * t.n, per: t.per }));
   return {
-    name: p.name, now, gems: Math.floor(p.gems), might: might(p),
+    name: p.name, now, gems: Math.floor(p.gems), might: might(p), portrait: p.portrait || 0,
     res: { grain: Math.floor(p.r.grain), timber: Math.floor(p.r.timber), stone: Math.floor(p.r.stone), iron: Math.floor(p.r.iron), gold: Math.floor(p.r.gold) },
     rate: ratePerSec(p), cap: capacity(p), buildSlots: BUILD_SLOTS,
     buildings, queue, troops: p.t, train, units: UNITS,
@@ -784,6 +784,10 @@ const ROUTES = {
   "POST /api/tutorial": async (req, res, b) => {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
     const p = db.players[n]; p.tutorial = Math.max(p.tutorial, b.step | 0); save(); send(res, 200, { tutorial: p.tutorial });
+  },
+  "POST /api/portrait": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; p.portrait = Math.max(0, Math.min(3, b.i | 0)); save(); send(res, 200, { portrait: p.portrait });
   },
   "GET /api/leaderboard": async (req, res) => {
     const rows = Object.values(db.players).map((p) => { resolve(p); return { name: p.name, might: might(p), keep: p.b.keep || 1 }; })

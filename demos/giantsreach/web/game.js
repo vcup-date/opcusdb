@@ -102,21 +102,39 @@ async function enterGame() {
   maybeWelcome();
 }
 // first-session onboarding: a warm steward welcome, then the coached objective bubbles take over
+const LORD_NAMES = ["The Veteran", "The Young Lord", "The Lady Commander", "The Old King"];
+function portraitTiles(sel) {
+  return [0, 1, 2, 3].map((i) => `<div class="ptile ${i === sel ? "sel" : ""}" data-por="${i}"><img src="img/lord/lord${i}.png" alt="${LORD_NAMES[i]}"/><div class="pnm">${LORD_NAMES[i]}</div></div>`).join("");
+}
 function maybeWelcome() {
   if (!S || (S.tutorial || 0) >= 1) return;
   showModal(`<div class="ph">${ic("scroll")} A Steward's Welcome <span class="x">&times;</span></div>
     <div class="bd welcome">
-      <div class="wcrest">${ic("shield")}</div>
       <h2 class="wh">Welcome, my lord ${esc(S.name)}.</h2>
       <p>This is your hold, raised among the bones of the fallen giants. Their carved heads break the far hills like buried moons, and the world they once carried is ours to keep now.</p>
-      <p>Grow your stores, raise your walls, drill a host, and march on the barbarian camps that prowl the Reach. I will point the way at each step. The rest, you will make your own.</p>
-      <div class="modal-actions"><button class="gbtn grn" id="w-begin">Take up the banner</button></div>
+      <p style="margin-bottom:8px">First, my lord, show the realm your face.</p>
+      <div class="pgrid" id="w-portraits">${portraitTiles(S.portrait || 0)}</div>
+      <div class="modal-actions" style="margin-top:8px"><button class="gbtn grn" id="w-begin">Take up the banner</button></div>
     </div>`);
   modalOpen = null;
+  bindPortraitTiles();
   const done = async () => { closeModal(); try { const v = await api("tutorial", { step: 1 }); S.tutorial = v.tutorial; renderObjective(); } catch (e) {} };
   $("#w-begin").onclick = done;
   const x = $("#modal .x"); if (x) x.onclick = done;
 }
+function bindPortraitTiles() {
+  $$("#modal .ptile").forEach((t) => t.onclick = async () => {
+    const i = +t.dataset.por; $$("#modal .ptile").forEach((o) => o.classList.toggle("sel", o === t));
+    try { const v = await api("portrait", { i }); S.portrait = v.portrait; renderTop(); sfx("click"); } catch (e) {}
+  });
+}
+// change your likeness later from the avatar
+$("#t-por-wrap").onclick = () => {
+  showModal(`<div class="ph">${ic("shield")} Your Likeness <span class="x">&times;</span></div>
+    <div class="bd"><p style="color:#caa86a;text-align:center;margin-bottom:12px">Choose the face the realm will know you by.</p>
+    <div class="pgrid">${portraitTiles(S.portrait || 0)}</div></div>`);
+  modalOpen = null; bindPortraitTiles();
+};
 
 // ---- sync + interpolation ----
 async function sync() {
@@ -223,6 +241,7 @@ function gemsFor(sec) { if (sec <= 60) return 1; if (sec <= 3600) return Math.ma
 function renderTop() {
   $("#t-name").textContent = S.name; $("#t-might").textContent = fmt(S.might);
   $("#t-keep").textContent = roman((S.buildings.find((b) => b.id === "keep") || {}).level || 1);
+  const por = $("#t-por"); if (por) { const src = "img/lord/lord" + (S.portrait || 0) + ".png"; if (por.getAttribute("src") !== src) { por.style.display = ""; por.src = src; } }
   const res = $("#res"); res.innerHTML = "";
   for (const k of RESES) {
     res.appendChild(el(`<div class="rp ${k === "gold" ? "gild" : ""}" data-k="${k}"><div class="ic">${ICON[k]}</div><div><div class="v">${fmt(local[k])}</div><div class="r">+${fmt(S.rate[k] * 3600)}/h</div></div></div>`));

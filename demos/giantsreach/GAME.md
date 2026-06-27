@@ -392,6 +392,20 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 25: LORD PORTRAITS, choose the face the realm knows you by)
+- Personalized identity: the HUD avatar was a generic shield. Baked FOUR painterly lord/lady portraits OFFLINE
+  with Qwen on the locked recipe (768x768, 24 steps, cfg 3.5): The Veteran (a grizzled scarred warlord), The
+  Young Lord (a circleted noble), The Lady Commander (an auburn-braided warrior-lady), and The Old King (a
+  crowned greybeard). All bust portraits in warm golden rim light, distinct but consistent. web/img/lord/.
+- A choose-your-likeness picker in the WELCOME flow at founding ("First, my lord, show the realm your face")
+  with four selectable tiles, and a changeable-anytime picker opened by clicking the avatar ("Your Likeness").
+  The chosen portrait fills the carved-oak avatar tile with the keep-level badge over it.
+- Server: p.portrait (0-3, clamped), in /api/state; /api/portrait {i} persists the choice. Endpoint validated
+  (set i=2 -> 2; i=9 clamps to 3).
+- Verified END TO END: a fresh founder gets the picker in the welcome; selecting The Lady Commander set the
+  HUD avatar to lord2.png (confirmed src + visible), and the avatar opens the likeness picker. Portraits serve
+  200. Screenshots lord_welcome.png (founding picker), lord_hud.png (avatar), lord_picker.png. No JS errors.
+
 ## DONE (iteration 24: THE CITY GROWS WITH THE KEEP, painterly img2img tiers)
 - The marquee progression payoff: your home city now visibly transforms as the Keep rises. The long-standing
   blocker was that re-baking the city would break the building markers (the chips are placed at fixed

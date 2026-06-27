@@ -558,3 +558,18 @@ svg{width:18px;height:18px;vertical-align:middle}
 .intelrow svg{width:14px;height:14px;vertical-align:middle}
 .repcard.scout{border-left:3px solid #5d7e9e}
 .res.scout{color:#9fcbe0;font-family:'Cinzel';font-weight:700;font-size:11px;letter-spacing:1px}
+
+/* ---- lord portrait: avatar + picker ---- */
+.por{overflow:hidden;cursor:pointer}
+.por #t-por{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px}
+.por .porfall{position:absolute;inset:0;display:grid;place-items:center}
+.por:hover{box-shadow:0 0 14px #f6e2a088,0 6px 16px #000a}
+.pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:6px 0}
+.ptile{border:2px solid #4a3a1c;border-radius:11px;overflow:hidden;cursor:pointer;background:#140d05;transition:transform .08s,border-color .12s,box-shadow .12s;position:relative}
+.ptile img{display:block;width:100%;aspect-ratio:1;object-fit:cover}
+.ptile .pnm{font-family:'Cinzel';font-size:10px;letter-spacing:.3px;text-align:center;color:#caa86a;padding:4px 2px}
+.ptile:hover{transform:translateY(-2px);border-color:var(--gold)}
+.ptile.sel{border-color:var(--gold);box-shadow:0 0 16px #f6e2a077,inset 0 0 0 1px var(--gold2)}
+.ptile.sel .pnm{color:var(--gold2)}
+.ptile.sel::after{content:"\2713";position:absolute;top:5px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--grn);color:#11250a;font-weight:900;font-size:12px;display:grid;place-items:center;box-shadow:0 2px 5px #0008}
+@media (max-width:760px){.pgrid{grid-template-columns:repeat(2,1fr)}}
