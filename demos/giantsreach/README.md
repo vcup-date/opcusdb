@@ -1,6 +1,6 @@
 # Giantsreach
 
-A complete, production-quality browser strategy MMO in the Travian / Clash of Kings / Rise of Kingdoms tradition. Raise a hold among the fallen stone giants, grow your economy on time-based timers, train a host, march on the barbarian camps, climb the realm ladder, and band your banner with others.
+A complete, production-quality browser strategy MMO in the Travian / Clash of Kings / Rise of Kingdoms tradition. Raise a hold among the fallen stone giants, grow your economy on time-based timers, train a host, march on the barbarian camps, war with rival lords, band your banner with others, and climb the realm ladder.
 
 The whole game is a single dependency-free Node.js server plus a static web client. The runtime is fully deterministic and server-authoritative. There are no third-party packages, no build step, and no AI calls at runtime.
 
@@ -28,17 +28,40 @@ Requirements: Node.js (any modern version). Nothing to install.
 
 ## What is in it
 
-- User registration and login (scrypt-hashed passwords) plus one-tap guest play.
+Economy and building
+- User registration and login (scrypt-hashed passwords) plus one-tap guest play, and a choose-your-likeness lord portrait at founding.
 - Time-based construction, training, and march timers that resolve lazily and deterministically, so they keep ticking correctly across server restarts and while you are offline.
 - A resource economy (grain, timber, stone, iron, gold) with storage caps, grounded in Travian/RoK formulas.
-- Structure upgrades with painterly building art, an interactive pannable/zoomable home town with tappable buildings.
-- A big world map of barbarian camps and rival cities, marches, and a deterministic mixed-arms combat resolver with win/lose battle reports.
+- Structure upgrades with painterly building portraits, an interactive pannable/zoomable home town with tappable building markers. The town itself visibly grows from a modest hold to a grand capital as the Keep rises.
+- Acceleration/speedups: finish a timer instantly with shards on a Clash-style gem-to-time curve, or free under five minutes (from the queue or the building modal).
+
+The war layer
+- A big world map of barbarian camps and rival cities, with marches drawn moving along their paths in real time.
+- A deterministic mixed-arms combat resolver (no RNG) with a cinematic battle scene: a painterly clash backdrop, a stamped victory/defeat seal, casualties, spoils, and a dramatic war-music cue.
+- Player-vs-player: scout a rival (countered by their watchtower), see incoming attacks coming with a live warning, march on their hold, and carry off their stores. A beginner's peace shields new holds.
+- The Infirmary: a share of every casualty is recoverable, tended back into the host for resources.
+
+Alliances ("banners")
+- Create/join/leave/browse, a roster, the signature timer-shaving help, a +1%/member production bonus, and a War Table chat.
+- Reinforcement: garrison a banded member's hold and your troops join every defense; recall the survivors.
+
+Retention and progression
+- A 7-day login calendar, a daily task ladder with reward chests, a free timed chest, permanent tiered achievements, a VIP track, and a 30-day season pass with free and gold tracks.
 - Equipment and a hero: a deterministic Forge gacha with a transparent pity counter; relics buff combat, loot, and march speed.
-- A full retention suite: a 7-day login calendar, a daily task ladder with reward chests, a free timed chest, permanent tiered achievements, a VIP track, and a 30-day season pass with free and gold tracks.
-- Alliances ("banners"): create/join, a roster, the signature timer-shaving help, a production bonus, and a War Table chat.
+- A multi-category Realm Ladder (Lords, Warlords, Banners) with portraits and your own standing.
+- A returning-player Council recap (what happened while away, what awaits) and a coached first-session tutorial.
+
+Presentation
 - A monetization-style shop. Purchases are SIMULATED: "buying" simply grants shards, with no payment of any kind.
-- Acceleration/speedups: finish timers instantly with shards on a Clash-style gem-to-time curve, or free under five minutes.
-- A splash/title screen, a game tutorial, procedural audio (ambient music + SFX, muted until the first click), animations, and a voice for the realm: barbarian taunts, battle narration, a steward's counsel, and a lore codex, all baked offline.
+- A splash/title screen over baked key-art, a composed orchestral main theme and a battle cue (baked with ACE-Step), synthesized SFX (muted until the first click), and a Settings panel with separate music/effects volume and a reduce-motion accessibility toggle.
+- A voice for the realm: barbarian taunts, battle narration, a steward's counsel, and a lore codex, all baked offline.
+
+## How to play
+
+- Tap a building (in the town or the bottom bar) to raise it. The Keep unlocks higher levels and speeds all construction.
+- Open the rails on the left for the Daily gift, the Shop, the Army (train soldiers and tend the wounded), the Forge (heroes and relics), Tasks, Honors, Banners (alliances), and the World map.
+- On the World map, tap a barbarian camp to raid it, or a red rival hold to scout or march on it.
+- Watch the top of the screen for an incoming-attack warning, and your banner's roster to send reinforcements.
 
 ## Architecture
 
@@ -46,26 +69,29 @@ Requirements: Node.js (any modern version). Nothing to install.
 giantsreach/
   server/server.js   the authoritative game server (http, crypto, fs only)
   web/               the static client (index.html, game.js, audio.js, style.css)
-  web/img/           baked painterly art (splash, city, building icons)
+  web/img/           baked painterly art (splash, city tiers, building portraits, lord portraits, battle)
+  web/audio/         the baked composed theme + battle cue (mp3)
   db/db.json         JSON persistence (created on first run)
   launch.sh          start script
   GAME.md            full design doc, locked art direction, and build log
 ```
 
 - Server-authoritative: the client never computes outcomes; it sends intents and renders the snapshot the server returns from `/api/state`. The client only interpolates resource counters smoothly between syncs.
-- Deterministic and lazy: all time-based state (builds, training, marches, resources, seasons) is resolved from timestamps on read, so it survives restarts and offline gaps with no background tick loop.
-- No runtime AI: every "AI" element (art, flavor text) is baked offline into static assets and served by seed. The server never calls an external service.
+- Deterministic and lazy: all time-based state (builds, training, marches, resources, seasons) is resolved from timestamps on read, so it survives restarts and offline gaps with no background tick loop. A re-entrancy guard keeps mutual scouts/attacks from recursing.
+- No runtime AI: every "AI" element (art, music, flavor text) is baked offline into static assets and served by seed. The server never calls an external service.
 
 ## Hardening
 
 - Atomic, durable saves: the database is written to a temp file, the previous file is backed up to `db.json.bak`, then renamed into place, so a crash mid-write cannot corrupt it. On boot the server falls back to the backup if the main file is unreadable.
 - Graceful shutdown: SIGINT/SIGTERM and uncaught exceptions flush the pending save before exit.
 - A per-IP sliding-window rate limit on the API, request-size and URL-length caps, method allow-listing, and static-path-traversal protection.
-- Input validation on every route (bounded numerics, name/tag patterns, JSON body cap).
+- Input validation on every route: bounded numerics, name/tag patterns, a JSON body cap, and sanitized troop selections (only known units, non-negative integers) so no march can fabricate soldiers.
 
 ## Offline asset baking
 
-Art is baked offline with Qwen-Image via ComfyUI on a slow high-quality pass (no Lightning LoRA, ~24-26 steps, cfg 3.5) in the locked painterly style. Audio is procedural Web Audio (a generative ambient bed plus synthesized SFX), created on the first user gesture and muted until then. None of this runs at game time; the runtime only serves the static results.
+- Art is baked offline with Qwen-Image via ComfyUI on a slow high-quality pass (no Lightning LoRA, ~24-26 steps, cfg 3.5) in the locked painterly style: the splash key-art, the building portraits, the lord portraits, the battle backdrop, and the city growth tiers (img2img from the base city at moderate denoise so the building markers stay aligned).
+- Music is baked offline with ACE-Step (a warm orchestral main theme and a driving battle cue), loudness-normalized and encoded to small mp3s. SFX are procedural Web Audio. All audio is created on the first user gesture and muted until then.
+- None of this runs at game time; the runtime only serves the static results.
 
 ## Notes
 

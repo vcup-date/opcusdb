@@ -392,6 +392,21 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 32: SECURITY FIX + README refresh, the production capstone)
+- Audited the routes added since the iteration-15 hardening pass. Found and fixed a real EXPLOIT: the march /
+  attack / reinforce routes deducted troops with `p.t[u] -= troops[u]` on unsanitized input, so a NEGATIVE
+  count (e.g. {spearman:50, swordsman:-10}) added soldiers instead of removing them, fabricating troops from
+  nothing (confirmed: a march minted 10 swordsmen). Added cleanTroops() which keeps only known units as
+  non-negative integers, applied to all three routes. Verified: the same payload now sanitizes to
+  {spearman:20} (junk keys and the negative dropped), no fabrication, and legitimate marches still work.
+- Refreshed the README, which was 16 iterations stale (written at iteration 15). It now documents the full
+  current game: the war layer (scout, incoming warnings, PvP attack, the infirmary, the battle cinematic),
+  alliances with reinforcement, the retention + progression suite, the Realm Ladder, the Council recap,
+  settings/accessibility, a how-to-play section, the ACE-Step composed music and img2img city growth in the
+  offline-baking section, and the troop-sanitization line under Hardening.
+- Verified END TO END: a clean-db guest smoke renders with no JS errors and every asset serves 200 (index,
+  splash, city3, lord0, theme.mp3, battle.mp3). The exploit-fix curl test passed.
+
 ## DONE (iteration 31: INCOMING ATTACK WARNINGS, a host marches on you)
 - Closed the last PvP defensive gap: an attacker's march was invisible to the target until it landed (the
   post-hoc defense report). Now the defender is WARNED while the enemy is still on the road and can prepare.

@@ -126,6 +126,8 @@ function ratePerSec(p) {
 const CAV = { knight: true };
 const LOOTABLE = ["grain", "timber", "stone", "iron"];
 function unitsCount(t) { let n = 0; for (const k in t) n += t[k] || 0; return n; }
+// sanitize a client troop selection: only known units, non-negative integers (blocks negative-count duplication)
+function cleanTroops(t) { const out = {}; if (t && typeof t === "object") for (const u in UNITS) { const n = Math.floor(Number(t[u]) || 0); if (n > 0) out[u] = n; } return out; }
 function ihash(x, y) { let h = ((x * 73856093) ^ (y * 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; h = (h * 1274126177) >>> 0; return h; }
 function tileAt(x, y) {
   const h = ihash(x, y);
@@ -864,7 +866,7 @@ const ROUTES = {
   "POST /api/march": async (req, res, b) => {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
     const p = db.players[n]; resolve(p);
-    const tx = b.x | 0, ty = b.y | 0; const troops = b.troops || {};
+    const tx = b.x | 0, ty = b.y | 0; const troops = cleanTroops(b.troops);
     const t = tileAt(tx, ty); if (!t || t.type !== "camp") return send(res, 400, { err: "No camp there to raid." });
     if (((p.cleared || {})[tx + "," + ty] || 0) > NOW()) return send(res, 400, { err: "That camp is cleared. It will return soon." });
     for (const u in troops) if ((troops[u] | 0) > (p.t[u] || 0)) return send(res, 400, { err: "You do not have that many " + (UNITS[u] ? UNITS[u].name : u) + "." });
@@ -883,7 +885,7 @@ const ROUTES = {
   "POST /api/attack": async (req, res, b) => {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
     const p = db.players[n]; resolve(p);
-    const tx = b.x | 0, ty = b.y | 0; const troops = b.troops || {};
+    const tx = b.x | 0, ty = b.y | 0; const troops = cleanTroops(b.troops);
     const target = cityAt(tx, ty, n);
     if (!target) return send(res, 400, { err: "No rival hold stands there." });
     const d = db.players[target]; resolve(d);
@@ -1092,7 +1094,7 @@ const ROUTES = {
     const member = b.member; if (member === n) return send(res, 400, { err: "Reinforce a fellow member, not yourself." });
     if (!a.members.includes(member)) return send(res, 400, { err: "Not in your banner." });
     const d = db.players[member]; if (!d) return send(res, 400, { err: "No such member." });
-    const troops = b.troops || {};
+    const troops = cleanTroops(b.troops);
     for (const u in troops) if ((troops[u] | 0) > (p.t[u] || 0)) return send(res, 400, { err: "You do not have that many " + (UNITS[u] ? UNITS[u].name : u) + "." });
     if (unitsCount(troops) <= 0) return send(res, 400, { err: "Send at least one soldier." });
     const cap = marchCap(p);
