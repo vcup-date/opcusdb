@@ -392,6 +392,24 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 39: NAMED WARLORD CAMPS, elite PvE with a guaranteed relic)
+- The world map's barbarian camps were anonymous and flat: every level-N camp identical, no aspirational target.
+  Added named Warlord camps, the roadmap's "named barbarian warlords", as rare elite camps that reward a strong host.
+- Server: about one in seven camp tiles becomes a Warlord (deterministic from coords; levels 5 to 8). A WARLORDS
+  corpus of eight named barbarians (Gorruk the Bonebreaker, Ysolde the Red Oath, ...) each carries a baked taunt.
+  warlordGarrison is far tougher (spearmen, archers, swordsmen AND knights) and the warlord fights with a wall-like
+  1.35 defense edge. A felled warlord ALWAYS yields shards (30 + 6/level) and a guaranteed relic rolled to the field
+  (deterministic per clear via a wlN counter, seed-collision-guarded), plus double the loot, double hero XP, and a
+  bigger season gain. A warlord stays broken for 3h (a camp returns in 30 min). All deterministic, zero runtime AI.
+- Client: warlord tiles render as a distinct dark-crimson, gold-bordered sword marker (vs the bright numbered camps);
+  the raid dialog is reskinned with the warlord's name and title in the header, a gold taunt, and a reward hint that
+  a felled warlord drops shards and a relic. Battle reports read "Felled <name>... took a Legendary relic, N shards,
+  ..." with a SLAIN seal; the cinematic and the returning-player recap name the warlord too.
+- Verified END TO END: a 12k host marched on Ysolde (L5) and won, banking 60 shards and a Legendary War Banner into
+  the stash with +80 hero XP; re-raiding the felled tile is blocked by the 3h cooldown; the map showed 15 warlord
+  cells (14 raidable) and the dialog rendered "Gorruk, the Bonebreaker" with taunt + reward hint. Screenshots
+  warlord-map.png / warlord-dialog.png. No JS errors, guest smoke clean (no regression).
+
 ## DONE (iteration 38: RELIC FUSION, ascend duplicates a tier)
 - The stash filled with duplicate low relics that could only be salvaged for shards. Added the last equipment lever
   on the roadmap: tier-up fusion, so duplicates become a progression path, not just scrap.
@@ -751,8 +769,8 @@ NEXT STEPS list below; none are blocking.
    20 per order), +1%/member production bonus, War Table chat; [DONE] reinforcement (iteration 27): garrison
    a member's hold, join their defense, recall. Future: a shared map territory, joint rally marches, member ranks.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
-   codex, all baked offline to a static corpus, deterministic, never an API call at runtime. Future:
-   per-building flavor, named barbarian warlords, event log narration.
+   codex, all baked offline to a static corpus, deterministic, never an API call at runtime; [DONE] named
+   barbarian warlords as elite map camps (iteration 39). Future: per-building flavor, event log narration.
 10. [DONE] MOBILE LAYOUT pass (iteration 12); [DONE] SETTINGS + accessibility (iteration 30); [DONE] in-game
     incoming-attack alerts (iteration 31). Remaining (optional): a SERVER SELECT (one realm) screen.
 11. PRODUCTION HARDENING: rate-limiting, input validation, save integrity, error states,

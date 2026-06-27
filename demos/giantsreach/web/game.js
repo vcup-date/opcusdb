@@ -111,7 +111,7 @@ function maybeCouncil() {
   const since = (S.reports || []).filter((r) => r.time > lastVisit && lastVisit > 0);
   // tally the battles
   let raids = 0, sieges = 0, defenses = 0, defLost = 0;
-  since.forEach((r) => { if (r.kind === "defense") { defenses++; if (!r.win) defLost++; } else if (r.kind === "city") sieges++; else if (!r.kind || r.kind === "camp") raids++; });
+  since.forEach((r) => { if (r.kind === "defense") { defenses++; if (!r.win) defLost++; } else if (r.kind === "city") sieges++; else if (!r.kind || r.kind === "camp" || r.kind === "warlord") raids++; });
   const today = Math.floor(S.now / 86400);
   const claim = [];
   if (!S.login || S.login.claimed !== today) claim.push(["gift", "Daily tribute", openDaily]);
@@ -239,7 +239,7 @@ function renderIncoming(v) {
 let battleBusy = false;
 function playBattle(r) {
   if (battleBusy) return; battleBusy = true;
-  const foe = r.kind === "city" ? esc(r.target) : ("a level " + r.level + " camp");
+  const foe = r.kind === "city" ? esc(r.target) : r.kind === "warlord" ? esc(r.warlord || "a warlord") : ("a level " + r.level + " camp");
   const sentN = Object.values(r.sent || {}).reduce((a, c) => a + c, 0);
   const woundedN = Object.values(r.wounded || {}).reduce((a, c) => a + c, 0);
   const lossPct = Math.round((r.attLoss || 0) * 100);
@@ -968,6 +968,7 @@ function renderMap() {
     const t = idx[x + "," + y];
     if (!t) cells += `<div class="cell"></div>`;
     else if (t.type === "camp") cells += `<div class="cell camp ${t.cleared ? "cleared" : ""}" data-x="${x}" data-y="${y}" title="Barbarian camp, level ${t.level}">${t.level}</div>`;
+    else if (t.type === "warlord") cells += `<div class="cell warlord ${t.cleared ? "cleared" : ""}" ${t.cleared ? "" : `data-x="${x}" data-y="${y}"`} title="${esc(t.name)}, ${esc(t.title)} &middot; warlord camp, level ${t.level}">${ic("sword")}</div>`;
     else if (t.type === "ruin") cells += `<div class="cell ruin ${t.delved ? "delved" : ""}" ${t.delved ? "" : `data-rx="${x}" data-ry="${y}"`} title="${t.delved ? "A delved ruin" : "A fallen giant's ruin (delve it)"}">${ic("ruin")}</div>`;
     else if (t.type === "city") {
       const attackable = !t.shielded && !t.allied;
@@ -982,7 +983,7 @@ function renderMap() {
       <div id="mapinner" style="position:relative;display:grid;gap:2px;grid-template-columns:repeat(${side},${CELL}px);grid-auto-rows:${CELL}px">${cells}</div>
       <div class="mapctl"><button id="mz-in">+</button><button id="mz-out">&minus;</button><button id="mz-home" title="center on home">&#9733;</button></div>
     </div>${reportsHtml()}</div>`);
-  $$("#mapinner .cell.camp:not(.cleared)").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); marchDialog(+e.dataset.x, +e.dataset.y); });
+  $$("#mapinner .cell.camp:not(.cleared), #mapinner .cell.warlord:not(.cleared)").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); marchDialog(+e.dataset.x, +e.dataset.y); });
   $$("#mapinner .cell.ruin[data-rx]").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); delveDialog(+e.dataset.rx, +e.dataset.ry); });
   $$("#mapinner .cell.city.foe[data-ax]").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); attackDialog(+e.dataset.ax, +e.dataset.ay); });
   initIcons($("#mapinner"));
@@ -1080,10 +1081,13 @@ function marchDialog(x, y) {
   const garr = Object.entries(t.garrison).filter(([k, v]) => v > 0).map(([k, v]) => v + " " + MAP.units[k].name).join(", ");
   const loot = Object.entries(t.loot).map(([k, v]) => v + " " + k).join(", ");
   const rows = Object.keys(MAP.units).map((u) => `<div class="unitcard"><div class="em">${ic("sword")}</div><div class="mid"><div class="un">${MAP.units[u].name}</div><div class="st">you have ${MAP.troops[u] || 0} &middot; speed ${MAP.units[u].speed}</div></div><input type="number" min="0" max="${MAP.troops[u] || 0}" value="0" data-mu="${u}"/></div>`).join("");
-  showModal(`<div class="ph">${ic("sword")} Raid camp &#183; level ${t.level} <span class="x">&times;</span></div><div class="bd">
-    ${t.taunt ? `<div class="taunt">${ic("ruin")}<span>&ldquo;${esc(t.taunt)}&rdquo;</span></div>` : ""}
-    <p style="color:#caa86a;text-align:center">Distance ${t.dist}. Defended by ${garr || "a few barbarians"}.</p>
-    <p style="color:#caa86a;text-align:center;margin-bottom:10px">Spoils up to <b style="color:#f6e2a0">${loot}</b></p>
+  const wl = t.type === "warlord";
+  const head = wl ? `${ic("sword")} ${esc(t.name)}, ${esc(t.title)} &#183; warlord` : `${ic("sword")} Raid camp &#183; level ${t.level}`;
+  showModal(`<div class="ph">${head} <span class="x">&times;</span></div><div class="bd">
+    ${t.taunt ? `<div class="taunt ${wl ? "wl" : ""}">${ic(wl ? "sword" : "ruin")}<span>&ldquo;${esc(t.taunt)}&rdquo;</span></div>` : ""}
+    <p style="color:#caa86a;text-align:center">Distance ${t.dist}. ${wl ? "An elite host" : "Defended"} by ${garr || "a few barbarians"}.</p>
+    <p style="color:#caa86a;text-align:center;margin-bottom:${wl ? 4 : 10}px">Spoils up to <b style="color:#f6e2a0">${loot}</b></p>
+    ${wl ? `<p class="wlreward" style="text-align:center;margin-bottom:10px">${ic("gem")} A felled warlord always yields <b style="color:var(--gold2)">shards and a relic</b>. Bring a strong host.</p>` : ""}
     ${rows}<div class="modal-actions"><button class="gbtn grn" id="do-march">Send the march</button></div></div>`);
   $("#do-march").onclick = async () => {
     const troops = {}; $$("#modal [data-mu]").forEach((i) => { const n = +i.value || 0; if (n > 0) troops[i.dataset.mu] = n; });
@@ -1155,6 +1159,10 @@ function reportsHtml() {
     } else if (r.kind === "city") {
       win = r.win; label = win ? "VICTORY" : "DEFEAT";
       line = `March on <b>${esc(r.target)}</b> &middot; lost ${Math.round(r.attLoss * 100)}% of the host${win && loot ? " &middot; looted <b>" + loot + "</b>" : ""}${r.flavor ? `<div class="repflav">${esc(r.flavor)}</div>` : ""}`;
+    } else if (r.kind === "warlord") {
+      win = r.win; label = win ? "SLAIN" : "DEFEAT";
+      const bounty = win ? [r.relic ? `a <b>${esc(r.relic.tierName)}</b> relic` : "", r.shards ? `<b>${r.shards}</b> shards` : "", loot ? `<b>${loot}</b>` : ""].filter(Boolean).join(", ") : "";
+      line = `Felled <b>${esc(r.warlord || "a warlord")}</b> &middot; lost ${Math.round(r.attLoss * 100)}% of the host${win && bounty ? " &middot; took " + bounty : ""}${r.flavor ? `<div class="repflav">${esc(r.flavor)}</div>` : ""}`;
     } else {
       win = r.win; label = win ? "VICTORY" : "DEFEAT";
       line = `Raid on a level <b>${r.level}</b> camp &middot; lost ${Math.round(r.attLoss * 100)}% of the host${win && loot ? " &middot; looted <b>" + loot + "</b>" : ""}${r.flavor ? `<div class="repflav">${esc(r.flavor)}</div>` : ""}`;

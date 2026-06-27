@@ -131,14 +131,30 @@ function cleanTroops(t) { const out = {}; if (t && typeof t === "object") for (c
 // safe own-property lookup so a client key like "__proto__" or "constructor" can never index the prototype chain
 function has(obj, k) { return typeof k === "string" && Object.prototype.hasOwnProperty.call(obj, k); }
 function ihash(x, y) { let h = ((x * 73856093) ^ (y * 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; h = (h * 1274126177) >>> 0; return h; }
+// named barbarian warlords: rare, elite camps (a fraction of all camps) with a tougher garrison and a guaranteed relic
+const WARLORDS = [
+  { name: "Gorruk", title: "the Bonebreaker", taunt: "Gorruk has cracked stronger holds than yours for the marrow. Step closer." },
+  { name: "Vashka", title: "Wolf of the Ash", taunt: "The Wolf smells your soft little city on the wind. She is already running." },
+  { name: "Hragar", title: "the Stone-Eater", taunt: "Bring your walls. Hragar is still hungry after the last lord's." },
+  { name: "Ysolde", title: "the Red Oath", taunt: "Every banner that crossed this hill is sewn into Ysolde's cloak. Yours is a fine color." },
+  { name: "Crax", title: "Gravewright of the Reach", taunt: "Crax digs the pits before the battle. Tidy. Considerate. Inevitable." },
+  { name: "Morth", title: "the Unbeaten", taunt: "Twelve lords named Morth a dead man. Count the lords. Then count Morth." },
+  { name: "Selka", title: "the Iron Widow", taunt: "Selka buried three husbands and an army. There is room for one more host." },
+  { name: "Drogan", title: "Bull of the Barrows", taunt: "Drogan does not scout, does not parley, does not tire. Drogan arrives." },
+];
 function tileAt(x, y) {
   const h = ihash(x, y);
-  if (h % 11 === 0) return { type: "camp", x, y, level: 1 + ((h >>> 5) % 6) };
+  if (h % 11 === 0) {
+    if (h % 7 === 0) return { type: "warlord", x, y, level: 5 + ((h >>> 5) % 4), wi: (h >>> 9) % WARLORDS.length }; // levels 5-8, ~1 in 7 camps
+    return { type: "camp", x, y, level: 1 + ((h >>> 5) % 6) };
+  }
   if (h % 37 === 3) return { type: "ruin", x, y };
   return null;
 }
 function campGarrison(level) { return { spearman: 5 * level, archer: 3 * level, knight: level >= 4 ? level : 0 }; }
 function campLoot(level) { return { grain: level * 450, timber: level * 450, stone: level * 350, iron: level * 220 }; }
+function warlordGarrison(level) { return { spearman: 9 * level, archer: 6 * level, swordsman: 4 * level, knight: 2 * level }; }
+function warlordLoot(level) { return { grain: level * 900, timber: level * 900, stone: level * 750, iron: level * 500 }; }
 
 // ---- the voice of the realm: flavor text BAKED at build time (authored offline, never an AI call at runtime) ----
 const FLAVOR = {
@@ -635,27 +651,37 @@ function resolveInner(p) {
       if (!m.resolved && now >= m.arrive && m.kind === "scout") resolveScout(p, m, now);
       if (!m.resolved && now >= m.arrive && m.kind === "reinforce") resolveReinforce(p, m, now);
       if (!m.resolved && now >= m.arrive && m.kind === "city") resolveCityAttack(p, m, now);
-      if (!m.resolved && now >= m.arrive) {
-        const def = campGarrison(m.level);
+      if (!m.resolved && now >= m.arrive && (m.kind === "warlord" || !m.kind)) {
+        const wl = m.kind === "warlord";
+        const def = wl ? warlordGarrison(m.level) : campGarrison(m.level);
         const hb = heroBonusOf(p);
-        const r = combat(m.troops, def, 1 + hb.atk / 100);
-        const rep = { time: now, tx: m.tx, ty: m.ty, level: m.level, win: r.attWins, attLoss: r.attWins ? r.winnerLoss : 1, sent: Object.assign({}, m.troops) };
+        const r = combat(m.troops, def, 1 + hb.atk / 100, wl ? 1.35 : 1); // warlords fight with elite discipline (a wall-like edge)
+        const rep = { time: now, tx: m.tx, ty: m.ty, level: m.level, win: r.attWins, attLoss: r.attWins ? r.winnerLoss : 1, sent: Object.assign({}, m.troops), kind: m.kind || "camp" };
+        if (wl) { const w = WARLORDS[m.wi % WARLORDS.length]; rep.warlord = w.name + ", " + w.title; }
         rep.flavor = pick(r.attWins ? FLAVOR.victory : FLAVOR.defeat, ihash(m.tx, m.ty) ^ (now >>> 4));
         if (r.attWins) {
           const surv = {}; let carry = 0;
           for (const u in m.troops) { const keep = Math.max(0, Math.round(m.troops[u] * (1 - r.winnerLoss))); surv[u] = keep; carry += keep * UNITS[u].carry; }
-          const src = campLoot(m.level); const loot = {}; let sum = 0;
+          const src = wl ? warlordLoot(m.level) : campLoot(m.level); const loot = {}; let sum = 0;
           for (const k of LOOTABLE) { loot[k] = Math.round(src[k] * (1 + hb.gold / 100)); sum += loot[k]; }
           if (sum > carry && sum > 0) { const f = carry / sum; for (const k in loot) loot[k] = Math.floor(loot[k] * f); }
           m.surv = surv; m.loot = loot; rep.loot = loot; rep.surv = surv;
           const lostW = {}; for (const u in m.troops) lostW[u] = (m.troops[u] || 0) - (surv[u] || 0);
           m.wounded = woundedFromLost(lostW); rep.wounded = m.wounded;
-          // hero earns experience from each cleared camp; level grants flat atk/def
-          const gain = m.level * 8; p.hero.xp += gain; rep.heroXp = gain;
+          // hero earns experience from each cleared camp; level grants flat atk/def (a warlord is worth far more)
+          const gain = m.level * (wl ? 16 : 8); p.hero.xp += gain; rep.heroXp = gain;
           while (p.hero.xp >= p.hero.level * 100) { p.hero.xp -= p.hero.level * 100; p.hero.level++; rep.heroLevel = p.hero.level; }
+          if (wl) { // a defeated warlord always yields shards and a relic from the field
+            const shards = 30 + m.level * 6; p.gems += shards; rep.shards = shards;
+            p.wlN = (p.wlN || 0) + 1; p.relics = p.relics || [];
+            const it = rollRelic((ihash(m.tx, m.ty) ^ Math.imul(p.wlN, 0x9e3779b9) ^ hstr(p.name)) >>> 0, 1);
+            while (p.relics.some((x) => x.seed === it.seed)) it.seed = (it.seed + 0x9e3779b9) >>> 0;
+            p.relics.push(it);
+            rep.relic = { seed: it.seed, slot: it.slot, slotName: SLOT_NAME[it.slot], tier: it.tier, tierName: TIERS[it.tier], aff: it.aff, affName: AFFIX_NAME[it.aff], val: it.val };
+          }
           bump(p, "raid"); if (Object.values(loot).some((v) => v > 0)) bump(p, "loot");
-          life(p, "raidsWon"); life(p, "looted", Object.values(loot).reduce((a, c) => a + c, 0)); seasonGain(p, 50);
-          p.cleared[m.tx + "," + m.ty] = now + 1800; // camp returns after 30 min
+          life(p, "raidsWon"); life(p, "looted", Object.values(loot).reduce((a, c) => a + c, 0)); seasonGain(p, wl ? 120 : 50);
+          p.cleared[m.tx + "," + m.ty] = now + (wl ? 10800 : 1800); // a warlord stays broken for 3h; a camp returns in 30 min
         } else { m.surv = {}; m.loot = {}; rep.loot = {}; rep.surv = {}; m.wounded = woundedFromLost(m.troops); rep.wounded = m.wounded; }
         p.reports.unshift(rep); p.reports = p.reports.slice(0, 25);
         m.resolved = true;
@@ -906,6 +932,7 @@ const ROUTES = {
       const x = p.x + dx, y = p.y + dy; if (x === p.x && y === p.y) continue;
       const t = tileAt(x, y); if (!t) continue;
       if (t.type === "camp") { const until = (p.cleared || {})[x + "," + y] || 0; tiles.push({ type: "camp", x, y, level: t.level, cleared: until > now, dist: Math.round(Math.hypot(dx, dy) * 10) / 10, garrison: campGarrison(t.level), loot: campLoot(t.level), taunt: pick(FLAVOR.taunts, ihash(x, y)) }); }
+      else if (t.type === "warlord") { const until = (p.cleared || {})[x + "," + y] || 0; const w = WARLORDS[t.wi % WARLORDS.length]; tiles.push({ type: "warlord", x, y, level: t.level, cleared: until > now, until: until > now ? until : 0, dist: Math.round(Math.hypot(dx, dy) * 10) / 10, garrison: warlordGarrison(t.level), loot: warlordLoot(t.level), name: w.name, title: w.title, taunt: w.taunt }); }
       else if (t.type === "ruin") tiles.push({ type: "ruin", x, y, dist: Math.round(Math.hypot(dx, dy) * 10) / 10, delved: !!(p.delved && p.delved[x + "," + y]) });
       else tiles.push({ type: t.type, x, y, dist: Math.round(Math.hypot(dx, dy) * 10) / 10 });
     }
@@ -922,7 +949,7 @@ const ROUTES = {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
     const p = db.players[n]; resolve(p);
     const tx = b.x | 0, ty = b.y | 0; const troops = cleanTroops(b.troops);
-    const t = tileAt(tx, ty); if (!t || t.type !== "camp") return send(res, 400, { err: "No camp there to raid." });
+    const t = tileAt(tx, ty); if (!t || (t.type !== "camp" && t.type !== "warlord")) return send(res, 400, { err: "No camp there to raid." });
     if (((p.cleared || {})[tx + "," + ty] || 0) > NOW()) return send(res, 400, { err: "That camp is cleared. It will return soon." });
     for (const u in troops) if ((troops[u] | 0) > (p.t[u] || 0)) return send(res, 400, { err: "You do not have that many " + (UNITS[u] ? UNITS[u].name : u) + "." });
     const total = unitsCount(troops); if (total <= 0) return send(res, 400, { err: "Send at least one soldier." });
@@ -934,7 +961,9 @@ const ROUTES = {
     const travel = Math.max(12, Math.round(dist / speed * 400 / (1 + (hb.speed + vipPerks(p).march) / 100)));
     for (const u in troops) p.t[u] -= troops[u];
     const now = NOW();
-    p.marches.push({ tx, ty, level: t.level, troops: Object.assign({}, troops), depart: now, arrive: now + travel, ret: now + travel * 2, resolved: false });
+    const mr = { tx, ty, level: t.level, troops: Object.assign({}, troops), depart: now, arrive: now + travel, ret: now + travel * 2, resolved: false };
+    if (t.type === "warlord") { mr.kind = "warlord"; mr.wi = t.wi; }
+    p.marches.push(mr);
     save(); send(res, 200, view(p));
   },
   "POST /api/attack": async (req, res, b) => {
