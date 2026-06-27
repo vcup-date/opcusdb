@@ -4,8 +4,6 @@ A complete, production-quality browser strategy MMO in the Travian / Clash of Ki
 
 The whole game is a single dependency-free Node.js server plus a static web client. The runtime is fully deterministic and server-authoritative. There are no third-party packages, no build step, and no AI calls at runtime.
 
-![splash](web/img/splash.png)
-
 ## Run it
 
 ```sh
