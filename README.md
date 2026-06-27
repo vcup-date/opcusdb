@@ -7,7 +7,6 @@ multiplayer games and AI-agent worlds, written in Rust, dependency-free.
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![rust](https://img.shields.io/badge/rust-1.80%2B-orange)
-![tests](https://img.shields.io/badge/tests-191%20passing-success)
 ![deps](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![targets](https://img.shields.io/badge/targets-native%20%2B%20WASM-informational)
 
@@ -33,10 +32,6 @@ _policy_ layered over a common core, not a hard-coded choice**, so the *same*
 engine serves wildly different netcode models. Every one of the five below is
 demonstrated with running, tested code.
 
-```
-191 tests · 41 binaries · ~7.4k LoC Rust · clippy-clean · zero external deps
-native + WASM proven byte-identical (cross-target determinism gate passes)
-```
 
 ## See it run
 
@@ -308,6 +303,28 @@ any townsperson to see who they are.
 export OPENROUTER_API_KEY=sk-...                  # required: all resident dialogue is from the model
 cargo run -p opcusdb-server --bin opcusdb-town    # open http://localhost:9011 (more tabs = more visitors)
 # click to walk · type to talk to whoever's nearby
+```
+
+## Giantsreach, a browser strategy MMO 🏰⚔️
+
+[`demos/giantsreach`](demos/giantsreach) is a complete, production-quality **browser strategy
+MMO** in the Travian / Clash of Kings / Rise of Kingdoms tradition: raise a hold among the
+fallen stone giants, grow a time-based economy, train a host, march on barbarian camps and
+named warlords, war with rival lords, band your banner with others, raise and besiege alliance
+strongholds, and climb the realm ladder. Unlike the Rust demos above it is a **standalone,
+dependency-free Node.js server** plus a static web client, but built in the same spirit: the
+runtime is fully **deterministic and server-authoritative**, with **no third-party packages, no
+build step, and no AI calls at runtime** (all art and music ship as pre-rendered static assets).
+Hand-painted painterly art and a carved-oak HUD throughout.
+
+<div align="center">
+<img src="assets/giantsreach.png" width="820"/><br/>
+<b>Giantsreach</b>: your hold rendered as the playfield, with the carved-oak HUD, action rails, and tappable building markers; a dependency-free Node.js strategy MMO.
+</div>
+
+```sh
+cd demos/giantsreach && node server/server.js     # open http://localhost:8787 (or ./launch.sh)
+# tap a building to raise it; open the left rails for the army, the forge, alliances, and the world map
 ```
 
 ## Architecture
