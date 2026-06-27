@@ -102,7 +102,29 @@ async function enterGame() {
   initIcons(); updateMuteIcon();
   await sync(); setupTown(); buildHotbar(); loop(); setInterval(sync, 3500);
   maybeWelcome();
-  maybeCouncil();
+  if (S && S.seasonEnded) maybeSeasonRecap(); else maybeCouncil();
+}
+// the season has turned: a one-time recap of the season that closed and where you stand as the new one dawns
+function maybeSeasonRecap() {
+  const e = S && S.seasonEnded; if (!e) return;
+  if (!$("#modal").classList.contains("hidden")) return; // do not stack over the welcome
+  const st = e.standing || {};
+  showModal(`<div class="ph">${ic("pass")} The Season Turns <span class="x">&times;</span></div>
+    <div class="bd" style="text-align:center">
+      <div class="seasonend">
+        <div class="seTitle">${esc(e.name)}</div><div class="seSub">draws to a close</div>
+        ${e.flavor ? `<div class="seFlav">${ic("scroll")}<span>&ldquo;${esc(e.flavor)}&rdquo;</span></div>` : ""}
+        <div class="seStats">
+          <div class="seStat"><div class="seK">Pass level reached</div><div class="seV">${e.level}<span class="seOf"> / ${e.maxLevel}</span></div><div class="seTrack">${e.premium ? "gilded track" : "free track"}</div></div>
+          ${st.rank ? `<div class="seStat"><div class="seK">Your standing</div><div class="seV">${fmt(st.rank)}<span class="seOf"> of ${fmt(st.total)} lords</span></div><div class="seTrack">by might</div></div>` : ""}
+        </div>
+        <p class="seNote">Your pass progress resets for <b>${esc(e.newName || "the new season")}</b>. Your hold, your host, and your standing endure.</p>
+      </div>
+      <div class="modal-actions"><button class="gbtn grn" id="se-ok">Onward</button></div>
+    </div>`);
+  modalOpen = null;
+  const done = async () => { try { const v = await api("seasonack", {}); applyState(v); } catch (err) {} closeModal(); };
+  const ok = $("#se-ok"); if (ok) ok.onclick = done; const x = $("#modal .x"); if (x) x.onclick = done;
 }
 // returning-player digest: what happened while away + what awaits your word (shown once per session)
 function maybeCouncil() {

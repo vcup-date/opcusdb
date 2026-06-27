@@ -392,6 +392,22 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 57: THE SEASON TURNS, a recap when a season closes)
+- The 30-day season pass rolled over SILENTLY (seasonSync just wiped the old season when its id changed), so the
+  season cycle had no climax and a returning player never learned how their season ended. Added a one-time
+  season-turn recap that closes the retention loop with a real moment.
+- Server: seasonSync now, on a genuine rollover where the lord made progress, stashes a seasonEnded summary (the
+  closed season's name and the pass level reached, the track, and the incoming season's name) before resetting. The
+  state view enriches it with the lord's current realm standing by might (a cheap lordStanding sweep) and a baked
+  season-turn flavor line, and a new /api/seasonack clears it so it shows exactly once. Deterministic, zero AI.
+- Client: on entering, if a season has turned, a "The Season Turns" recap modal takes priority over the Council
+  digest, showing the closed season, the flavor quote, a pass-level-reached card and a realm-standing card, and a note
+  that the pass resets while the hold and standing endure; Onward acks it.
+- Verified END TO END: seeding Hero's season to the previous id at level 15 (premium) triggered, on next load,
+  seasonEnded "The Ashen Pact" -> "Banners of the Long Dusk" with level 15/50 and standing 3 of 28 lords; the modal
+  auto-showed those exact values and the flavor, and Onward acked it so it did not reappear (seasonEnded cleared). A
+  normal guest with no rollover saw nothing. Screenshot season-end.png. No JS errors, guest smoke clean, no em-dashes.
+
 ## DONE (iteration 56: YOUR BANNER'S STANDING on the Banners and Territory ladders)
 - The Lords ladder showed your own rank when you fell below the visible top, but the Banners and Territory ladders
   did not, so a player could not see where their banner sat once it dropped out of the top 15. Surfaced own-banner
@@ -1032,7 +1048,8 @@ NEXT STEPS list below; none are blocking.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime; [DONE] named
    barbarian warlords as elite map camps (iteration 39); [DONE] per-building flavor lines in the upgrade modal
-   (iteration 53); [DONE] defender + siege war-report narration (iteration 54). Future: a season-end realm recap.
+   (iteration 53); [DONE] defender + siege war-report narration (iteration 54); [DONE] a season-turn recap with the
+   lord's realm standing (iteration 57). Future: a realm-wide event chronicle.
 10. [DONE] MOBILE LAYOUT pass (iteration 12); [DONE] SETTINGS + accessibility (iteration 30); [DONE] in-game
     incoming-attack alerts (iteration 31). Remaining (optional): a SERVER SELECT (one realm) screen.
 11. PRODUCTION HARDENING: rate-limiting, input validation, save integrity, error states,

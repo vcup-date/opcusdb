@@ -254,6 +254,14 @@ const FLAVOR = {
     "Their garrison was awake and angry. The breach you wanted never opened.",
     "You spent the day teaching your men the height of those walls.",
   ],
+  // the turning of a season
+  seasonturn: [
+    "The almanac turns a page. What you won this season is written; what you build next is not.",
+    "Banners are lowered and raised again. The Reach takes a breath before the next long campaign.",
+    "An age closes quietly, as ages do, with a tally and a toast and the smell of cold rain.",
+    "The heralds cry the new season through the streets. Old debts are remembered; new ones begin.",
+    "Snow on the old battlefields, green on the new. The realm forgets nothing and forgives little.",
+  ],
 };
 // a baked, deterministic flavor line per building, shown in the upgrade modal (varies as the building rises)
 const BLD_FLAVOR = {
@@ -398,7 +406,17 @@ const SEASON_XP_PER = 300;            // xp per pass level
 const SEASON_NAMES = ["The Ashen Pact", "Banners of the Long Dusk", "The Gilded March", "Embers of the Giant-Kings", "The Frostbound Accord", "Crowns of the Reach"];
 function seasonId() { return Math.floor((NOW() - SEASON_EPOCH) / SEASON_LEN); }
 function seasonName(id) { const n = SEASON_NAMES.length; return SEASON_NAMES[((id % n) + n) % n]; }
-function seasonSync(p) { const id = seasonId(); if (!p.season || p.season.id !== id) p.season = { id, xp: 0, level: 0, claimed: [], claimedP: [], premium: false }; }
+function seasonSync(p) {
+  const id = seasonId();
+  if (!p.season) { p.season = { id, xp: 0, level: 0, claimed: [], claimedP: [], premium: false }; return; }
+  if (p.season.id !== id) {
+    // the season has turned: stash a recap of the one that just closed (if the lord made any progress in it)
+    if ((p.season.level || 0) > 0 || (p.season.xp || 0) > 0) p.seasonEnded = { id: p.season.id, name: seasonName(p.season.id), level: p.season.level || 0, premium: !!p.season.premium, newName: seasonName(id) };
+    p.season = { id, xp: 0, level: 0, claimed: [], claimedP: [], premium: false };
+  }
+}
+// the lord's place in the realm by might (cheap, for the season recap; computed from current state, no resolve)
+function lordStanding(p) { const mine = might(p); let better = 0, total = 0; for (const n of Object.keys(db.players)) { const q = db.players[n]; if (!q) continue; total++; if (n !== p.name && might(q) > mine) better++; } return { rank: better + 1, total }; }
 function seasonGain(p, amt) { seasonSync(p); p.season.xp += amt; p.season.level = Math.min(SEASON_LEVELS, Math.floor(p.season.xp / SEASON_XP_PER)); }
 function seasonFree(lv) { if (lv % 10 === 0) return { gems: 40 }; if (lv % 5 === 0) return { gems: 15 }; const a = 200 + lv * 40; return { res: { grain: a, timber: a, stone: a, iron: a } }; }
 function seasonPrem(lv) { const r = { gems: 12 + Math.floor(lv / 4) * 4 }; if (lv % 10 === 0) r.gems += 120; if (lv % 5 === 0) r.res = { iron: 1500 + lv * 100 }; return r; }
@@ -984,6 +1002,7 @@ function view(p) {
     heroBonus: heroBonusOf(p), pity: p.pity, pityMax: PITY, forgeCost: FORGE_COST, reforgeCost: REFORGE_COST, salvageVals: SALVAGE, fuseN: FUSE_N,
     achievements: achvView(p), achvClaim: achvClaimable(p),
     vip: vipView(p), season: seasonView(p),
+    seasonEnded: p.seasonEnded ? Object.assign({}, p.seasonEnded, { standing: lordStanding(p), maxLevel: SEASON_LEVELS, flavor: pick(FLAVOR.seasonturn, (hstr(p.name) ^ p.seasonEnded.id) >>> 0) }) : null,
     alliance: allianceView(p), allyTag: p.alliance || null, rally: rallyView(p, NOW()),
     counsel: pick(FLAVOR.counsel, hstr(p.name) ^ curDay()), chronicle: FLAVOR.chronicle,
   };
@@ -1504,6 +1523,11 @@ const ROUTES = {
     save(); send(res, 200, view(p));
   },
   // ---- season pass: claim one level/track, or every available reward at once ----
+  // acknowledge the season-turn recap so it is shown only once
+  "POST /api/seasonack": async (req, res) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; if (p.seasonEnded) delete p.seasonEnded; save(); send(res, 200, view(p));
+  },
   "POST /api/season": async (req, res, b) => {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
     const p = db.players[n]; resolve(p); seasonSync(p); const s = p.season;

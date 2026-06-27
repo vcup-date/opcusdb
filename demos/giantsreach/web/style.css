@@ -505,6 +505,18 @@ svg{width:18px;height:18px;vertical-align:middle}
 .taunt{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;margin-bottom:12px;border-left:3px solid var(--ox);border-radius:8px;background:linear-gradient(90deg,#2a120c,#1a0f08);color:#e9b9a6;font-style:italic;font-size:13px;line-height:1.4}
 .taunt svg{width:20px;height:20px;flex:none;stroke:#e2613f;margin-top:1px}
 .repflav{margin-top:5px;color:#b59a6e;font-style:italic;font-size:12px;line-height:1.35}
+.seasonend{padding:6px 4px 4px}
+.seTitle{font-family:'Cinzel';font-weight:800;font-size:22px;color:var(--gold2);letter-spacing:.5px;text-shadow:0 1px 6px #f6e2a033}
+.seSub{font-family:'Cinzel';color:#8a7858;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.seFlav{display:flex;gap:9px;align-items:flex-start;justify-content:center;text-align:left;margin:14px auto;max-width:380px;padding:10px 13px;border-left:3px solid var(--gold);border-radius:8px;background:linear-gradient(90deg,#241808,#1a1006);color:#d8c08a;font-style:italic;font-size:13px;line-height:1.45}
+.seFlav svg{width:16px;height:16px;flex:none;stroke:var(--gold2);margin-top:2px}
+.seStats{display:flex;gap:12px;justify-content:center;margin:14px 0}
+.seStat{flex:1;max-width:180px;border:1.5px solid #4a3a1c;border-radius:11px;background:#160d05;padding:11px 9px}
+.seK{font-family:'Cinzel';font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a7858}
+.seV{font-family:'Cinzel';font-weight:800;font-size:24px;color:var(--gold2);margin-top:3px}
+.seV .seOf{font-size:12px;font-weight:600;color:#8a7858}
+.seTrack{font-size:11px;color:#caa86a;margin-top:2px}
+.seNote{color:#caa86a;font-size:12.5px;line-height:1.5;max-width:400px;margin:6px auto 0}.seNote b{color:#f3e7c8}
 .counsel{display:flex;gap:11px;align-items:flex-start;padding:12px 14px;margin-bottom:14px;border:1.5px solid #5a431f;border-radius:10px;background:linear-gradient(#241808,#160d05);color:#e7d6ad;font-style:italic;line-height:1.45;font-size:14px}
 .counsel svg{width:22px;height:22px;flex:none;stroke:#caa244;margin-top:1px}
 .counsel .ck{font-family:'Cinzel';font-style:normal;font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#caa86a;margin-bottom:4px}
