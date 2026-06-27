@@ -392,6 +392,23 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 46: CONTESTABLE STRONGHOLDS, alliance-vs-alliance war on the map)
+- The Banner Stronghold gave alliances a map presence but it was untouchable, so there were no territorial stakes.
+  Made rival strongholds contestable: a host can now march on an enemy banner's fortress and batter it down.
+- Server: /api/fortassault sends a host at a rival fort (blocked against your own banner, while under beginner's
+  peace, or while the fort is rebuilding). It resolves as a deterministic march (kind "fort") on arrival against the
+  fort's standing garrison (40 spearmen + 30 archers + 15 swordsmen per level) behind a fortified wall multiplier
+  (1.35 + 0.05/level). A victory knocks the stronghold DOWN one level (razing it entirely at level 1), zeroes its
+  pledge progress, and raises a 30-minute rebuild shield; the attacker takes shards + looted resources and the whole
+  defending banner is warned on the War Table and with a defense report to every member. A loss leaves it standing.
+- Client: rival fort tiles on the map are now clickable (gold allied, violet rival, greyed while rebuilding) and open
+  an Assault dialog showing the garrison and the stakes; new battle-report cards for both the attacker (STORMED /
+  RAZED / REPELLED) and each defender (HELD / BATTERED / RAZED).
+- Verified END TO END: a rival (Rax of Ravens) stormed Wolves' level-3 stronghold, battering it to level 2 (not
+  razed), banking 35 shards + 3,600 loot; the defending leader got a fortdef report and the War Table logged the
+  storming; a re-assault while the rebuild shield stood was rejected; the assault dialog rendered the garrison and
+  stakes. Screenshot fort-assault.png. No JS errors, guest smoke clean (no regression).
+
 ## DONE (iteration 45: THE BANNER STRONGHOLD, a shared alliance fortress on the map)
 - Alliances had help, reinforcement, rallies, and ranks, but no shared PRESENCE on the world map and no collective
   build goal. Added the Banner Stronghold: a fortress the whole banner raises together, the roadmap's "shared map
@@ -871,7 +888,8 @@ NEXT STEPS list below; none are blocking.
    20 per order), +1%/member production bonus, War Table chat; [DONE] reinforcement (iteration 27): garrison
    a member's hold, join their defense, recall; [DONE] joint rally marches on warlords (iteration 40); [DONE]
    member ranks: officers + transferable leadership + moderation (iteration 41); [DONE] the Banner Stronghold, a
-   shared map fortress raised by pledges for an alliance-wide march buff (iteration 45). Future: rival forts contestable.
+   shared map fortress raised by pledges for an alliance-wide march buff (iteration 45); [DONE] rival strongholds are
+   contestable, battered down a level per assault and razable (iteration 46). Future: garrisoning troops into a fort.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime; [DONE] named
    barbarian warlords as elite map camps (iteration 39). Future: per-building flavor, event log narration.

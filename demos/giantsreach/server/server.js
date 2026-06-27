@@ -398,6 +398,9 @@ function findEmptyNear(cx, cy) { // spiral out from a city to the nearest open m
   return null;
 }
 function fortAt(x, y) { for (const t in db.alliances) { const a = db.alliances[t]; if (a.fort && a.fort.x === x && a.fort.y === y) return a; } return null; }
+function fortGarrison(level) { return { spearman: 40 * level, archer: 30 * level, swordsman: 15 * level }; } // the stronghold's standing defenders, by level
+function fortDefMult(level) { return 1.35 + 0.05 * level; } // forts are fortified, and sturdier the taller they stand
+const FORT_SHIELD = 1800; // 30 min of rebuilding after a stronghold is stormed
 function allyHelpShave(total) { return Math.max(HELP_MIN, Math.round(total * HELP_FRACTION)); }
 function allyRank(a, name) { return a.leader === name ? "leader" : (a.officers || []).includes(name) ? "officer" : "member"; }
 function isOfficer(a, name) { return a.leader === name || (a.officers || []).includes(name); }
@@ -641,6 +644,32 @@ function resolveReinforce(p, m, now) {
   p.reports.unshift({ time: now, kind: "reinfsent", ally: m.target, troops: Object.assign({}, m.troops) }); p.reports = p.reports.slice(0, 25);
   m.resolved = true; m.ret = now; // garrisoned, no return leg
 }
+// resolve an assault on a rival banner stronghold: a win batters it down a level (and razes it at zero)
+function resolveFortAssault(p, m, now) {
+  const a = db.alliances[m.target]; const sent = Object.assign({}, m.troops);
+  if (!a || !a.fort || a.fort.x !== m.tx || a.fort.y !== m.ty) { // the stronghold is already gone: the host wheels home
+    m.surv = sent; m.loot = {}; p.reports.unshift({ time: now, kind: "fort", target: m.target, win: false, gone: true, attLoss: 0, sent }); p.reports = p.reports.slice(0, 25); m.resolved = true; return;
+  }
+  const lvl = a.fort.level; const hb = heroBonusOf(p);
+  const r = combat(m.troops, fortGarrison(lvl), 1 + hb.atk / 100, fortDefMult(lvl));
+  const lossF = r.attWins ? r.winnerLoss : r.loserLoss;
+  const surv = {}; let carry = 0; for (const u in m.troops) { const keep = Math.max(0, Math.round(m.troops[u] * (1 - lossF))); surv[u] = keep; carry += keep * UNITS[u].carry; }
+  m.surv = surv; const lostW = {}; for (const u in m.troops) lostW[u] = (m.troops[u] || 0) - (surv[u] || 0); m.wounded = woundedFromLost(lostW);
+  const rep = { time: now, kind: "fort", target: m.target, tag: a.tag, fortName: a.name, level: lvl, win: r.attWins, attLoss: r.attWins ? r.winnerLoss : r.loserLoss, sent, wounded: m.wounded };
+  if (r.attWins) {
+    a.fort.level = Math.max(0, lvl - 1); a.fort.prog = 0; a.fort.shield = now + FORT_SHIELD;
+    const razed = a.fort.level <= 0; rep.razed = razed; rep.newLevel = razed ? 0 : a.fort.level;
+    const loot = {}; const base = lvl * 300; let sum = 0; for (const k of LOOTABLE) { loot[k] = Math.round(base * (1 + hb.gold / 100)); sum += loot[k]; }
+    if (sum > carry && sum > 0) { const f = carry / sum; for (const k in loot) loot[k] = Math.floor(loot[k] * f); }
+    m.loot = loot; rep.loot = loot;
+    const shards = 20 + lvl * 5; p.gems += shards; rep.shards = shards;
+    life(p, "looted", Object.values(loot).reduce((c, v) => c + v, 0)); seasonGain(p, 80);
+    allyChatPush(a, "", razed ? (p.name + " razed the banner stronghold to the ground.") : (p.name + " stormed the stronghold and battered it to level " + a.fort.level + "."));
+    if (razed) delete a.fort;
+  } else { m.loot = {}; rep.loot = {}; allyChatPush(a, "", "The stronghold threw back an assault by " + p.name + "."); }
+  p.reports.unshift(rep); p.reports = p.reports.slice(0, 25); m.resolved = true;
+  for (const mem of (a.members || [])) { const q = db.players[mem]; if (q && mem !== p.name) { q.reports = q.reports || []; q.reports.unshift({ time: now, kind: "fortdef", attacker: p.name, win: !r.attWins, level: lvl, newLevel: rep.newLevel || 0, razed: !!rep.razed }); q.reports = q.reports.slice(0, 25); } }
+}
 // ---- alliance rally: banded lords muster a JOINT host against a warlord, fighting as one ----
 const RALLY_MUSTER = Number(process.env.RALLY_MUSTER) || 180;   // seconds the rally gathers before it marches (members may join until then)
 function rallyHost(ra) { const c = {}; for (const nm in ra.parts) { const t = ra.parts[nm].troops || {}; for (const u in t) c[u] = (c[u] || 0) + (t[u] || 0); } return c; }
@@ -780,6 +809,7 @@ function resolveInner(p) {
       if (!m.resolved && now >= m.arrive && m.kind === "scout") resolveScout(p, m, now);
       if (!m.resolved && now >= m.arrive && m.kind === "reinforce") resolveReinforce(p, m, now);
       if (!m.resolved && now >= m.arrive && m.kind === "city") resolveCityAttack(p, m, now);
+      if (!m.resolved && now >= m.arrive && m.kind === "fort") resolveFortAssault(p, m, now);
       if (!m.resolved && now >= m.arrive && (m.kind === "warlord" || !m.kind)) {
         const wl = m.kind === "warlord";
         const def = wl ? warlordGarrison(m.level) : campGarrison(m.level);
@@ -1076,7 +1106,7 @@ const ROUTES = {
     }
     for (const t of Object.keys(db.alliances)) { // banner strongholds in view
       const a = db.alliances[t]; if (!a.fort) continue; const f = a.fort;
-      if (Math.abs(f.x - p.x) <= R && Math.abs(f.y - p.y) <= R) tiles.push({ type: "fort", x: f.x, y: f.y, tag: a.tag, name: a.name, level: f.level, allied: a.tag === p.alliance, dist: Math.round(Math.hypot(f.x - p.x, f.y - p.y) * 10) / 10 });
+      if (Math.abs(f.x - p.x) <= R && Math.abs(f.y - p.y) <= R) tiles.push({ type: "fort", x: f.x, y: f.y, tag: a.tag, name: a.name, level: f.level, allied: a.tag === p.alliance, shielded: (f.shield || 0) > now, garrison: fortGarrison(f.level), dist: Math.round(Math.hypot(f.x - p.x, f.y - p.y) * 10) / 10 });
     }
     send(res, 200, { center: { x: p.x, y: p.y }, name: p.name, troops: p.t, units: UNITS, tiles, R, shielded: shielded(p), shieldKeep: SHIELD_KEEP, watchtower: p.b.watchtower || 0 });
   },
@@ -1099,6 +1129,28 @@ const ROUTES = {
     const mr = { tx, ty, level: t.level, troops: Object.assign({}, troops), depart: now, arrive: now + travel, ret: now + travel * 2, resolved: false };
     if (t.type === "warlord") { mr.kind = "warlord"; mr.wi = t.wi; }
     p.marches.push(mr);
+    save(); send(res, 200, view(p));
+  },
+  // ---- assault a rival banner stronghold: a win batters it down a level ----
+  "POST /api/fortassault": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p);
+    const tx = b.x | 0, ty = b.y | 0; const troops = cleanTroops(b.troops);
+    const a = fortAt(tx, ty); if (!a || !a.fort) return send(res, 400, { err: "No stronghold stands there." });
+    if (a.tag === p.alliance) return send(res, 400, { err: "That is your own banner's stronghold." });
+    if (shielded(p)) return send(res, 400, { err: "Raise your Keep to " + SHIELD_KEEP + " before you make war." });
+    if ((a.fort.shield || 0) > NOW()) return send(res, 400, { err: "That stronghold is still rebuilding its defenses." });
+    for (const u in troops) if ((troops[u] | 0) > (p.t[u] || 0)) return send(res, 400, { err: "You do not have that many " + (UNITS[u] ? UNITS[u].name : u) + "." });
+    if (unitsCount(troops) <= 0) return send(res, 400, { err: "Send at least one soldier." });
+    const cap = marchCap(p);
+    if ((p.marches || []).filter((m) => m.kind !== "scout").length >= cap) return send(res, 400, { err: "All your marches are out (" + cap + " max)." });
+    const dist = Math.hypot(tx - p.x, ty - p.y); let speed = Infinity;
+    for (const u in troops) if (troops[u]) speed = Math.min(speed, UNITS[u].speed);
+    const hb = heroBonusOf(p);
+    const travel = Math.max(12, Math.round(dist / speed * 400 / (1 + (hb.speed + vipPerks(p).march + allyFortSpeed(p)) / 100)));
+    for (const u in troops) p.t[u] -= troops[u];
+    const now = NOW();
+    p.marches.push({ tx, ty, level: a.fort.level, troops: Object.assign({}, troops), depart: now, arrive: now + travel, ret: now + travel * 2, resolved: false, kind: "fort", target: a.tag });
     save(); send(res, 200, view(p));
   },
   // ---- call a joint alliance rally on a warlord: escrow your host; banded lords join until it musters ----

@@ -446,6 +446,8 @@ svg{width:18px;height:18px;vertical-align:middle}
 .cell.fort svg{width:16px;height:16px}
 .cell.fort.ally{background:radial-gradient(#f4dd9a,#caa033);color:#241a06}.cell.fort.ally svg{stroke:#241a06}
 .cell.fort.foe{background:radial-gradient(#7a4a7a,#3a1f3a);box-shadow:0 0 0 1px #caa86a inset}.cell.fort.foe svg{stroke:#e6c8e6}
+.cell.fort.foe[data-fx]{cursor:pointer}
+.cell.fort.shielded{filter:grayscale(.5) brightness(.7);cursor:default}
 .cell.fort:hover{transform:scale(1.18);z-index:4}
 .rallycard{border:1.5px solid var(--ox);border-radius:11px;background:linear-gradient(#2a130c,#180c07);padding:11px 13px;margin-bottom:12px}
 .rcTop{display:flex;align-items:center;gap:10px}

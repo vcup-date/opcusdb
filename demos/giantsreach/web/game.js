@@ -1044,7 +1044,7 @@ function renderMap() {
     else if (t.type === "camp") cells += `<div class="cell camp ${t.cleared ? "cleared" : ""}" data-x="${x}" data-y="${y}" title="Barbarian camp, level ${t.level}">${t.level}</div>`;
     else if (t.type === "warlord") cells += `<div class="cell warlord ${t.cleared ? "cleared" : ""}" ${t.cleared ? "" : `data-x="${x}" data-y="${y}"`} title="${esc(t.name)}, ${esc(t.title)} &middot; warlord camp, level ${t.level}">${ic("sword")}</div>`;
     else if (t.type === "ruin") cells += `<div class="cell ruin ${t.delved ? "delved" : ""}" ${t.delved ? "" : `data-rx="${x}" data-ry="${y}"`} title="${t.delved ? "A delved ruin" : "A fallen giant's ruin (delve it)"}">${ic("ruin")}</div>`;
-    else if (t.type === "fort") cells += `<div class="cell fort ${t.allied ? "ally" : "foe"}" title="${esc(t.name)} [${esc(t.tag)}] &middot; banner stronghold, level ${t.level}">${ic("flag")}</div>`;
+    else if (t.type === "fort") { const raid = !t.allied && !t.shielded; cells += `<div class="cell fort ${t.allied ? "ally" : "foe"} ${t.shielded ? "shielded" : ""}" ${raid ? `data-fx="${x}" data-fy="${y}"` : ""} title="${esc(t.name)} [${esc(t.tag)}] &middot; banner stronghold, level ${t.level}${t.allied ? " (your banner)" : t.shielded ? " (rebuilding)" : " (assault it)"}">${ic("flag")}</div>`; }
     else if (t.type === "city") {
       const attackable = !t.shielded && !t.allied;
       const cls = t.allied ? "ally" : (t.shielded ? "shielded" : "foe");
@@ -1061,6 +1061,7 @@ function renderMap() {
   $$("#mapinner .cell.camp:not(.cleared), #mapinner .cell.warlord:not(.cleared)").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); marchDialog(+e.dataset.x, +e.dataset.y); });
   $$("#mapinner .cell.ruin[data-rx]").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); delveDialog(+e.dataset.rx, +e.dataset.ry); });
   $$("#mapinner .cell.city.foe[data-ax]").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); attackDialog(+e.dataset.ax, +e.dataset.ay); });
+  $$("#mapinner .cell.fort[data-fx]").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); fortAssaultDialog(+e.dataset.fx, +e.dataset.fy); });
   initIcons($("#mapinner"));
   buildMapMarchLayer();
   setupMapPanZoom(side, CELL);
@@ -1204,6 +1205,22 @@ function attackDialog(x, y) {
     try { await api("scout", { x, y }); sfx("march"); toast("Your scout rides out for " + esc(t.name)); closeModal(); } catch (e) { toast(e.message, true); }
   };
 }
+// assault a rival banner stronghold to batter it down a level
+function fortAssaultDialog(x, y) {
+  const t = MAP.tiles.find((c) => c.x === x && c.y === y && c.type === "fort"); if (!t) return;
+  const garr = Object.entries(t.garrison || {}).filter(([k, v]) => v > 0).map(([k, v]) => fmt(v) + " " + MAP.units[k].name).join(", ");
+  const rows = Object.keys(MAP.units).map((u) => `<div class="unitcard"><div class="em">${ic("sword")}</div><div class="mid"><div class="un">${MAP.units[u].name}</div><div class="st">you have ${MAP.troops[u] || 0} &middot; speed ${MAP.units[u].speed}</div></div><input type="number" min="0" max="${MAP.troops[u] || 0}" value="0" data-mu="${u}"/></div>`).join("");
+  showModal(`<div class="ph">${ic("flag")} Assault the stronghold <span class="x">&times;</span></div><div class="bd">
+    <div class="foehead"><div><div class="fn">${esc(t.name)} <span class="tagchip">${esc(t.tag)}</span></div><div class="fs">Banner stronghold &middot; level ${t.level} &middot; distance ${t.dist}</div></div><div class="foesig">${ic("flag")}</div></div>
+    <p style="color:#caa86a;text-align:center;margin:8px 0 10px;font-size:13px">Defended by <b>${garr || "its garrison"}</b> behind fortified walls. A victory batters the stronghold DOWN a level (and razes it at level 1), with spoils. The whole rival banner is warned.</p>
+    ${rows}<div class="modal-actions"><button class="gbtn ox" id="do-fort">Storm the walls</button></div></div>`);
+  modalOpen = null;
+  $("#do-fort").onclick = async () => {
+    const troops = {}; $$("#modal [data-mu]").forEach((i) => { const n = +i.value || 0; if (n > 0) troops[i.dataset.mu] = n; });
+    if (!Object.keys(troops).length) return toast("Choose some soldiers to send.", true);
+    try { const v = await api("fortassault", { x, y, troops }); applyState(v); sfx("march"); toast("Your host marches on the stronghold"); closeModal(); } catch (e) { toast(e.message, true); }
+  };
+}
 function reportsHtml() {
   if (!S || !S.reports || !S.reports.length) return "";
   const rows = S.reports.slice(0, 6).map((r) => {
@@ -1223,6 +1240,15 @@ function reportsHtml() {
     if (r.kind === "reinfsent") {
       const n = Object.values(r.troops || {}).reduce((a, c) => a + c, 0);
       return `<div class="repcard scout"><div class="rt">Sent <b>${fmt(n)}</b> soldiers to garrison <b>${esc(r.ally)}</b></div><div class="res scout">AID</div></div>`;
+    }
+    if (r.kind === "fort") {
+      if (r.gone) return `<div class="repcard loss"><div class="rt">Marched on <b>${esc(r.fortName || r.target)}</b>'s stronghold &middot; it was already gone</div><div class="res loss">GONE</div></div>`;
+      const w = r.win; const bounty = w ? [r.razed ? "<b>razed it</b>" : `battered it to <b>level ${r.newLevel}</b>`, r.shards ? `<b>${r.shards}</b> shards` : "", loot ? `<b>${loot}</b>` : ""].filter(Boolean).join(", ") : "";
+      return `<div class="repcard ${w ? "win" : "loss"}"><div class="rt">Assaulted <b>${esc(r.fortName || r.target)}</b>'s stronghold (level ${r.level}) &middot; lost ${Math.round((r.attLoss || 0) * 100)}% of the host${w ? " &middot; " + bounty : ""}</div><div class="res ${w ? "win" : "loss"}">${w ? (r.razed ? "RAZED" : "STORMED") : "REPELLED"}</div></div>`;
+    }
+    if (r.kind === "fortdef") {
+      const held = r.win;
+      return `<div class="repcard ${held ? "win" : "loss"} def"><div class="rt">Your banner stronghold was assaulted by <b>${esc(r.attacker)}</b> &middot; ${held ? "the walls held" : r.razed ? "it was <b>razed</b>" : `battered to <b>level ${r.newLevel}</b>`}</div><div class="res ${held ? "win" : "loss"}">${held ? "HELD" : r.razed ? "RAZED" : "BATTERED"}</div></div>`;
     }
     if (r.kind === "reinf") {
       const lost = Object.values(r.lost || {}).reduce((a, c) => a + c, 0);
