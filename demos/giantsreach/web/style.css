@@ -601,6 +601,14 @@ svg{width:18px;height:18px;vertical-align:middle}
 .rbtn{font-family:'Cinzel';font-weight:700;font-size:11px;color:#11250a;background:linear-gradient(#a6e07a,#5d9e36);border:none;border-radius:7px;padding:4px 11px;cursor:pointer;box-shadow:0 2px 0 var(--grnln)}
 .rbtn:hover{filter:brightness(1.07)}.rbtn:active{transform:translateY(1px);box-shadow:none}
 .rbtn.recall{color:#2a1a06;background:linear-gradient(#f4dd9a,#d3a544);box-shadow:0 2px 0 var(--goldln)}
+.rankchip{display:inline-flex;align-items:center;gap:3px;font-family:'Cinzel';font-weight:700;font-size:9.5px;letter-spacing:.4px;text-transform:uppercase;padding:1px 7px;border-radius:9px;border:1px solid}
+.rankchip svg{width:11px;height:11px}
+.rankchip.lead{color:#2a1a06;background:linear-gradient(#f4dd9a,#d3a544);border-color:var(--goldln)}.rankchip.lead svg{stroke:#2a1a06}
+.rankchip.off{color:#cdb6e6;background:#241830;border-color:#5a4577}.rankchip.off svg{stroke:#b89be0}
+.amActs{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.mbtn{font-family:'Cinzel';font-weight:700;font-size:10.5px;color:#caa86a;background:#1c1206;border:1px solid #4a3a1c;border-radius:7px;padding:4px 9px;cursor:pointer}
+.mbtn:hover{border-color:var(--gold);color:var(--gold2)}
+.mbtn.ox{color:#e9b9a6;border-color:#5a2418}.mbtn.ox:hover{border-color:var(--ox);color:#f0b89e;background:#23120c}
 
 /* ---- the realm ladder ---- */
 .ph .sub2{margin-left:auto;margin-right:10px;font-family:'Spectral';font-weight:400;letter-spacing:0;text-transform:none;font-size:12px;color:#caa86a}

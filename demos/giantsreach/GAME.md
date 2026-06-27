@@ -392,6 +392,25 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 41: BANNER RANKS, officers and a transferable leadership)
+- The alliance had no internal structure: every member was equal and only the founder was nominally "leader" with no
+  powers. Added member ranks (the roadmap's last alliance gap): leader, officer, and member, with a real permission
+  ladder for moderation and succession.
+- Server: ranks are an a.officers list beside the existing a.leader. /api/alliancepromote and /api/alliancedemote
+  (leader only) raise and lower officers; /api/alliancetransfer (leader only) passes the mantle, the old leader
+  stepping down to officer; /api/alliancekick lets a leader expel anyone and an officer expel only plain members, a
+  kicked lord's banner cleared. pruneAlliance keeps officers valid and, when a leader departs, passes the mantle to
+  an officer first, then the next member. allianceView now returns each member's rank plus a per-viewer can{} set so
+  the client only ever shows permitted actions. Every change is announced on the War Table.
+- Client: the roster shows a gold Leader chip and a purple Officer chip, and renders only the management buttons the
+  viewer is allowed (Raise to officer / Lower to member / Pass the banner / Expel), with a confirm on the two
+  destructive ones. Members are sorted leader, then officers, then by might.
+- Verified END TO END with three banded lords: leader promoted an officer; the officer was correctly BLOCKED from
+  promoting or from kicking the leader but COULD expel a plain member (whose banner was then cleared); leadership
+  transfer swapped the ranks; a demote returned an officer to the ranks; and when the leader left, the mantle passed
+  to the officer. The leader's roster screenshot (ranks.png) shows the chips and the correct per-member buttons. No
+  JS errors, guest smoke clean (no regression).
+
 ## DONE (iteration 40: ALLIANCE RALLY, a joint march where banded lords fight as one)
 - Verified first that the early curve and combat scaling are already well-tuned (first builds affordable from the
   start, 46s to 2m timers, no degenerate combat), so a forced balance tweak would be low value. Built the headline
@@ -786,8 +805,8 @@ NEXT STEPS list below; none are blocking.
    [DONE] relic tier-up fusion (iteration 38). Future: a second hero slot.
 8. [DONE] ALLIANCES (banners) (iteration 13): create/join/leave/browse, timer-shaving help (max(1%,60s),
    20 per order), +1%/member production bonus, War Table chat; [DONE] reinforcement (iteration 27): garrison
-   a member's hold, join their defense, recall; [DONE] joint rally marches on warlords (iteration 40). Future:
-   a shared map territory, member ranks.
+   a member's hold, join their defense, recall; [DONE] joint rally marches on warlords (iteration 40); [DONE]
+   member ranks: officers + transferable leadership + moderation (iteration 41). Future: a shared map territory.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime; [DONE] named
    barbarian warlords as elite map camps (iteration 39). Future: per-building flavor, event log narration.

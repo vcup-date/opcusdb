@@ -811,13 +811,21 @@ function renderAlliance() {
     }).join("");
     const isMe = m.name === S.name;
     const garr = m.garrison > 0 ? `<span class="garr">${ic("shield")}${fmt(m.garrison)} garrisoned</span>` : "";
+    const rankChip = m.rank === "leader" ? `<span class="rankchip lead">${ic("crown")}Leader</span>` : m.rank === "officer" ? `<span class="rankchip off">${ic("medal")}Officer</span>` : "";
     let reinfBtn = "";
     if (!isMe) {
       reinfBtn = `<button class="rbtn" data-reinf="${esc(m.name)}">Reinforce</button>`;
       if (m.yourReinf > 0) reinfBtn += `<button class="rbtn recall" data-recall="${esc(m.name)}">Recall ${fmt(m.yourReinf)}</button>`;
     }
-    return `<div class="amem"><div class="amName">${m.leader ? ic("crown") : ""}${esc(m.name)}</div>
-      <div class="amStat">${fmt(m.might)} might &middot; Keep ${roman(m.keep)} ${garr}</div>${orders ? `<div class="aords">${orders}</div>` : ""}${reinfBtn ? `<div class="areinf">${reinfBtn}</div>` : ""}</div>`;
+    const c = m.can || {};
+    const manage = [
+      c.promote ? `<button class="mbtn" data-promote="${esc(m.name)}">Raise to officer</button>` : "",
+      c.demote ? `<button class="mbtn" data-demote="${esc(m.name)}">Lower to member</button>` : "",
+      c.transfer ? `<button class="mbtn" data-transfer="${esc(m.name)}">Pass the banner</button>` : "",
+      c.kick ? `<button class="mbtn ox" data-kick="${esc(m.name)}">Expel</button>` : "",
+    ].filter(Boolean).join("");
+    return `<div class="amem"><div class="amName">${esc(m.name)} ${rankChip}</div>
+      <div class="amStat">${fmt(m.might)} might &middot; Keep ${roman(m.keep)} ${garr}</div>${orders ? `<div class="aords">${orders}</div>` : ""}${reinfBtn ? `<div class="areinf">${reinfBtn}</div>` : ""}${manage ? `<div class="amActs">${manage}</div>` : ""}</div>`;
   }).join("");
   const chat = (A.chat || []).map((c) => c.from ? `<div class="cmsg"><b>${esc(c.from)}</b> ${esc(c.text)}</div>` : `<div class="cmsg sys">${esc(c.text)}</div>`).join("") || `<div class="empty">No words yet. Hail your banner.</div>`;
   showModalWide(`<div class="ph">${ic("ally")} ${esc(A.name)} <span class="tagchip">${esc(A.tag)}</span> <span class="x">&times;</span></div>
@@ -843,6 +851,11 @@ function renderAlliance() {
     try { const v = await api("recall", { member: btn.dataset.recall }); sfx("march"); toast(fmt(v.recalled) + " soldiers marched home"); applyState(v); renderAlliance(); }
     catch (e) { toast(e.message, true); }
   });
+  const manage = async (route, member, ok) => { try { const v = await api(route, { member }); sfx("done"); toast(ok); applyState(v); renderAlliance(); } catch (e) { toast(e.message, true); } };
+  $$("#modal [data-promote]").forEach((btn) => btn.onclick = () => manage("alliancepromote", btn.dataset.promote, esc(btn.dataset.promote) + " is raised to officer"));
+  $$("#modal [data-demote]").forEach((btn) => btn.onclick = () => manage("alliancedemote", btn.dataset.demote, esc(btn.dataset.demote) + " returns to the ranks"));
+  $$("#modal [data-transfer]").forEach((btn) => btn.onclick = () => { if (confirm("Pass the banner to " + btn.dataset.transfer + "? They become leader and you step down to officer.")) manage("alliancetransfer", btn.dataset.transfer, "The banner passes to " + esc(btn.dataset.transfer)); });
+  $$("#modal [data-kick]").forEach((btn) => btn.onclick = () => { if (confirm("Expel " + btn.dataset.kick + " from the banner?")) manage("alliancekick", btn.dataset.kick, esc(btn.dataset.kick) + " is expelled"); });
   const send = async () => { const t = $("#chat-txt").value.trim(); if (!t) return; try { const v = await api("alliancechat", { text: t }); applyState(v); renderAlliance(); } catch (e) { toast(e.message, true); } };
   $("#chat-send").onclick = send; $("#chat-txt").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
   const cl = $("#chatlog"); if (cl) cl.scrollTop = cl.scrollHeight;

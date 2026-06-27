@@ -383,11 +383,14 @@ const HELP_MIN = 60;             // ...but at least 60s
 function allyOf(p) { return p.alliance ? db.alliances[p.alliance] : null; }
 function allyProdBonus(p) { const a = allyOf(p); if (!a) return 0; return Math.min(10, (a.members || []).length); } // +1%/member up to +10%
 function allyHelpShave(total) { return Math.max(HELP_MIN, Math.round(total * HELP_FRACTION)); }
+function allyRank(a, name) { return a.leader === name ? "leader" : (a.officers || []).includes(name) ? "officer" : "member"; }
+function isOfficer(a, name) { return a.leader === name || (a.officers || []).includes(name); }
 function pruneAlliance(tag) {
   const a = db.alliances[tag]; if (!a) return;
   a.members = (a.members || []).filter((m) => db.players[m] && db.players[m].alliance === tag);
+  a.officers = (a.officers || []).filter((m) => a.members.includes(m) && m !== a.leader); // officers must be current, non-leader members
   if (!a.members.length) { delete db.alliances[tag]; return; }
-  if (!a.members.includes(a.leader)) a.leader = a.members[0];
+  if (!a.members.includes(a.leader)) a.leader = a.officers.length ? a.officers.shift() : a.members[0]; // the mantle passes to an officer first
 }
 function allyChatPush(a, from, text) {
   a.chat = a.chat || []; a.chat.push({ from, text: String(text).slice(0, 160), t: NOW() });
@@ -404,15 +407,19 @@ function memberOrders(m, viewer) {
 }
 function allianceView(p) {
   const a = allyOf(p); if (!a) return null;
+  const myRank = allyRank(a, p.name);
   return {
-    tag: a.tag, name: a.name, leader: a.leader, created: a.created, bonus: allyProdBonus(p),
+    tag: a.tag, name: a.name, leader: a.leader, created: a.created, bonus: allyProdBonus(p), myRank,
     members: (a.members || []).map((m) => {
       const q = db.players[m]; if (q) resolve(q);
       const reinf = (q && q.reinforcements) || {};
       let garrison = 0; for (const f in reinf) for (const u in reinf[f]) garrison += reinf[f][u] || 0;
       let yourReinf = 0; const mine = reinf[p.name]; if (mine) for (const u in mine) yourReinf += mine[u] || 0;
-      return { name: m, might: q ? might(q) : 0, keep: q ? (q.b.keep || 1) : 1, leader: m === a.leader, orders: m === p.name ? [] : memberOrders(m, p.name), garrison, yourReinf };
-    }).sort((x, y) => y.might - x.might),
+      const rank = allyRank(a, m);
+      // what the VIEWER may do to this member: a leader rules all; an officer may only kick plain members
+      const can = { promote: myRank === "leader" && rank === "member", demote: myRank === "leader" && rank === "officer", transfer: myRank === "leader" && m !== p.name, kick: m !== p.name && (myRank === "leader" ? m !== a.leader : (myRank === "officer" && rank === "member")) };
+      return { name: m, might: q ? might(q) : 0, keep: q ? (q.b.keep || 1) : 1, leader: m === a.leader, rank, can, orders: m === p.name ? [] : memberOrders(m, p.name), garrison, yourReinf };
+    }).sort((x, y) => (y.leader - x.leader) || ((y.rank === "officer") - (x.rank === "officer")) || y.might - x.might),
     chat: (a.chat || []).slice(-30),
     helpMax: HELP_MAX,
   };
@@ -1349,7 +1356,7 @@ const ROUTES = {
     if (db.alliances[tag]) return send(res, 400, { err: "That tag is taken." });
     if (p.gems < ALLY_CREATE_COST) return send(res, 400, { err: "Founding a banner costs " + ALLY_CREATE_COST + " shards." });
     p.gems -= ALLY_CREATE_COST;
-    db.alliances[tag] = { tag, name, leader: n, members: [n], created: NOW(), chat: [], help: {} };
+    db.alliances[tag] = { tag, name, leader: n, officers: [], members: [n], created: NOW(), chat: [], help: {} };
     p.alliance = tag; allyChatPush(db.alliances[tag], "", n + " founded the banner.");
     save(); send(res, 200, view(p));
   },
@@ -1394,6 +1401,48 @@ const ROUTES = {
     const a = allyOf(p); if (!a) return send(res, 400, { err: "You hold no banner." });
     const text = (b.text || "").trim(); if (!text) return send(res, 400, { err: "Say something." });
     allyChatPush(a, n, text); save(); send(res, 200, view(p));
+  },
+  // ---- banner officership: the leader raises and lowers officers, hands on the mantle; leaders and officers expel ----
+  "POST /api/alliancepromote": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p); const a = allyOf(p); if (!a) return send(res, 400, { err: "You hold no banner." });
+    if (a.leader !== n) return send(res, 400, { err: "Only the banner's leader may raise officers." });
+    const m = b.member; if (!a.members.includes(m)) return send(res, 400, { err: "Not in your banner." });
+    if (m === a.leader) return send(res, 400, { err: "The leader already outranks all." });
+    a.officers = a.officers || []; if (a.officers.includes(m)) return send(res, 400, { err: m + " is already an officer." });
+    a.officers.push(m); allyChatPush(a, "", n + " raised " + m + " to officer.");
+    save(); send(res, 200, view(p));
+  },
+  "POST /api/alliancedemote": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p); const a = allyOf(p); if (!a) return send(res, 400, { err: "You hold no banner." });
+    if (a.leader !== n) return send(res, 400, { err: "Only the banner's leader may lower officers." });
+    const m = b.member; a.officers = a.officers || [];
+    if (!a.officers.includes(m)) return send(res, 400, { err: m + " is not an officer." });
+    a.officers = a.officers.filter((x) => x !== m); allyChatPush(a, "", n + " returned " + m + " to the ranks.");
+    save(); send(res, 200, view(p));
+  },
+  "POST /api/alliancetransfer": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p); const a = allyOf(p); if (!a) return send(res, 400, { err: "You hold no banner." });
+    if (a.leader !== n) return send(res, 400, { err: "Only the leader may pass the mantle." });
+    const m = b.member; if (!a.members.includes(m) || m === n) return send(res, 400, { err: "Choose a fellow member to lead." });
+    a.officers = (a.officers || []).filter((x) => x !== m); a.officers.push(n); // new leader leaves the officer list; old leader joins it
+    a.leader = m; allyChatPush(a, "", n + " passed the banner to " + m + ".");
+    save(); send(res, 200, view(p));
+  },
+  "POST /api/alliancekick": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p); const a = allyOf(p); if (!a) return send(res, 400, { err: "You hold no banner." });
+    const m = b.member; if (m === n) return send(res, 400, { err: "Leave the banner instead." });
+    if (!a.members.includes(m)) return send(res, 400, { err: "Not in your banner." });
+    const myRank = allyRank(a, n), tgtRank = allyRank(a, m);
+    const allowed = myRank === "leader" ? m !== a.leader : (myRank === "officer" && tgtRank === "member");
+    if (!allowed) return send(res, 400, { err: myRank === "member" ? "Only officers may expel members." : "You cannot expel one of equal or higher rank." });
+    a.members = a.members.filter((x) => x !== m); a.officers = (a.officers || []).filter((x) => x !== m);
+    const mp = db.players[m]; if (mp) mp.alliance = null;
+    allyChatPush(a, "", n + " expelled " + m + " from the banner.");
+    pruneAlliance(a.tag); save(); send(res, 200, view(p));
   },
   // ---- send troops to garrison and defend a banded member's hold ----
   "POST /api/reinforce": async (req, res, b) => {
