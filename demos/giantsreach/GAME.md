@@ -392,6 +392,21 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 51: PRODUCTION QA SWEEP + favicon)
+- A full new-player QA pass: a BRAND-NEW guest account (not a seeded one) was walked through every major screen with
+  an automated JS-error collector and a horizontal-overflow detector, screenshotting each: the splash, the steward
+  welcome and lord choice, the home town, and all panels (Daily, Shop, Army, Forge, Tasks, Honors, Banners, World map,
+  Realm ladder, Steward settings, VIP). Every screen rendered cleanly, including the brand-new empty states (a Level-1
+  champion already wearing the chosen lord's face, empty relic slots and stash with guidance, the found-a-banner form).
+- The overflow detector flagged #worldinner / #townspots on every in-game screen, but this is a FALSE POSITIVE: that
+  is the intentionally oversized pannable town world, clipped by its container; the document does not scroll
+  horizontally (scrollWidth == clientWidth). No real layout overflow anywhere.
+- The only genuine defect found was a favicon 404 (browsers auto-request /favicon.ico; a production site should answer
+  it). Added an inline-SVG favicon, a carved-oak gold shield with an oxblood cross matching the locked HUD, as UI
+  chrome via a data URI (no new file, no route, dependency-free).
+- Verified END TO END: after the fix a fresh-guest load reported ZERO 404s and ZERO page errors across the walk, and
+  the favicon link is present; guest smoke clean. Screenshots qa-*.png. No regression.
+
 ## DONE (iteration 50: THE MAJESTIC KEEP, a tier-3 art capstone for the heart of the hold)
 - Buildings rose from a base to a grand (tier-2) portrait at level 10 (iteration 42), but there was no late-game art
   payoff. Gave the Keep, the heart of the hold and the building every player pushes hardest, a third majestic tier.
