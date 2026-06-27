@@ -888,7 +888,8 @@ function fortCard(A) {
   const pct = f.max ? 100 : Math.min(100, Math.round(100 * f.prog / Math.max(1, f.next)));
   const prog = f.max ? `<b>Full height</b>` : `${fmt(f.prog)} / ${fmt(f.next)} pledged`;
   const g = f.garrison || { total: 0, mine: 0 };
-  return `<div class="fortcard"><div class="fcTop"><span class="fcIco">${ic("flag")}</span>
+  return `<div class="fortcard"><div class="fortpic"><img src="img/fort.png" alt="" onerror="this.parentElement.style.display='none'"/><div class="fortpiccap">${ic("flag")} Level ${f.level}</div></div>
+    <div class="fcTop"><span class="fcIco">${ic("flag")}</span>
       <div><div class="fcTtl">Banner Stronghold &middot; Level ${f.level}</div><div class="fcSub">at (${f.x} | ${f.y}) &middot; <b style="color:var(--gold2)">+${f.speed}% march</b> for the whole banner</div></div></div>
     <div class="fcBar"><i style="width:${pct}%"></i></div>
     <div class="fcRow"><span class="tg">${prog}</span>${f.max ? "" : `<button class="gbtn grn" id="fort-donate" style="padding:6px 12px">Pledge resources</button>`}</div>
@@ -1228,6 +1229,7 @@ function fortAssaultDialog(x, y) {
   const garr = Object.entries(t.garrison || {}).filter(([k, v]) => v > 0).map(([k, v]) => fmt(v) + " " + MAP.units[k].name).join(", ");
   const rows = Object.keys(MAP.units).map((u) => `<div class="unitcard"><div class="em">${ic("sword")}</div><div class="mid"><div class="un">${MAP.units[u].name}</div><div class="st">you have ${MAP.troops[u] || 0} &middot; speed ${MAP.units[u].speed}</div></div><input type="number" min="0" max="${MAP.troops[u] || 0}" value="0" data-mu="${u}"/></div>`).join("");
   showModal(`<div class="ph">${ic("flag")} Assault the stronghold <span class="x">&times;</span></div><div class="bd">
+    <div class="fortpic atk"><img src="img/fort.png" alt="" onerror="this.parentElement.style.display='none'"/><div class="fortpiccap">${esc(t.name)} [${esc(t.tag)}] &middot; Level ${t.level}</div></div>
     <div class="foehead"><div><div class="fn">${esc(t.name)} <span class="tagchip">${esc(t.tag)}</span></div><div class="fs">Banner stronghold &middot; level ${t.level} &middot; distance ${t.dist}</div></div><div class="foesig">${ic("flag")}</div></div>
     <p style="color:#caa86a;text-align:center;margin:8px 0 10px;font-size:13px">Defended by <b>${garr || "its garrison"}</b> behind fortified walls. A victory batters the stronghold DOWN a level (and razes it at level 1), with spoils. The whole rival banner is warned.</p>
     ${rows}<div class="modal-actions"><button class="gbtn ox" id="do-fort">Storm the walls</button></div></div>`);

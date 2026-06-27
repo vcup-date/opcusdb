@@ -392,6 +392,21 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 48: THE STRONGHOLD GETS A PORTRAIT, baked painterly art for the territory war)
+- The Banner Stronghold, now a full found/pledge/buff/garrison/assault system, was represented only by a map glyph
+  and a flag icon. Baked a painterly stronghold portrait so the central territory feature carries real visual weight.
+- Baked OFFLINE with Qwen-Image via ComfyUI (127.0.0.1:8188), the locked slow high-quality pass (24 steps, cfg 3.5,
+  no Lightning LoRA): a fortified war keep on a rocky hill with crenellated ramparts, corner bastion towers, an
+  iron-gated barbican, crimson-and-gold alliance war banners, braziers, and a garrison drilling in the bailey, in the
+  locked golden-hour painterly style and deliberately distinct from the home city/keep (this reads as a military
+  fortress). Saved as web/img/fort.png. Pipeline: scratchpad/fort_bake.py (reusable).
+- Client: the stronghold card in the Banners panel and the rival-fort Assault dialog both now lead with the portrait
+  as a carved-oak framed header strip with a level/banner caption, with a graceful hide-on-error fallback. Runtime is
+  a static image; zero AI at game time.
+- Verified END TO END: the fort card portrait loaded over a level-4 stronghold, and the Assault dialog portrait loaded
+  for a rival (Ravens, level 3); both framed in the carved-oak style with captions. Screenshots fortart-card.png /
+  fortart-assault.png. No JS errors, guest smoke clean (no regression).
+
 ## DONE (iteration 47: FORT GARRISONING, members defend the stronghold with real troops)
 - A stronghold's defense was a fixed garrison by level, so members could not actively defend it and an assault was a
   formality. Members can now station their own troops in the banner stronghold, making fort defense a real, contested
@@ -907,7 +922,8 @@ NEXT STEPS list below; none are blocking.
    member ranks: officers + transferable leadership + moderation (iteration 41); [DONE] the Banner Stronghold, a
    shared map fortress raised by pledges for an alliance-wide march buff (iteration 45); [DONE] rival strongholds are
    contestable, battered down a level per assault and razable (iteration 46); [DONE] members garrison their own troops
-   into the stronghold to defend it, with recall (iteration 47). Future: a baked stronghold portrait.
+   into the stronghold to defend it, with recall (iteration 47); [DONE] a baked painterly stronghold portrait on the
+   fort card and assault dialog (iteration 48). Future: alliance ranks gating fort actions.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime; [DONE] named
    barbarian warlords as elite map camps (iteration 39). Future: per-building flavor, event log narration.
