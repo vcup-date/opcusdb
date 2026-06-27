@@ -131,7 +131,7 @@ function applyState(v) {
     const diff = v.res[k] - (local[k] || 0);
     if (Math.abs(diff) > Math.max(50, v.rate[k] * 6)) local[k] = v.res[k]; // big drift (spend/build) -> snap
   }
-  renderTop(); renderHot(); renderQueue(); renderTrain(); renderMarches(); renderTownSpots(); renderObjective();
+  renderTop(); renderHot(); renderQueue(); renderTrain(); renderMarches(); renderTownSpots(); renderObjective(); setCityTier();
   $("#rl-daily-bdg").classList.toggle("hidden", v.login && v.login.claimed === Math.floor(v.now / 86400));
   const taskClaim = (v.tasks && v.tasks.chests.some((c) => c.ready && !c.claimed)) || (v.chest && v.chest.ready);
   const tb = $("#rl-tasks-bdg"); if (tb) tb.classList.toggle("hidden", !taskClaim);
@@ -248,6 +248,15 @@ function renderHot() {
   }
 }
 const keepLv = () => (S.buildings.find((b) => b.id === "keep") || {}).level || 1;
+// the home city grows grander as the Keep rises (img2img tiers that preserve the layout, so the markers still align)
+let cityTier = 0;
+function setCityTier() {
+  const lv = keepLv(); const tier = lv >= 11 ? 3 : lv >= 5 ? 2 : 1;
+  if (tier === cityTier) return; cityTier = tier;
+  const inner = $("#worldinner"); if (!inner) return;
+  const img = tier === 3 ? "city3.png" : tier === 2 ? "city2.png" : "city.png";
+  inner.style.backgroundImage = `url('img/${img}')`;
+}
 function canAfford(cost) { for (const k in cost) if ((local[k] || 0) < cost[k]) return false; return true; }
 
 // ---- the interactive town: clickable building markers + pan/zoom ----

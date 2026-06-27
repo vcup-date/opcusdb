@@ -392,6 +392,24 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 24: THE CITY GROWS WITH THE KEEP, painterly img2img tiers)
+- The marquee progression payoff: your home city now visibly transforms as the Keep rises. The long-standing
+  blocker was that re-baking the city would break the building markers (the chips are placed at fixed
+  percentages over city.png). SOLVED with IMG2IMG: copied city.png into ComfyUI's input and baked two grander
+  variants with Qwen at MODERATE denoise (0.46 for tier 2, 0.58 for tier 3), so the composition (and therefore
+  the marker positions) is preserved while the city grows. Locked painterly recipe (26 steps, cfg 3.5).
+- Three tiers: city.png (a modest walled hold, keep 1-4) -> city2.png (a grown, more fortified town with a
+  taller keep, keep 5-10) -> city3.png (a grand multi-towered capital with soaring spires and banners, keep
+  11+). The fallen giant's hand and head, the river and bridge, and the wall layout all carry through, so it
+  reads as the SAME place risen, not a different picture.
+- Client: setCityTier() swaps #worldinner's background-image by keep level, only when the tier changes (no
+  flicker). The interactive building chips are unchanged and still land on their buildings because the layout
+  is preserved.
+- Verified END TO END: seeded keep-6 and keep-13 players; the town backdrop loaded city2.png and city3.png
+  respectively (confirmed via computed style), the markers stayed aligned over the grander art, and the
+  building/HUD all render. Screenshots tier2_town.png (grown) and tier3_town.png (grand capital). city2.png
+  and city3.png serve 200. No JS errors.
+
 ## DONE (iteration 23: SCOUTING + a re-entrancy fix for the resolver)
 - Completed the conquest loop with recon. The Watchtower (previously near-useless) now governs scouting both
   ways: your scout reveals a rival, and your watchtower turns back theirs.
@@ -494,8 +512,8 @@ NEXT STEPS list below; none are blocking.
    and rewarding (research: early dopamine), fix any UI overflow at common resolutions, make the
    tutorial bullet-proof, screenshot-verify each screen.
 2. ART: [DONE] dedicated splash/title key-art (iteration 11); [DONE] painterly building portraits in the
-   upgrade modal (iteration 17). Remaining: a few visual TIERS per building (humble/grown/grand) swapped by
-   level, a city image that reflects keep level, a Founder/lord portrait. All painterly, offline, high-quality.
+   upgrade modal (iteration 17); [DONE] city image that grows with keep level via img2img tiers (iteration 24).
+   Remaining (optional): a Founder/lord portrait, per-building visual tiers. All painterly, offline.
 3. SOUND + MUSIC: bake an ambient town theme + UI clicks/build-complete/coin/level sfx (offline);
    muted until first click; a mute toggle. Splash video via LTX if viable.
 4. [DONE] WORLD MAP + MARCHES + COMBAT (iteration 2); [DONE] PvP city attacks with a beginner shield
