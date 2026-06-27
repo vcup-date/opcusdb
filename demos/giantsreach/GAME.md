@@ -392,6 +392,20 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 22: BATTLE MUSIC CUE, the fighting scene gets its own score)
+- The battle cinematic played under the calm main theme. Baked a dramatic BATTLE CUE OFFLINE with ACE-Step 1.5
+  (gr_battle.toml: pounding war drums + taiko, brass stabs, driving string ostinato, a fierce low choir, D
+  minor, 142 bpm, 28s; instrumental). Two takes generated; chose the fuller one by peak/RMS/silence analysis,
+  loudness-normalized hotter than the theme (I=-15) and encoded to a 448KB mp3 (web/audio/battle.mp3).
+- Wired audio.js: a new cue layer (a second looped Audio routed through its own gain into the master). GA.cue()
+  ducks the main theme to 0.10 and swings the battle cue up; GA.cueStop() fades the cue and restores the theme.
+  The battle cinematic calls GA.cue() on open and GA.cueStop() when dismissed, so the fighting scene swaps to
+  the war score and the calm theme returns after. Respects mute (no-op while muted; the cue pauses on mute).
+- Verified END TO END (audio is not screenshot-testable, so instrumented the Audio elements): battle.mp3 serves
+  200 as audio/mpeg (448KB); after the first gesture the theme plays; during the cinematic the battle cue is
+  playing (currentTime advances) while the theme is ducked; on dismiss the cue pauses and the theme resumes.
+  No JS errors.
+
 ## DONE (iteration 21: THE INFIRMARY, wounded soldiers are recoverable)
 - Softened the one harsh part of combat: every casualty used to be gone forever. Now a share of the slain are
   WOUNDED (recoverable), not lost. 30% of casualties become wounded; the rest die. The keep shelters up to

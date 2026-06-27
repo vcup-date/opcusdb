@@ -99,18 +99,42 @@ const GA = (() => {
   };
 
   // the baked composed theme (offline ACE-Step), looped; falls back to the procedural bed if it fails to load
-  let musicEl = null, themeOk = false;
+  let musicEl = null, themeOk = false, themeGain = null;
+  const THEME_VOL = 0.62;
   function startProcedural() { if (chordTimer) return; playChord(); chordTimer = setInterval(playChord, 7000); }
   function startTheme() {
     try {
       musicEl = new Audio("audio/theme.mp3"); musicEl.loop = true; musicEl.preload = "auto";
-      let routed = false;
-      try { const src = ctx.createMediaElementSource(musicEl); const g = ctx.createGain(); g.gain.value = 0.62; src.connect(g); g.connect(master); routed = true; }
+      try { const src = ctx.createMediaElementSource(musicEl); themeGain = ctx.createGain(); themeGain.gain.value = THEME_VOL; src.connect(themeGain); themeGain.connect(master); }
       catch (e) { musicEl.volume = muted ? 0 : 0.5; }
       musicEl.addEventListener("canplay", () => { themeOk = true; if (!muted) musicEl.play().catch(() => {}); }, { once: true });
       musicEl.addEventListener("error", () => { if (!themeOk) startProcedural(); }, { once: true });
       musicEl.load();
     } catch (e) { startProcedural(); }
+  }
+  // a dramatic battle cue that ducks the theme while a fighting scene plays
+  let cueEl = null, cueGain = null, cueOk = false;
+  function startCue() {
+    if (cueEl) return;
+    try {
+      cueEl = new Audio("audio/battle.mp3"); cueEl.loop = true; cueEl.preload = "auto";
+      try { const src = ctx.createMediaElementSource(cueEl); cueGain = ctx.createGain(); cueGain.gain.value = 0; src.connect(cueGain); cueGain.connect(master); }
+      catch (e) {}
+      cueEl.addEventListener("canplaythrough", () => { cueOk = true; }, { once: true });
+      cueEl.load();
+    } catch (e) {}
+  }
+  function cue() {
+    if (muted || !ctx) return;
+    if (!cueEl) startCue();
+    if (themeGain) themeGain.gain.setTargetAtTime(0.10, ctx.currentTime, 0.15); // duck the theme
+    if (cueEl) { try { cueEl.currentTime = 0; } catch (e) {} cueEl.play().catch(() => {}); if (cueGain) cueGain.gain.setTargetAtTime(0.85, ctx.currentTime, 0.05); }
+  }
+  function cueStop() {
+    if (!ctx) return;
+    if (cueGain) cueGain.gain.setTargetAtTime(0, ctx.currentTime, 0.4);
+    if (cueEl) setTimeout(() => { try { cueEl.pause(); } catch (e) {} }, 700);
+    if (themeGain) themeGain.gain.setTargetAtTime(muted ? 0 : THEME_VOL, ctx.currentTime, 0.6); // restore the theme
   }
   function start() {
     if (started) return; started = true;
@@ -122,11 +146,14 @@ const GA = (() => {
     muted = m; localStorage.setItem("gr_muted", m ? "1" : "0");
     if (master && ctx) master.gain.setTargetAtTime(m ? 0 : 0.9, ctx.currentTime, 0.2);
     if (musicEl) { if (m) musicEl.pause(); else if (themeOk) musicEl.play().catch(() => {}); musicEl.volume = m ? 0 : musicEl.volume; }
+    if (m && cueEl) { try { cueEl.pause(); } catch (e) {} }
   }
   return {
     start, isMuted: () => muted, setMuted,
     toggle: () => { setMuted(!muted); return muted; },
     sfx: (k) => { try { if (SFX[k]) SFX[k](); } catch (e) {} },
+    cue: () => { try { cue(); } catch (e) {} },
+    cueStop: () => { try { cueStop(); } catch (e) {} },
   };
 })();
 window.GA = GA;

@@ -186,7 +186,8 @@ function playBattle(r) {
     </div></div>`);
   $("#app").appendChild(ov);
   initIcons(ov);
-  const finish = () => { ov.remove(); battleBusy = false; };
+  if (window.GA) GA.cue(); // swap to the dramatic battle cue
+  const finish = () => { if (window.GA) GA.cueStop(); ov.remove(); battleBusy = false; };
   // phase timeline: march in -> clash (shake) -> seal stamp -> aftermath
   setTimeout(() => ov.classList.add("clash"), 350);
   setTimeout(() => { ov.classList.add("sealed"); sfx(r.win ? "victory" : "defeat"); }, 1250);
