@@ -392,6 +392,22 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 49: BALANCE FIX, the defender's champion now actually defends)
+- A data-driven balance review found a real, concrete defect (not a vibe): the DEFENDER's hero defense bonus was
+  computed and shown ("Defense +X%" from the Bulwark trait, armor relics, and the Panoply) but NEVER applied in any
+  combat. Only the attacker's hero attack bonus fed the math, so PvP was structurally attacker-favored and every
+  point a player spent on defense was dead. (The early curve and unit cost-efficiency were re-checked and are fine.)
+- Server: resolveCityAttack now folds the defender's hero defense into the defense multiplier alongside the wall,
+  defMult = (1 + wall*WALL_DEF) * (1 + defenderHeroDef/100), symmetric with the attacker's atkMult = 1 + atk/100.
+  PvE defenders (camps, warlords, forts) stay NPC garrisons with no hero, which is correct. Scout intel now also
+  carries the target's champion defense so an attacker can see and plan against it.
+- Client: the scout report in the march dialog shows "Champion +N% def" beside wall and watchtower.
+- Verified END TO END: a combat simulation showed a fixed attacker's losses climbing 39% -> 57% -> 85% as the
+  defender's hero defense rose 0 -> 30 -> 70%; a live PvP attack by a 2000-swordsman host with a Warmonger champion
+  on a defender holding a +110% defense champion behind wall 8 WON but lost 68% of the host (a pyrrhic result that
+  before the fix would have been a cheap win); a scout returned heroDef 110 and the attack dialog displayed it.
+  Screenshot scout-def.png. No JS errors, guest smoke clean (no regression).
+
 ## DONE (iteration 48: THE STRONGHOLD GETS A PORTRAIT, baked painterly art for the territory war)
 - The Banner Stronghold, now a full found/pledge/buff/garrison/assault system, was represented only by a map glyph
   and a flag icon. Baked a painterly stronghold portrait so the central territory feature carries real visual weight.

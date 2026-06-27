@@ -1202,7 +1202,7 @@ function attackDialog(x, y) {
     const stores = Object.entries(inT.res || {}).filter(([k, v]) => v).map(([k, v]) => `${ICON[k]}${fmt(v)}`).join(" ");
     intelHtml = `<div class="intel"><div class="intelh">${ic("map")} Scout report <span class="ago">${hms(ago)} ago</span></div>
       <div class="intelrow">Garrison: <b>${garr || "none seen"}</b></div>
-      <div class="intelrow">Wall <b>${inT.wall}</b> &middot; Watchtower <b>${inT.watchtower}</b></div>
+      <div class="intelrow">Wall <b>${inT.wall}</b> &middot; Watchtower <b>${inT.watchtower}</b>${inT.heroDef ? ` &middot; Champion <b style="color:#e9b9a6">+${inT.heroDef}% def</b>` : ""}</div>
       <div class="intelrow">Stores: ${stores || "bare"}</div></div>`;
   }
   const canScout = (MAP.watchtower || 0) >= 1;

@@ -571,7 +571,9 @@ function resolveCityAttack(p, m, now) {
   }
   resolve(d); // bring the defender current before the blow lands
   const hb = heroBonusOf(p);
-  const defMult = 1 + (d.b.wall || 0) * WALL_DEF;
+  // the wall AND the defender's own champion bolster the defense (symmetric with the attacker's hero attack bonus)
+  const dHb = heroBonusOf(d);
+  const defMult = (1 + (d.b.wall || 0) * WALL_DEF) * (1 + dHb.def / 100);
   // the defending host is the lord's own troops plus every allied reinforcement garrisoned with them
   const reinf = d.reinforcements || {};
   const defArmy = {}; for (const u in d.t) defArmy[u] = d.t[u] || 0;
@@ -626,7 +628,7 @@ function resolveScout(p, m, now) {
     d.reports.unshift({ time: now, kind: "spotted", scout: p.name });
     d.reports = d.reports.slice(0, 25);
   } else {
-    const intel = { time: now, troops: Object.assign({}, d.t), wall: d.b.wall || 0, watchtower: tgtW, keep: d.b.keep || 1, might: might(d), res: { grain: Math.floor(d.r.grain), timber: Math.floor(d.r.timber), stone: Math.floor(d.r.stone), iron: Math.floor(d.r.iron) }, wounded: Object.assign({}, d.wounded || {}) };
+    const intel = { time: now, troops: Object.assign({}, d.t), wall: d.b.wall || 0, watchtower: tgtW, keep: d.b.keep || 1, might: might(d), heroDef: heroBonusOf(d).def, res: { grain: Math.floor(d.r.grain), timber: Math.floor(d.r.timber), stone: Math.floor(d.r.stone), iron: Math.floor(d.r.iron) }, wounded: Object.assign({}, d.wounded || {}) };
     if (!p.intel) p.intel = {}; p.intel[m.target] = intel;
     p.reports.unshift({ time: now, kind: "scout", target: m.target, caught: false, intel });
   }
