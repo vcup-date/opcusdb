@@ -113,7 +113,7 @@ function maybeSeasonRecap() {
     <div class="bd" style="text-align:center">
       <div class="seasonend">
         <div class="seTitle">${esc(e.name)}</div><div class="seSub">draws to a close</div>
-        ${e.flavor ? `<div class="seFlav">${ic("scroll")}<span>&ldquo;${esc(e.flavor)}&rdquo;</span></div>` : ""}
+        ${e.flavor ? `<div class="seFlav">${esc(e.flavor)}</div>` : ""}
         <div class="seStats">
           <div class="seStat"><div class="seK">Pass level reached</div><div class="seV">${e.level}<span class="seOf"> / ${e.maxLevel}</span></div><div class="seTrack">${e.premium ? "gilded track" : "free track"}</div></div>
           ${st.rank ? `<div class="seStat"><div class="seK">Your standing</div><div class="seV">${fmt(st.rank)}<span class="seOf"> of ${fmt(st.total)} lords</span></div><div class="seTrack">by might</div></div>` : ""}
@@ -277,7 +277,7 @@ function playBattle(r) {
       </div>
       <div class="bseal ${r.win ? "win" : "loss"}"><span>${r.win ? "VICTORY" : "DEFEAT"}</span></div>
       <div class="baftermath">
-        ${r.flavor ? `<div class="bflav">&ldquo;${esc(r.flavor)}&rdquo;</div>` : ""}
+        ${r.flavor ? `<div class="bflav">${esc(r.flavor)}</div>` : ""}
         <div class="bstats"><span class="bs">Host lost <b>${lossPct}%</b></span>${woundedN ? `<span class="bs">${ic("shield")} <b>${fmt(woundedN)}</b> wounded</span>` : ""}${r.win && lootRows ? `<span class="bs">Spoils ${lootRows}</span>` : ""}</div>
         <button class="gbtn ${r.win ? "grn" : "ox"}" id="b-done">${r.win ? "To the spoils" : "Onward"}</button>
       </div>
@@ -514,7 +514,7 @@ function renderBuilding(id) {
         <div class="bpover"><div class="bplv">${lvTag}</div>${b.icon === "keep" && b.level >= BLD_TIER3 ? '<div class="grandtag maj">Majestic</div>' : b.level >= BLD_TIER2 ? '<div class="grandtag">Grand</div>' : ""}</div>
       </div>
       <p class="bdesc">${b.desc}</p>
-      ${b.flavor ? `<p class="bflavor">${ic("scroll")}<span>&ldquo;${esc(b.flavor)}&rdquo;</span></p>` : ""}
+      ${b.flavor ? `<p class="bflavor">${ic("scroll")}<span>${esc(b.flavor)}</span></p>` : ""}
       ${prodLine}
       <div class="statline"><span class="k">Build time</span><span class="v">${hms(b.time)}</span></div>
       <div class="costrow">${costHtml || '<span class="k">free</span>'}</div>
@@ -1064,7 +1064,7 @@ $("#ic-settings").onclick = () => {
   const rm = localStorage.getItem("gr_reducemotion") === "1";
   const muted = window.GA && GA.isMuted();
   showModal(`<div class="ph">${ic("gear")} The Steward <span class="x">&times;</span></div><div class="bd">
-    ${S.counsel ? `<div class="counsel">${ic("scroll")}<div><div class="ck">Your steward counsels</div>&ldquo;${esc(S.counsel)}&rdquo;</div></div>` : ""}
+    ${S.counsel ? `<div class="counsel">${ic("scroll")}<div><div class="ck">Your steward counsels</div>${esc(S.counsel)}</div></div>` : ""}
     <div class="setsec"><div class="seth">${ic("soundOn")} Sound</div>
       <div class="setrow"><span class="setk">Music</span><input type="range" min="0" max="100" value="${mv}" id="set-music" class="slider"/><span class="setv" id="set-music-v">${mv}</span></div>
       <div class="setrow"><span class="setk">Effects</span><input type="range" min="0" max="100" value="${sv}" id="set-sfx" class="slider"/><span class="setv" id="set-sfx-v">${sv}</span></div>
@@ -1209,7 +1209,7 @@ function delveReveal(d) {
   else { const it = r.relic; body = `<div class="delvereward"><span class="relic ${TIER_CLS[it.tier]}" style="display:inline-flex"><span class="rico">${ic(SLOT_ICON[it.slot])}</span><span class="rmid"><span class="rn">${it.slotName} <span class="rt">${it.tierName}</span></span><span class="rv">+${it.val}${AFF_SUFFIX[it.aff]}</span></span></span></div><div class="delvelabel">A relic, lost and found</div>`; }
   showModal(`<div class="ph">${ic("ruin")} The Ruin Gives Up Its Dead <span class="x">&times;</span></div><div class="bd" style="text-align:center">
     ${body}
-    <p class="epitaph">&ldquo;${esc(d.epitaph)}&rdquo;</p>
+    <p class="epitaph">${esc(d.epitaph)}</p>
     <div class="modal-actions"><button class="gbtn grn" id="delve-ok">Honor the fallen</button></div></div>`);
   modalOpen = null; $("#delve-ok").onclick = closeModal;
 }
@@ -1233,7 +1233,7 @@ function marchDialog(x, y) {
   const wl = t.type === "warlord";
   const head = wl ? `${ic("sword")} ${esc(t.name)}, ${esc(t.title)} &#183; warlord` : `${ic("sword")} Raid camp &#183; level ${t.level}`;
   showModal(`<div class="ph">${head} <span class="x">&times;</span></div><div class="bd">
-    ${t.taunt ? `<div class="taunt ${wl ? "wl" : ""}">${ic(wl ? "sword" : "ruin")}<span>&ldquo;${esc(t.taunt)}&rdquo;</span></div>` : ""}
+    ${t.taunt ? `<div class="taunt ${wl ? "wl" : ""}">${ic(wl ? "sword" : "ruin")}<span>${esc(t.taunt)}</span></div>` : ""}
     <p style="color:#caa86a;text-align:center">Distance ${t.dist}. ${wl ? "An elite host" : "Defended"} by ${garr || "a few barbarians"}.</p>
     <p style="color:#caa86a;text-align:center;margin-bottom:${wl ? 4 : 10}px">Spoils up to <b style="color:#f6e2a0">${loot}</b></p>
     ${wl ? `<p class="wlreward" style="text-align:center;margin-bottom:10px">${ic("gem")} A felled warlord always yields <b style="color:var(--gold2)">shards and a relic</b>. Bring a strong host, or rally your banner.</p>` : ""}

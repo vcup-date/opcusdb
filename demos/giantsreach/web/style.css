@@ -42,7 +42,7 @@ svg{width:18px;height:18px;vertical-align:middle}
 #auth .row{display:flex;gap:8px;margin-top:8px}#auth .row .gbtn{margin-top:0}
 #auth .swap{margin-top:16px;color:#caa86a;font-size:14px}#auth .swap a{color:var(--gold2);cursor:pointer;text-decoration:underline}
 #auth .err{color:#ff9a7a;min-height:20px;font-size:14px;margin-top:6px}
-#auth .tag{margin-top:14px;color:#8a7858;font-size:12px;font-style:italic}
+#auth .tag{margin-top:14px;color:#8a7858;font-size:12px}
 
 /* ---------- game world ---------- */
 #game{position:absolute;inset:0}
@@ -508,14 +508,13 @@ svg{width:18px;height:18px;vertical-align:middle}
 @media (max-width:430px){.modal-actions .gbtn{font-size:13px;padding:12px 8px;line-height:1.15}}
 
 /* ---- the voice of the realm: flavor text ---- */
-.taunt{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;margin-bottom:12px;border-left:3px solid var(--ox);border-radius:8px;background:linear-gradient(90deg,#2a120c,#1a0f08);color:#e9b9a6;font-style:italic;font-size:13px;line-height:1.4}
+.taunt{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;margin-bottom:12px;border:1px solid #4a2a1c;border-radius:8px;background:#1c1109;color:#e9b9a6;font-size:13px;line-height:1.45}
 .taunt svg{width:20px;height:20px;flex:none;stroke:#e2613f;margin-top:1px}
-.repflav{margin-top:5px;color:#b59a6e;font-style:italic;font-size:12px;line-height:1.35}
+.repflav{margin-top:5px;color:#b59a6e;font-size:12px;line-height:1.4}
 .seasonend{padding:6px 4px 4px}
 .seTitle{font-family:'Cinzel';font-weight:800;font-size:22px;color:var(--gold2);letter-spacing:.5px;text-shadow:0 1px 6px #f6e2a033}
 .seSub{font-family:'Cinzel';color:#8a7858;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
-.seFlav{display:flex;gap:9px;align-items:flex-start;justify-content:center;text-align:left;margin:14px auto;max-width:380px;padding:10px 13px;border-left:3px solid var(--gold);border-radius:8px;background:linear-gradient(90deg,#241808,#1a1006);color:#d8c08a;font-style:italic;font-size:13px;line-height:1.45}
-.seFlav svg{width:16px;height:16px;flex:none;stroke:var(--gold2);margin-top:2px}
+.seFlav{margin:13px auto 16px;max-width:420px;color:#bfa873;font-size:13.5px;line-height:1.5}
 .seStats{display:flex;gap:12px;justify-content:center;margin:14px 0}
 .seStat{flex:1;max-width:180px;border:1.5px solid #4a3a1c;border-radius:11px;background:#160d05;padding:11px 9px}
 .seK{font-family:'Cinzel';font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a7858}
@@ -523,11 +522,11 @@ svg{width:18px;height:18px;vertical-align:middle}
 .seV .seOf{font-size:12px;font-weight:600;color:#8a7858}
 .seTrack{font-size:11px;color:#caa86a;margin-top:2px}
 .seNote{color:#caa86a;font-size:12.5px;line-height:1.5;max-width:400px;margin:6px auto 0}.seNote b{color:#f3e7c8}
-.counsel{display:flex;gap:11px;align-items:flex-start;padding:12px 14px;margin-bottom:14px;border:1.5px solid #5a431f;border-radius:10px;background:linear-gradient(#241808,#160d05);color:#e7d6ad;font-style:italic;line-height:1.45;font-size:14px}
+.counsel{display:flex;gap:11px;align-items:flex-start;padding:12px 14px;margin-bottom:14px;border:1.5px solid #5a431f;border-radius:10px;background:linear-gradient(#241808,#160d05);color:#e7d6ad;line-height:1.5;font-size:13.5px}
 .counsel svg{width:22px;height:22px;flex:none;stroke:#caa244;margin-top:1px}
 .counsel .ck{font-family:'Cinzel';font-style:normal;font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#caa86a;margin-bottom:4px}
 .chronwrap{display:flex;flex-direction:column;gap:13px}
-.chron{border-left:3px solid var(--gold);padding:2px 0 2px 13px}
+.chron{border:1px solid #4a3a1c;border-radius:9px;background:#160d05;padding:10px 13px;margin-bottom:8px}
 .chron .cht{font-family:'Cinzel';font-weight:700;color:var(--gold2);font-size:15px;letter-spacing:1px;margin-bottom:4px}
 .chron .chb{color:#cbb88f;font-size:13.5px;line-height:1.5}
 
@@ -560,7 +559,8 @@ svg{width:18px;height:18px;vertical-align:middle}
 .bplv{font-family:'Cinzel';font-weight:700;font-size:13px;letter-spacing:1px;color:var(--gold2);background:#140d05cc;border:1px solid var(--gold);border-radius:8px;padding:4px 11px;text-shadow:0 1px 2px #000}
 .bplv .to{color:#bfe39f}
 .bdesc{color:#cbb88f;font-size:13.5px;line-height:1.5;margin:0 0 10px}
-.bflavor{display:flex;gap:8px;align-items:flex-start;margin:0 0 12px;padding:9px 11px;border-left:3px solid var(--gold);border-radius:8px;background:linear-gradient(90deg,#241808,#1a1006);color:#d8c08a;font-style:italic;font-size:12.5px;line-height:1.45}
+.bflavor{display:flex;gap:8px;align-items:flex-start;margin:0 0 12px;color:#a99268;font-size:12.5px;line-height:1.5}
+.bflavor svg{width:14px;height:14px;flex:none;stroke:#7a6440;margin-top:2px;opacity:.8}
 .bflavor svg{width:15px;height:15px;flex:none;stroke:var(--gold2);margin-top:1px}
 @media (max-width:760px){.bportrait{height:150px;margin:0 -13px 11px}}
 
@@ -597,7 +597,7 @@ svg{width:18px;height:18px;vertical-align:middle}
 .baftermath{opacity:0;transform:translateY(14px)}
 #battle.show-after .baftermath{animation:bup .45s ease forwards}
 @keyframes bup{to{opacity:1;transform:translateY(0)}}
-.bflav{font-style:italic;color:#e7d6ad;font-size:15px;line-height:1.45;margin-bottom:12px;max-width:560px;margin-inline:auto;text-shadow:0 2px 5px #000}
+.bflav{color:#e7d6ad;font-size:15px;line-height:1.5;margin-bottom:12px;max-width:560px;margin-inline:auto;text-shadow:0 2px 5px #000}
 .bstats{display:flex;gap:10px 22px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
 .bstats .bs{font-size:15px;color:#e8c98a;display:inline-flex;align-items:center;gap:6px;background:#140d05bb;border:1px solid #5a431f;border-radius:10px;padding:7px 14px}
 .bstats .bs b{color:#fff}
@@ -702,7 +702,7 @@ svg{width:18px;height:18px;vertical-align:middle}
 .lyou::before{content:"Your standing";font-family:'Cinzel';font-size:10px;letter-spacing:1px;color:#8a7448;text-transform:uppercase}
 
 /* ---- the Council: returning-player recap ---- */
-.council .csub{color:#caa86a;text-align:center;font-style:italic;margin-bottom:14px}
+.council .csub{color:#caa86a;text-align:center;margin-bottom:14px}
 .cwsec{margin-bottom:14px}
 .cwh{font-family:'Cinzel';font-weight:700;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#caa86a;margin-bottom:8px}
 .cwline{display:flex;align-items:center;gap:9px;padding:7px 11px;color:#e7d6ad;font-size:13.5px;border-left:2px solid #5a431f;background:#140d0588;border-radius:0 8px 8px 0;margin-bottom:5px}
@@ -763,7 +763,7 @@ body.reduce-motion #tutorial .ring{animation:none !important;box-shadow:0 0 14px
 .delvereward .rwc{display:inline-flex;align-items:center;gap:4px;font-size:17px;color:var(--gold2);font-weight:600}
 .delvereward .rwc svg{width:20px;height:20px}
 .delvelabel{font-family:'Cinzel';font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#caa86a;margin-bottom:4px}
-.epitaph{font-style:italic;color:#cbb88f;font-size:14px;line-height:1.55;max-width:440px;margin:14px auto;border-top:1px solid #4a3a1c;border-bottom:1px solid #4a3a1c;padding:12px 0}
+.epitaph{color:#cbb88f;font-size:14px;line-height:1.6;max-width:440px;margin:14px auto;border-top:1px solid #4a3a1c;border-bottom:1px solid #4a3a1c;padding:12px 0}
 
 /* ---- relic salvage / reforge ---- */
 .relic{flex-direction:column;align-items:stretch;gap:6px}
