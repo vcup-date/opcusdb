@@ -4,6 +4,10 @@ A complete, production-quality browser strategy MMO in the Travian / Clash of Ki
 
 The whole game is a single dependency-free Node.js server plus a static web client. The runtime is fully deterministic and server-authoritative. There are no third-party packages, no build step, and no AI calls at runtime.
 
+![Giantsreach: the painterly home town and carved-oak HUD](screenshot.png)
+
+Above: your hold rendered as the playfield, with the carved-oak-and-gold HUD, the resource bar, the action rails, tappable building markers, and the construction and army panels.
+
 ## Run it
 
 ```sh
