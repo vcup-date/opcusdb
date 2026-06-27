@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>Giantsreach</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div id="app">
+
+  <!-- splash / auth -->
+  <div id="auth">
+    <div class="box">
+      <div class="crest" data-svg="shield"></div>
+      <div class="wm">Giantsreach</div>
+      <div class="sub">Raise your hold among the fallen giants</div>
+      <input id="au-name" placeholder="your lord's name" maxlength="16" autocomplete="off"/>
+      <input id="au-pass" type="password" placeholder="a password" maxlength="40"/>
+      <div class="err" id="au-err"></div>
+      <button class="gbtn" id="au-go">Found your city</button>
+      <div class="row">
+        <button class="gbtn grn" id="au-guest" style="flex:1">Quick play</button>
+      </div>
+      <div class="swap" id="au-swap">Already hold a city? <a id="au-toggle">Return to it</a></div>
+      <div class="tag">A time-based strategy realm. Build, march, and bind the banners.</div>
+    </div>
+  </div>
+
+  <!-- the living game -->
+  <div id="game" class="hidden">
+    <div id="worldwrap"><div id="worldinner"><div id="townspots"></div></div></div>
+
+    <div id="top">
+      <div id="ava">
+        <div class="por"><span class="ri" data-svg="shield"></span><div class="lvl" id="t-keep">I</div></div>
+        <div><div class="nm" id="t-name">Lord</div><div class="mt"><span class="num" id="t-might">0</span> might</div></div>
+      </div>
+      <div id="res"></div>
+      <div id="topright">
+        <div class="vipcrest" id="ic-vip" title="VIP"><span class="ri" data-svg="crown"></span><span class="vl" id="vip-lv">0</span><div class="bdg hidden" id="vip-bdg">!</div></div>
+        <div class="ico" id="ic-mute" title="sound"></div>
+        <div class="ico" id="ic-board" data-svg="trophy" title="realm ladder"></div>
+        <div class="ico" id="ic-settings" data-svg="gear" title="steward"></div>
+      </div>
+    </div>
+
+    <div id="leftrail">
+      <div class="rail glow" id="rl-daily"><span class="ri" data-svg="gift"></span><small>Daily</small><div class="bdg hidden" id="rl-daily-bdg">!</div></div>
+      <div class="rail" id="rl-shop"><span class="ri" data-svg="gem"></span><small>Shop</small></div>
+      <div class="rail" id="rl-army"><span class="ri" data-svg="sword"></span><small>Army</small></div>
+      <div class="rail" id="rl-forge"><span class="ri" data-svg="anvil"></span><small>Forge</small></div>
+      <div class="rail" id="rl-tasks"><span class="ri" data-svg="tasks"></span><small>Tasks</small><div class="bdg hidden" id="rl-tasks-bdg">!</div></div>
+      <div class="rail" id="rl-honors"><span class="ri" data-svg="medal"></span><small>Honors</small><div class="bdg hidden" id="rl-honors-bdg">!</div></div>
+      <div class="rail" id="rl-ally"><span class="ri" data-svg="ally"></span><small>Banners</small><div class="bdg hidden" id="rl-ally-bdg">!</div></div>
+      <div class="rail" id="rl-map"><span class="ri" data-svg="map"></span><small>World</small></div>
+    </div>
+
+    <div id="right">
+      <div class="drawerhandle" id="drawerhandle"><span class="dgrip"></span><span>Empire &amp; Queues</span><span class="bdg hidden" id="draw-bdg">!</span></div>
+      <div class="seasonbar" id="seasonbar">
+        <div class="sbtop"><span class="ri" data-svg="pass"></span><div class="sbttl"><div class="snm" id="s-name">Season</div><div class="slv" id="s-lvl">Level 0</div></div><div class="sbdg hidden" id="s-bdg">!</div></div>
+        <div class="sbar"><i id="s-fill"></i></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="ri" data-svg="hammer"></span> Construction</div>
+        <div id="queue"></div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <div class="ph"><span class="ri" data-svg="sword"></span> The Host</div>
+        <div id="trainq"></div>
+      </div>
+    </div>
+
+    <div id="bottom">
+      <div id="hot"></div>
+      <div class="obj">
+        <div class="panel objc">
+          <div class="q"><span class="ri" data-svg="scroll"></span></div>
+          <div style="flex:1"><div class="ch cin" id="obj-title">Your first task</div><div class="ds" id="obj-desc">Raise a building</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal" class="hidden"></div>
+  <div id="tutorial" class="hidden"></div>
+  <div id="toasts"></div>
+</div>
+<script src="audio.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# runtime database (created on first run; not source)
+db/
+
+# logs and OS cruft
+*.log
+.DS_Store
+
+# node (none used, but just in case)
+node_modules/
+npm-debug.log*

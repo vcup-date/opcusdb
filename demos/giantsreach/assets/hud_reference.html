@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Cinzel:wght@600;700;900&family=Spectral:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#e7c061;--gold2:#f6e2a0;--goldln:#7a5a1d;
+    --wood:#2c1d0f;--wood2:#3e2a16;--woodln:#120a04;
+    --parch:#ecd9b0;--ink:#231708;--ox:#c23b22;--ox2:#e2613f;--grn:#7fc25a;--grnln:#3f6a28;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1600px;height:1000px;overflow:hidden;background:#0a0703;font-family:'Spectral',Georgia,serif;color:#f3e7c8}
+  .cin{font-family:'Cinzel',serif}.num{font-variant-numeric:tabular-nums;letter-spacing:.4px}
+  #g{position:relative;width:1600px;height:1000px;overflow:hidden}
+  /* the living world */
+  #world{position:absolute;inset:0;background:#1a1208 center/cover no-repeat;background-image:url('col_a.png')}
+  #world::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 38%,transparent 52%,#0a0703bb 100%),linear-gradient(#0a070366 0,transparent 16% 70%,#0a0703f2 100%)}
+  /* ===== reusable game panel (carved oak + gold, floats with depth) ===== */
+  .panel{position:relative;background:linear-gradient(#3a2715,#221608);border:2px solid var(--woodln);border-radius:12px;
+    box-shadow:0 10px 26px #000a, inset 0 0 0 2px #c8a45822, inset 0 2px 0 #ffffff14;}
+  .panel::before{content:"";position:absolute;inset:4px;border:1px solid #c8a45844;border-radius:8px;pointer-events:none}
+  .ph{font-family:'Cinzel';font-weight:700;letter-spacing:2px;font-size:12px;text-transform:uppercase;color:var(--gold2);
+    padding:8px 14px;border-bottom:1px solid #00000088;text-shadow:0 1px 0 #000;display:flex;align-items:center;gap:8px}
+  .gbtn{font-family:'Cinzel';font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#2a1a06;cursor:pointer;border:none;border-radius:9px;
+    background:linear-gradient(#f4dd9a,#d3a544);box-shadow:0 4px 0 var(--goldln),0 8px 16px #0007,inset 0 1px 0 #fff8;padding:11px 18px;font-size:14px}
+  .gbtn.ox{color:#fff;background:linear-gradient(#e2613f,#b22f17);box-shadow:0 4px 0 #6e1c0c,0 8px 20px #c23b2266,inset 0 1px 0 #ffffff55}
+  .gbtn.grn{color:#11250a;background:linear-gradient(#a6e07a,#5d9e36);box-shadow:0 4px 0 var(--grnln),0 8px 16px #0007,inset 0 1px 0 #fff8}
+  /* ===== top: avatar + resources ===== */
+  #ava{position:absolute;top:14px;left:14px;display:flex;align-items:center;gap:10px;z-index:6}
+  .por{width:60px;height:60px;border-radius:11px;border:2px solid var(--gold);background:radial-gradient(circle at 38% 30%,#7a5a2e,#241608);
+    display:grid;place-items:center;box-shadow:0 6px 16px #000a,inset 0 0 0 2px #00000066;position:relative}
+  .por .lv{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);font-family:'Cinzel';font-weight:900;font-size:12px;color:#2a1a06;
+    background:linear-gradient(#f6e2a0,#cf9f3f);border:2px solid #7a5a1d;border-radius:9px;padding:0 7px;box-shadow:0 2px 4px #0008}
+  .pcol{display:flex;flex-direction:column;gap:4px}
+  .pname{font-family:'Cinzel';font-weight:700;font-size:15px;color:#f6e2a0;text-shadow:0 2px 3px #000}
+  .might{display:flex;align-items:center;gap:6px;font-size:12px;color:#e9d49a}
+  .pwrbar{width:150px;height:7px;border-radius:4px;background:#0c0804;border:1px solid #00000088;overflow:hidden}
+  .pwrbar i{display:block;height:100%;width:64%;background:linear-gradient(90deg,#d3a544,#f6e2a0)}
+  #res{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:6}
+  .rp{display:flex;align-items:center;gap:7px;background:linear-gradient(#22160a,#140d05);border:1.5px solid #5a431f;border-radius:18px;
+    padding:5px 14px 5px 6px;box-shadow:0 5px 12px #0008,inset 0 1px 0 #ffffff12}
+  .rp .ic{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#4a3618,#140d05);border:1px solid #6a4f24;display:grid;place-items:center}
+  .rp .ic svg{width:18px;height:18px}
+  .rp .v{font-weight:600;font-size:16px;color:#f3e7c8;line-height:1}
+  .rp .r{font-size:10px;color:#8fbf78;line-height:1}
+  .rp.gild{border-color:#7d5e22}.rp.gild .v{color:#f6e2a0}
+  /* top-right buttons */
+  #tr{position:absolute;top:16px;right:14px;display:flex;gap:8px;z-index:6}
+  .ico{width:42px;height:42px;border-radius:10px;background:linear-gradient(#3a2715,#221608);border:1.5px solid var(--woodln);
+    display:grid;place-items:center;font-size:19px;box-shadow:0 5px 12px #0008,inset 0 1px 0 #ffffff14;position:relative}
+  .bdg{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:linear-gradient(#e2613f,#b22f17);
+    border:1.5px solid #2a0c06;color:#fff;font-family:'Cinzel';font-weight:700;font-size:11px;display:grid;place-items:center;padding:0 4px}
+  /* ===== floating building tap-targets on the world ===== */
+  .plot{position:absolute;transform:translate(-50%,-100%);z-index:5;text-align:center;filter:drop-shadow(0 6px 8px #0009)}
+  .plot .cap{font-family:'Cinzel';font-weight:700;font-size:12px;color:#f6e2a0;text-shadow:0 2px 3px #000;white-space:nowrap;
+    background:linear-gradient(#2c1d0f,#160d05);border:1.5px solid var(--gold);border-radius:14px;padding:3px 11px}
+  .plot .lvl{display:inline-block;margin-left:4px;color:#2a1a06;background:linear-gradient(#f6e2a0,#cf9f3f);border-radius:8px;padding:0 6px;font-size:11px}
+  .plot .pip{width:0;height:0;margin:1px auto 0;border:7px solid transparent;border-top-color:var(--gold)}
+  .timer{font-family:'Cinzel';font-weight:700;font-size:12px;color:#fff;background:linear-gradient(#e2613f,#b22f17);border:1.5px solid #6e1c0c;border-radius:12px;padding:3px 10px;white-space:nowrap}
+  .hammer{display:inline-block;margin-right:4px}
+  .ready{font-family:'Cinzel';font-weight:700;font-size:12px;color:#11250a;background:linear-gradient(#a6e07a,#5d9e36);border:1.5px solid var(--grnln);border-radius:12px;padding:3px 11px;
+    box-shadow:0 0 14px #7fc25a99;white-space:nowrap}
+  /* ===== left rail ===== */
+  #lr{position:absolute;left:14px;top:150px;display:flex;flex-direction:column;gap:10px;z-index:6}
+  .rail{width:54px;height:54px;border-radius:12px;background:linear-gradient(#3a2715,#221608);border:1.5px solid var(--woodln);
+    display:grid;place-items:center;font-size:23px;box-shadow:0 6px 14px #0009,inset 0 1px 0 #ffffff14;position:relative}
+  .rail.glow{box-shadow:0 0 18px #f6e2a077,0 6px 14px #0009;border-color:var(--gold)}
+  /* ===== right: alliance + tidings ===== */
+  #rr{position:absolute;right:14px;top:96px;width:300px;z-index:6}
+  .ban{padding:9px 12px}
+  .line{display:flex;gap:8px;font-size:14px;padding:6px 0;border-bottom:1px solid #ffffff10;line-height:1.3}
+  .line .who{font-family:'Cinzel';font-weight:700;font-size:12px;flex:none}
+  .who.a{color:#7fc7ec}.who.b{color:#f0c267}.who.c{color:#a6e07a}
+  .line .tx{color:#e7d6ae}
+  .tline{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:#ecd9b0;padding:6px 0}
+  .tline .d{flex:none;margin-top:6px;width:8px;height:8px;border-radius:50%}
+  .tline .d.ox{background:var(--ox);box-shadow:0 0 8px var(--ox)}.tline .d.gd{background:var(--gold)}.tline .d.gr{background:var(--grn)}
+  .tline b{color:#f6e2a0}.tline .oxt{color:var(--ox2)}
+  /* ===== bottom: hotbar + objective ===== */
+  #bottom{position:absolute;left:0;right:0;bottom:0;height:128px;z-index:6;display:flex;align-items:flex-end;gap:12px;padding:0 16px 14px}
+  .hot{display:flex;gap:9px}
+  .slot{width:84px;text-align:center;position:relative}
+  .slot .pl{width:74px;height:74px;margin:0 auto;border-radius:12px;background:linear-gradient(#efe0bd,#d8c39a);border:2px solid var(--woodln);
+    display:grid;place-items:center;overflow:hidden;box-shadow:0 6px 14px #0009,inset 0 2px 0 #fff8}
+  .slot.sel .pl{border-color:var(--gold);box-shadow:0 0 16px #f6e2a088,0 6px 14px #0009}
+  .slot .pl img{width:84%;height:84%;object-fit:contain;mix-blend-mode:multiply}
+  .slot .nm{font-family:'Cinzel';font-size:10px;letter-spacing:.5px;margin-top:3px;color:#e9d49a;text-transform:uppercase;text-shadow:0 1px 2px #000}
+  .slot .lv{position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-family:'Cinzel';font-weight:900;font-size:11px;color:#2a1a06;
+    background:linear-gradient(#f6e2a0,#cf9f3f);border:1.5px solid #7a5a1d;border-radius:8px;padding:0 6px;box-shadow:0 2px 3px #0008;z-index:2}
+  .slot .tm{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);font-family:'Cinzel';font-weight:700;font-size:10px;color:#fff;
+    background:#b22f17cc;border-radius:7px;padding:0 5px;white-space:nowrap}
+  .obj{flex:1;align-self:center;display:flex;align-items:center;gap:14px}
+  .objc{flex:1;display:flex;align-items:center;gap:13px;padding:10px 16px}
+  .objc .q{width:46px;height:46px;border-radius:10px;background:radial-gradient(circle at 38% 30%,#5d471f,#1d1206);border:1.5px solid var(--gold);display:grid;place-items:center;font-size:23px;flex:none;box-shadow:0 0 14px #f6e2a044}
+  .objc .ch{font-family:'Cinzel';font-weight:700;letter-spacing:1px;font-size:13px;color:#f6e2a0}
+  .objc .ds{font-size:14px;color:#e7d6ae}
+  .chest{position:relative}
+  .wm{position:absolute;left:84px;top:18px;z-index:6;font-family:'Pirata One';font-size:26px;color:#f6e2a0;text-shadow:0 2px 4px #000,0 0 18px #f6e2a033;letter-spacing:1px;display:none}
+</style></head>
+<body>
+<div id="g">
+  <div id="world"></div>
+
+  <!-- avatar -->
+  <div id="ava">
+    <div class="por">🛡️<div class="lv">23</div></div>
+    <div class="pcol">
+      <div class="pname">Lord Aldric · Giantsreach</div>
+      <div class="might">⚔ <span class="num">2,847,610</span> might</div>
+      <div class="pwrbar"><i></i></div>
+    </div>
+  </div>
+
+  <!-- resources -->
+  <div id="res">
+    <div class="rp"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#e7c061" stroke-width="1.7"><path d="M12 22 V8 M12 8 Q7 9 6 4 Q11 5 12 8 M12 8 Q17 9 18 4 Q13 5 12 8 M12 14 Q7 15 6 10 M12 14 Q17 15 18 10"/></svg></div><div><div class="v num">48.2k</div><div class="r">+1,240</div></div></div>
+    <div class="rp"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#e7c061" stroke-width="1.7"><ellipse cx="7" cy="8" rx="2.3" ry="3.2"/><ellipse cx="7" cy="15" rx="2.3" ry="3.2"/><path d="M7 8H17M7 15H17"/><ellipse cx="17" cy="8" rx="2.3" ry="3.2"/><ellipse cx="17" cy="15" rx="2.3" ry="3.2"/></svg></div><div><div class="v num">61.7k</div><div class="r">+1,510</div></div></div>
+    <div class="rp"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#e7c061" stroke-width="1.7"><path d="M4 9 12 5 20 9 20 16 12 20 4 16Z M4 9 12 13 20 9 M12 13V20"/></svg></div><div><div class="v num">33.0k</div><div class="r">+880</div></div></div>
+    <div class="rp"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#e7c061" stroke-width="1.7"><path d="M3 9H21V11Q21 16 15 16H14L13 20H11L10 16H9Q3 16 3 11Z M7 9V7H17V9"/></svg></div><div><div class="v num">12.4k</div><div class="r" style="color:#e8a86a">+410</div></div></div>
+    <div class="rp gild"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#f6e2a0" stroke-width="1.8"><path d="M12 3 20 9 17 19 7 19 4 9Z M4 9H20 M9 9 11 19 M15 9 13 19"/></svg></div><div><div class="v num">340</div><div class="r" style="color:#d9b86a">shards</div></div></div>
+  </div>
+
+  <!-- top right -->
+  <div id="tr">
+    <div class="ico">✉️<div class="bdg">3</div></div>
+    <div class="ico">⚑<div class="bdg">5</div></div>
+    <div class="ico">⚙️</div>
+  </div>
+
+  <!-- building tap-targets on the world -->
+  <div class="plot" style="left:46%;top:46%"><div class="cap">The Keep <span class="lvl num">VII</span></div><div class="pip"></div></div>
+  <div class="plot" style="left:30%;top:62%"><div class="timer"><span class="hammer">🔨</span><span class="num">02:14:51</span></div><div class="pip" style="border-top-color:#b22f17"></div></div>
+  <div class="plot" style="left:62%;top:60%"><div class="ready">✦ Granary ready</div><div class="pip" style="border-top-color:#5d9e36"></div></div>
+
+  <!-- left rail -->
+  <div id="lr">
+    <div class="rail glow chest">🎁<div class="bdg">!</div></div>
+    <div class="rail">🗺️</div>
+    <div class="rail">🦅</div>
+    <div class="rail">⚒️<div class="bdg">2</div></div>
+  </div>
+
+  <!-- right column -->
+  <div id="rr">
+    <div class="panel" style="margin-bottom:12px">
+      <div class="ph">⚑ The Iron Banner <span style="margin-left:auto;color:#a6e07a;font-size:11px">● 18 online</span></div>
+      <div class="ban">
+        <div class="line"><span class="who b">Marshal Ven</span><span class="tx">rally on Greythorn at the next bell, bring spears ⚔</span></div>
+        <div class="line"><span class="who a">Wren</span><span class="tx">reinforcements riding for your keep, hold</span></div>
+        <div class="line" style="border:0"><span class="who c">Old Bram</span><span class="tx">the Skull-Gate stirs again...</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph">📜 Tidings of the Realm</div>
+      <div class="ban">
+        <div class="tline"><span class="d ox"></span><div>A rival host marches on <b>Harrowfen</b>, strikes in <span class="oxt num">6h 12m</span></div></div>
+        <div class="tline"><span class="d gd"></span><div>The <b>giant-road</b> at the 9th marker is unsealed</div></div>
+        <div class="tline" style="padding-bottom:2px"><span class="d gr"></span><div>Your Banner rose to <b>3rd</b> on the realm ladder</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- bottom hotbar + objective -->
+  <div id="bottom">
+    <div class="hot">
+      <div class="slot sel"><div class="lv num">7</div><div class="pl"><img src="ico/keep.png"></div><div class="nm">Keep</div></div>
+      <div class="slot"><div class="lv num">5</div><div class="pl"><img src="ico/barracks.png"></div><div class="tm num">2:14</div><div class="nm">Barracks</div></div>
+      <div class="slot"><div class="lv num">6</div><div class="pl"><img src="ico/granary.png"></div><div class="nm">Granary</div></div>
+      <div class="slot"><div class="lv num">4</div><div class="pl"><img src="ico/quarry.png"></div><div class="nm">Quarry</div></div>
+      <div class="slot"><div class="lv num">4</div><div class="pl"><img src="ico/mine.png"></div><div class="nm">Mine</div></div>
+      <div class="slot"><div class="lv num">3</div><div class="pl"><img src="ico/market.png"></div><div class="nm">Market</div></div>
+      <div class="slot"><div class="lv num">6</div><div class="pl"><img src="ico/wall.png"></div><div class="nm">Wall</div></div>
+    </div>
+    <div class="obj">
+      <div class="panel objc">
+        <div class="q">🎯</div>
+        <div><div class="ch cin">CHAPTER II · THE WAKING GATE</div><div class="ds">Raise the Keep to Lv 8 to unseal the Skull-Gate</div></div>
+        <button class="gbtn grn" style="margin-left:auto">Go ▸</button>
+      </div>
+      <button class="gbtn ox" style="margin-left:12px;font-size:16px;padding:15px 26px">⚑ Muster a March</button>
+    </div>
+  </div>
+</div>
+</body></html>
