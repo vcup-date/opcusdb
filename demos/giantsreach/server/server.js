@@ -420,6 +420,7 @@ const FORGE_COST = 60;   // shards per draw
 const PITY = 10;         // a guaranteed Epic or better every 10 draws (shown to the player)
 const SALVAGE = [5, 15, 40, 100]; // shards returned when a relic is melted down, by tier
 const REFORGE_COST = 45;          // shards to re-roll a relic's value within its tier
+const FUSE_N = 3;                 // same-tier relics fused to ascend one tier (Common->Rare->Epic->Legendary)
 function prng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function hstr(s) { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function rollRelic(seed, minTier) {
@@ -427,6 +428,12 @@ function rollRelic(seed, minTier) {
   let tier = 0; const tot = TIER_WEIGHT.reduce((a, c) => a + c, 0); let x = r() * tot;
   for (let i = 0; i < TIER_WEIGHT.length; i++) { if (x < TIER_WEIGHT[i]) { tier = i; break; } x -= TIER_WEIGHT[i]; }
   if (minTier != null) tier = Math.max(tier, minTier);
+  const aff = SLOT_AFFIX[slot]; const [lo, hi] = AFFIX_RANGE[aff][tier];
+  return { seed, slot, tier, aff, val: lo + Math.floor(r() * (hi - lo + 1)) };
+}
+// forge a relic at an EXACT tier (used by fusion, so the "ascend to Rare/Epic" promise is honest)
+function relicAtTier(seed, tier) {
+  const r = prng(seed); const slot = SLOTS[Math.floor(r() * SLOTS.length)];
   const aff = SLOT_AFFIX[slot]; const [lo, hi] = AFFIX_RANGE[aff][tier];
   return { seed, slot, tier, aff, val: lo + Math.floor(r() * (hi - lo + 1)) };
 }
@@ -723,7 +730,7 @@ function view(p) {
     slots: SLOTS, slotNames: SLOT_NAME, affNames: AFFIX_NAME, tierNames: TIERS,
     hero: { level: p.hero.level, xp: p.hero.xp, xpNeed: p.hero.level * 100, traits: p.hero.traits || {}, points: Math.max(0, traitPoints(p) - traitsSpent(p)), nextAt: (Math.floor(((p.hero.level) / TRAIT_EVERY)) + 1) * TRAIT_EVERY },
     traitDefs: HERO_TRAITS, traitMax: TRAIT_MAX,
-    heroBonus: heroBonusOf(p), pity: p.pity, pityMax: PITY, forgeCost: FORGE_COST, reforgeCost: REFORGE_COST, salvageVals: SALVAGE,
+    heroBonus: heroBonusOf(p), pity: p.pity, pityMax: PITY, forgeCost: FORGE_COST, reforgeCost: REFORGE_COST, salvageVals: SALVAGE, fuseN: FUSE_N,
     achievements: achvView(p), achvClaim: achvClaimable(p),
     vip: vipView(p), season: seasonView(p),
     alliance: allianceView(p), allyTag: p.alliance || null,
@@ -1078,6 +1085,29 @@ const ROUTES = {
     const r = prng((hstr(p.name) ^ Math.imul(p.reforgeN, 0x85ebca6b) ^ seed) >>> 0);
     const old = it.val; it.val = lo + Math.floor(r() * (hi - lo + 1));
     save(); send(res, 200, Object.assign({ old, val: it.val }, view(p)));
+  },
+  // ---- fuse: consume FUSE_N stash relics of one tier to ascend a single relic to the next tier ----
+  "POST /api/fuse": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p); p.relics = p.relics || [];
+    const tier = b.tier | 0;
+    if (!(tier >= 0 && tier <= 2)) return send(res, 400, { err: "Only Common, Rare, or Epic relics can be fused upward." });
+    const idxs = [];
+    for (let i = 0; i < p.relics.length; i++) if (p.relics[i].tier === tier) idxs.push(i);
+    if (idxs.length < FUSE_N) return send(res, 400, { err: "Fusing needs " + FUSE_N + " " + TIERS[tier] + " relics. You hold " + idxs.length + "." });
+    // consume the FUSE_N lowest-value of that tier, so a player never loses their best relic to a fusion
+    idxs.sort((a, c) => p.relics[a].val - p.relics[c].val);
+    const consume = idxs.slice(0, FUSE_N).sort((a, c) => c - a); // splice high index first
+    let mix = 0; for (const i of consume) mix = (mix ^ (p.relics[i].seed >>> 0)) >>> 0;
+    p.fuseN = (p.fuseN || 0) + 1;
+    const seed = (mix ^ Math.imul(p.fuseN, 0x9e3779b9) ^ hstr(p.name)) >>> 0;
+    const it = relicAtTier(seed, tier + 1);
+    // guarantee a unique seed in the stash (deterministic nudge on the rare collision)
+    while (p.relics.some((x) => x.seed === it.seed)) it.seed = (it.seed + 0x9e3779b9) >>> 0;
+    for (const i of consume) p.relics.splice(i, 1);
+    p.relics.push(it);
+    save();
+    send(res, 200, Object.assign({ fused: { seed: it.seed, slot: it.slot, slotName: SLOT_NAME[it.slot], tier: it.tier, tierName: TIERS[it.tier], aff: it.aff, affName: AFFIX_NAME[it.aff], val: it.val } }, view(p)));
   },
   // ---- spend a hero trait point ----
   "POST /api/trait": async (req, res, b) => {

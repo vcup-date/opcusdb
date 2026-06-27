@@ -605,6 +605,10 @@ function renderForge() {
     <div class="racts"><button class="ract eq" data-equip="${it.seed >>> 0}">Equip</button><button class="ract" data-reforge="${it.seed >>> 0}" title="re-roll within tier">${ICON.gem}${rfc}</button><button class="ract sv" data-salvage="${it.seed >>> 0}" title="melt for shards">salvage +${sv[it.tier]}</button></div></div>`).join("") || `<div class="empty">No relics in the stash. Work the Forge to draw one, or delve a ruin.</div>`;
   const hasLow = stashRelics.some((it) => it.tier <= 1);
   const bulkBar = hasLow ? `<div class="salvbar"><span class="tg">Clear the clutter:</span><button class="ract sv" data-salvageall="0">Salvage all Common</button><button class="ract sv" data-salvageall="1">Salvage up to Rare</button></div>` : "";
+  const fn = S.fuseN || 3; const TN = S.tierNames || ["Common", "Rare", "Epic", "Legendary"];
+  const tcount = [0, 0, 0, 0]; stashRelics.forEach((it) => { tcount[it.tier]++; });
+  const fuseBtns = [0, 1, 2].filter((t) => tcount[t] >= fn).map((t) => `<button class="ract fuse" data-fuse="${t}" title="Consume your ${fn} lowest ${TN[t]} relics to forge one ${TN[t + 1]}">Fuse ${fn} ${TN[t]} &rarr; ${TN[t + 1]}</button>`).join("");
+  const fuseBar = fuseBtns ? `<div class="salvbar fusebar"><span class="tg">Ascend relics:</span>${fuseBtns}</div>` : "";
   const canForge = S.gems >= S.forgeCost;
   showModalWide(`<div class="ph">${ic("anvil")} The Forge &amp; the Hero <span class="x">&times;</span></div>
     <div class="bd">
@@ -622,6 +626,7 @@ function renderForge() {
                    : `<button class="gbtn" disabled>${ic("gem")} ${S.forgeCost} needed</button>`}
       </div>
       <div class="ph" style="border:0;padding:8px 0 4px">The Stash</div>
+      ${fuseBar}
       ${bulkBar}
       <div class="stash">${stash}</div>
     </div>`);
@@ -647,6 +652,9 @@ function renderForge() {
   });
   $$("#modal [data-salvageall]").forEach((c) => c.onclick = async () => {
     try { const v = await api("salvage", { maxTier: +c.dataset.salvageall }); sfx("coin"); toast(`Salvaged ${v.count} relics for ${fmt(v.gained)} shards`); applyState(v); renderForge(); } catch (e) { toast(e.message, true); }
+  });
+  $$("#modal [data-fuse]").forEach((c) => c.onclick = async () => {
+    try { const v = await api("fuse", { tier: +c.dataset.fuse }); const d = v.fused; sfx("level"); toast(`Ascended to a ${d.tierName} ${d.slotName}: +${d.val}${AFF_SUFFIX[d.aff]}`); applyState(v); renderForge(); } catch (e) { toast(e.message, true); }
   });
   $$("#modal [data-trait]").forEach((c) => c.onclick = async () => {
     const tr = (S.traitDefs || []).find((x) => x.id === c.dataset.trait);

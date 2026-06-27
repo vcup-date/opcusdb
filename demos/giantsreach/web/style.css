@@ -680,6 +680,9 @@ body.reduce-motion #tutorial .ring{animation:none !important;box-shadow:0 0 14px
 .ract.sv:hover{border-color:var(--ox);color:var(--ox2)}
 .salvbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:9px;padding:7px 10px;background:#140d05;border:1px solid #4a3a1c;border-radius:9px}
 .salvbar .tg{color:#8a7858;font-size:12px;margin-right:auto}
+.fusebar{background:#161003;border-color:#5a4416}
+.ract.fuse{flex:0 0 auto;color:#241a05;background:linear-gradient(#e6c66a,#caa033);border-color:var(--gold)}
+.ract.fuse:hover{filter:brightness(1.08);color:#241a05}
 .salvbar .ract{flex:none;padding:5px 11px;font-size:11px}
 .eqacts{display:flex;gap:8px;justify-content:center;margin-top:5px}
 .eqacts .eqx{cursor:pointer}.eqacts .eqx[data-reforge]:hover{color:var(--gold2)}

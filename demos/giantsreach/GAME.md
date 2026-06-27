@@ -392,6 +392,23 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 38: RELIC FUSION, ascend duplicates a tier)
+- The stash filled with duplicate low relics that could only be salvaged for shards. Added the last equipment lever
+  on the roadmap: tier-up fusion, so duplicates become a progression path, not just scrap.
+- Server: /api/fuse {tier} consumes FUSE_N (3) stash relics of a tier and forges one of the NEXT tier up
+  (Common->Rare->Epic->Legendary; Legendary cannot be fused). It always consumes the THREE LOWEST-value relics of
+  that tier, so a player never loses their best to a fusion. A new relicAtTier() forges at an EXACT tier (a fresh
+  deterministic slot/affix/value roll) so the "ascend to Rare/Epic" promise is honest, with a seed-collision nudge
+  to keep stash seeds unique. Shard-neutral by design (3 Commons salvage for the same 15 as the Rare they make), so
+  it is a real choice against salvage rather than a strictly better one. view() exposes fuseN.
+- Client: an "Ascend relics" bar in the Forge stash with gold "Fuse 3 Common -> Rare" / "Fuse 3 Rare -> Epic" /
+  "Fuse 3 Epic -> Legendary" buttons that appear only when you hold enough of a tier, distinct from the green salvage
+  bar; a toast announces the ascended relic.
+- Verified END TO END: seeded 4 Common + 3 Rare + 1 Epic; fusing Common consumed the 3 lowest (kept the best Common)
+  and yielded a Rare; a second fuse with one Common left returned "Fusing needs 3 Common relics. You hold 1."; fusing
+  Rare yielded an Epic; tier 3 was rejected. In-UI the two buttons rendered with correct labels and clicking Rare
+  raised the Epic count from 1 to 2. Screenshot fuse.png. No JS errors, guest smoke clean (no regression).
+
 ## DONE (iteration 37: CHAMPION'S TRAITS, build-defining hero choices)
 - The hero levelled and equipped relics but every champion grew identically. Added rankable traits (the roadmap
   "hero skills") so the player makes lasting, build-defining choices as the hero levels.
@@ -728,8 +745,8 @@ NEXT STEPS list below; none are blocking.
    broad; next best step is likely ALLIANCES (item 8) or a full MOBILE LAYOUT pass (item 10).
 7. [DONE] EQUIPMENT + HEROES (iteration 7): a hero with a gear loadout, deterministic Forge gacha with a
    transparent pity counter, hero buffs to combat/loot/march; [DONE] relic salvage + reforge (iteration 35);
-   [DONE] the Panoply set bonus (iteration 36); [DONE] rankable Champion's Traits, the "hero skills" (iteration 37).
-   Future: a second hero slot, relic tier-up fusion.
+   [DONE] the Panoply set bonus (iteration 36); [DONE] rankable Champion's Traits, the "hero skills" (iteration 37);
+   [DONE] relic tier-up fusion (iteration 38). Future: a second hero slot.
 8. [DONE] ALLIANCES (banners) (iteration 13): create/join/leave/browse, timer-shaving help (max(1%,60s),
    20 per order), +1%/member production bonus, War Table chat; [DONE] reinforcement (iteration 27): garrison
    a member's hold, join their defense, recall. Future: a shared map territory, joint rally marches, member ranks.
