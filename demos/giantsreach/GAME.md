@@ -392,6 +392,20 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 26: MARCHES VISUALIZED ON THE WORLD MAP)
+- Balance check first: measured the new-player early curve and it is well-tuned (starting stores cover ~15
+  builds, every early build is cheap and under 69s so the first several finish FREE instantly, 2 build slots).
+  So the real gap was the world map: active marches lived only in a side panel, never shown on the map.
+- Now your hosts ride across the Reach. An SVG overlay inside #mapinner draws, per active march, a dashed
+  route line from your hold to the target and a pulsing marker that moves along it in real time, color-coded
+  by kind: gold for camp raids, red for war on a rival hold, blue for scouts. Outbound marches travel toward
+  the target (progress from depart to arrive); resolved ones head home (arrive to ret). The marker positions
+  update every frame in the main loop and ride the map's pan/zoom transform; the layer rebuilds if the set of
+  marches changes. Server now sends each march's depart time so progress can be computed client-side.
+- Verified END TO END: seeded three in-flight marches (a raid outbound ~45%, a raid returning, and a scout);
+  the overlay drew 3 routes + 3 markers at the correct progress and colors; a guest with no marches opens the
+  map cleanly (layer present, 0 markers). Screenshot map_marches.png. No JS errors, no regression.
+
 ## DONE (iteration 25: LORD PORTRAITS, choose the face the realm knows you by)
 - Personalized identity: the HUD avatar was a generic shield. Baked FOUR painterly lord/lady portraits OFFLINE
   with Qwen on the locked recipe (768x768, 24 steps, cfg 3.5): The Veteran (a grizzled scarred warlord), The

@@ -624,7 +624,7 @@ function view(p) {
     wounded: p.wounded || { spearman: 0, swordsman: 0, archer: 0, knight: 0 }, woundCap: woundCap(p), healCost: healCostOf(p),
     tutorial: p.tutorial, login: p.login, daily: DAILY, packs: PACKS, starter: STARTER, boughtStarter: !!p.boughtStarter,
     coords: { x: p.x, y: p.y },
-    marches: (p.marches || []).map((m) => ({ tx: m.tx, ty: m.ty, level: m.level, arrive: m.arrive, ret: m.ret, resolved: m.resolved, troops: m.troops, kind: m.kind || "camp", target: m.target || null })),
+    marches: (p.marches || []).map((m) => ({ tx: m.tx, ty: m.ty, level: m.level, depart: m.depart, arrive: m.arrive, ret: m.ret, resolved: m.resolved, troops: m.troops, kind: m.kind || "camp", target: m.target || null })),
     reports: (p.reports || []).slice(0, 12),
     tasks: tasksView(p),
     chest: { ready: NOW() - ((p.chest && p.chest.last) || 0) >= CHEST_COOLDOWN, nextAt: ((p.chest && p.chest.last) || 0) + CHEST_COOLDOWN, reward: CHEST_REWARD },

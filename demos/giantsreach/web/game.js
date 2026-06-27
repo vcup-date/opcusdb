@@ -234,6 +234,7 @@ function loop(t) {
   $$("#trainq .qrow").forEach((row, i) => { const tr = S.train[i]; if (!tr) return; const rem = tr.finish - now; const tEl = row.querySelector(".left"); if (tEl) tEl.textContent = rem <= 0 ? "done" : hms(rem); });
   $$("#marchpanel .mleft").forEach((e) => { const m = S.marches[+e.dataset.mi]; if (!m) return; const rem = (m.resolved ? m.ret : m.arrive) - now; e.textContent = rem <= 0 ? "arriving" : hms(rem); });
   $$("#townspots .tmr").forEach((e) => { const q = S.queue[+e.dataset.q]; if (!q) { e.textContent = ""; return; } const rem = q.finish - now; e.textContent = rem <= 0 ? "done" : hms(rem); });
+  updateMapMarches(now);
 }
 function gemsFor(sec) { if (sec <= 60) return 1; if (sec <= 3600) return Math.max(1, Math.round((19 / 3540) * (sec - 60) + 1)); if (sec <= 86400) return Math.round((240 / 82800) * (sec - 3600) + 20); return Math.round((740 / 518400) * (sec - 86400) + 260); }
 
@@ -809,13 +810,46 @@ function renderMap() {
   const side = 2 * R + 1;
   showModalWide(`<div class="ph">${ic("map")} The Reach &#183; (${c.x} | ${c.y}) <span class="x">&times;</span></div>
     <div class="bd"><div id="mapview"><div class="maphint">drag to pan, scroll or +/- to zoom</div>
-      <div id="mapinner" style="display:grid;gap:2px;grid-template-columns:repeat(${side},${CELL}px);grid-auto-rows:${CELL}px">${cells}</div>
+      <div id="mapinner" style="position:relative;display:grid;gap:2px;grid-template-columns:repeat(${side},${CELL}px);grid-auto-rows:${CELL}px">${cells}</div>
       <div class="mapctl"><button id="mz-in">+</button><button id="mz-out">&minus;</button><button id="mz-home" title="center on home">&#9733;</button></div>
     </div>${reportsHtml()}</div>`);
   $$("#mapinner .cell.camp:not(.cleared)").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); marchDialog(+e.dataset.x, +e.dataset.y); });
   $$("#mapinner .cell.city.foe[data-ax]").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); attackDialog(+e.dataset.ax, +e.dataset.ay); });
   initIcons($("#mapinner"));
+  buildMapMarchLayer();
   setupMapPanZoom(side, CELL);
+}
+// active marches drawn moving along their path on the world map
+const MAP_CELL = 30, MAP_STEP = 32; // cell + 2px gap
+function mapPos(dx, dy, R) { return [(dx + R) * MAP_STEP + MAP_CELL / 2, (dy + R) * MAP_STEP + MAP_CELL / 2]; }
+function marchColor(m) { return m.kind === "scout" ? "#6fb4d6" : m.kind === "city" ? "#e2613f" : "#f6e2a0"; }
+function buildMapMarchLayer() {
+  const inner = $("#mapinner"); if (!inner || !MAP || !S) return;
+  const old = $("#marchlayer"); if (old) old.remove();
+  const c = MAP.center, R = MAP.R, side = 2 * R + 1, W = side * MAP_STEP;
+  const [hx, hy] = mapPos(0, 0, R);
+  let svg = `<svg id="marchlayer" width="${W}" height="${W}" style="position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-index:3">`;
+  (S.marches || []).forEach((m, i) => {
+    const [tx, ty] = mapPos(m.tx - c.x, m.ty - c.y, R); const col = marchColor(m);
+    svg += `<line x1="${hx}" y1="${hy}" x2="${tx}" y2="${ty}" stroke="${col}" stroke-width="1.5" stroke-dasharray="3 4" opacity="0.45"/>`;
+    svg += `<g class="mmark" data-mi="${i}"><circle r="11" fill="none" stroke="${col}" stroke-width="1.5" opacity="0.5"><animate attributeName="r" values="6;13;6" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.55;0;0.55" dur="1.5s" repeatCount="indefinite"/></circle><circle r="6.5" fill="${col}" stroke="#160d05" stroke-width="2"/></g>`;
+  });
+  inner.insertAdjacentHTML("beforeend", svg + "</svg>");
+  updateMapMarches(Date.now() / 1000 + (S.now - (S._recv || S.now)));
+}
+function updateMapMarches(now) {
+  const layer = $("#marchlayer"); if (!layer || !MAP || !S) return;
+  const marks = layer.querySelectorAll(".mmark");
+  if (marks.length !== (S.marches || []).length) { buildMapMarchLayer(); return; } // marches changed -> rebuild
+  const c = MAP.center, R = MAP.R, [hx, hy] = mapPos(0, 0, R);
+  marks.forEach((g) => {
+    const m = S.marches[+g.dataset.mi]; if (!m) return;
+    const [tx, ty] = mapPos(m.tx - c.x, m.ty - c.y, R);
+    let px, py;
+    if (!m.resolved) { const t = Math.max(0, Math.min(1, (now - m.depart) / (m.arrive - m.depart))); px = hx + (tx - hx) * t; py = hy + (ty - hy) * t; }
+    else { const t = Math.max(0, Math.min(1, (now - m.arrive) / (m.ret - m.arrive))); px = tx + (hx - tx) * t; py = ty + (hy - ty) * t; }
+    g.setAttribute("transform", `translate(${px},${py})`);
+  });
 }
 function setupMapPanZoom(side, CELL) {
   const view = $("#mapview"), inner = $("#mapinner"); if (!view || !inner) return;
