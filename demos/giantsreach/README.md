@@ -36,18 +36,23 @@ Economy and building
 - Acceleration/speedups: finish a timer instantly with shards on a Clash-style gem-to-time curve, or free under five minutes (from the queue or the building modal).
 
 The war layer
-- A big world map of barbarian camps and rival cities, with marches drawn moving along their paths in real time.
-- A deterministic mixed-arms combat resolver (no RNG) with a cinematic battle scene: a painterly clash backdrop, a stamped victory/defeat seal, casualties, spoils, and a dramatic war-music cue.
-- Player-vs-player: scout a rival (countered by their watchtower), see incoming attacks coming with a live warning, march on their hold, and carry off their stores. A beginner's peace shields new holds.
+- A big world map of barbarian camps, rival cities, fallen-giant ruins, and alliance strongholds, with marches drawn moving along their paths in real time.
+- A deterministic mixed-arms combat resolver (no RNG) with a cinematic battle scene: a painterly clash backdrop, a stamped victory/defeat seal, casualties, spoils, and a dramatic war-music cue. Both the attacker's and the defender's champion bonuses fold into the math, so investing in defense genuinely matters.
+- Named Warlord camps: rare elite barbarian lords (each with a baked taunt) holding a tougher garrison behind fortified walls, always dropping shards and a guaranteed relic to whoever fells them.
+- Player-vs-player: scout a rival (countered by their watchtower; the scout also reads their champion's defense), see incoming attacks coming with a live warning, march on their hold, and carry off their stores. A beginner's peace shields new holds.
 - The Infirmary: a share of every casualty is recoverable, tended back into the host for resources.
+- Delving: search a fallen giant's ruin for a buried cache, a hoard of shards, or a lost relic.
 
 Alliances ("banners")
 - Create/join/leave/browse, a roster, the signature timer-shaving help, a +1%/member production bonus, and a War Table chat.
+- Member ranks: a leader and officers with a real permission ladder (promote, demote, expel, and pass the mantle), the leadership passing to an officer first when a leader departs.
 - Reinforcement: garrison a banded member's hold and your troops join every defense; recall the survivors.
+- Joint rallies: muster a combined host with your banner against a Warlord; everyone's troops fight as one, survivors and spoils split by contribution, the relic to the lord who called it.
+- The Banner Stronghold, a shared territory fortress on the map: the leader founds it, every member pledges resources to raise it (for an alliance-wide march-speed buff) and garrisons real troops to defend it. Rival banners can assault it, battering it down a level per victory and razing it at the last, with a rebuild shield between sieges.
 
 Retention and progression
 - A 7-day login calendar, a daily task ladder with reward chests, a free timed chest, permanent tiered achievements, a VIP track, and a 30-day season pass with free and gold tracks.
-- Equipment and a hero: a deterministic Forge gacha with a transparent pity counter; relics buff combat, loot, and march speed.
+- Equipment and a hero champion: a deterministic Forge gacha with a transparent pity counter; relics buff combat, loot, and march speed. The Forge has real depth: salvage junk for shards, reforge a relic's roll within its tier, fuse three same-tier relics to ascend one tier, a Panoply set bonus that grows as the four slots fill with finer relics, and rankable Champion's Traits earned every five hero levels (a build-defining choice between attack, defense, march, spoils, march slots, and build or train speed).
 - A multi-category Realm Ladder (Lords, Warlords, Banners) with portraits and your own standing.
 - A returning-player Council recap (what happened while away, what awaits) and a coached first-session tutorial.
 
@@ -60,7 +65,8 @@ Presentation
 
 - Tap a building (in the town or the bottom bar) to raise it. The Keep unlocks higher levels and speeds all construction.
 - Open the rails on the left for the Daily gift, the Shop, the Army (train soldiers and tend the wounded), the Forge (heroes and relics), Tasks, Honors, Banners (alliances), and the World map.
-- On the World map, tap a barbarian camp to raid it, or a red rival hold to scout or march on it.
+- On the World map, tap a barbarian camp to raid it, a crimson Warlord camp to fell (alone or by calling a banner rally), a fallen-giant ruin to delve, or a red rival hold to scout or march on it.
+- In the Banners panel, found and raise your alliance stronghold, pledge resources and garrison troops to it, and assault a rival banner's stronghold on the map.
 - Watch the top of the screen for an incoming-attack warning, and your banner's roster to send reinforcements.
 
 ## Architecture
@@ -89,7 +95,7 @@ giantsreach/
 
 ## Offline asset baking
 
-- Art is baked offline with Qwen-Image via ComfyUI on a slow high-quality pass (no Lightning LoRA, ~24-26 steps, cfg 3.5) in the locked painterly style: the splash key-art, the building portraits, the lord portraits, the battle backdrop, and the city growth tiers (img2img from the base city at moderate denoise so the building markers stay aligned).
+- Art is baked offline with Qwen-Image via ComfyUI on a slow high-quality pass (no Lightning LoRA, ~24-26 steps, cfg 3.5) in the locked painterly style: the splash key-art, the lord portraits (which also serve as your champion's likeness), the battle backdrop, the banner-stronghold portrait, and the city growth tiers. Every building has a base portrait plus a grander tier-2 version baked img2img at moderate denoise (so the composition stays put as it visibly grows on upgrade), and the Keep rises further to a majestic tier-3 citadel at high level.
 - Music is baked offline with ACE-Step (a warm orchestral main theme and a driving battle cue), loudness-normalized and encoded to small mp3s. SFX are procedural Web Audio. All audio is created on the first user gesture and muted until then.
 - None of this runs at game time; the runtime only serves the static results.
 

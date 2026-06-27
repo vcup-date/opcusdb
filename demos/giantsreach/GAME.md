@@ -1,4 +1,4 @@
-# GIANTSREACH — master design, roadmap, and build status
+# GIANTSREACH: master design, roadmap, and build status
 
 A complete, production-quality, time-based browser strategy MMO in the lineage of
 Travian / Clash of Kings / Rise of Kingdoms, set in a realm built among the ruins of
@@ -940,7 +940,7 @@ VIP, 30-day season pass), the splash/title key-art, the mobile layout, alliances
 the baked flavor-text voice of the realm, and production hardening + README. Further polish ideas live in the
 NEXT STEPS list below; none are blocking.
 
-## NEXT STEPS (roadmap — pick the next meaningful one each loop, keep it tested)
+## NEXT STEPS (roadmap: pick the next meaningful one each loop, keep it tested)
 1. POLISH + TEST the foundation hard: balance the early curve so the first 3 builds feel fast
    and rewarding (research: early dopamine), fix any UI overflow at common resolutions, make the
    tutorial bullet-proof, screenshot-verify each screen.
