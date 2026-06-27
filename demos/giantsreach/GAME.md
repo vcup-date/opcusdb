@@ -392,6 +392,20 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 50: THE MAJESTIC KEEP, a tier-3 art capstone for the heart of the hold)
+- Buildings rose from a base to a grand (tier-2) portrait at level 10 (iteration 42), but there was no late-game art
+  payoff. Gave the Keep, the heart of the hold and the building every player pushes hardest, a third majestic tier.
+- Baked OFFLINE with Qwen-Image via ComfyUI (127.0.0.1:8188), the locked slow high-quality pass (26 steps, cfg 3.5,
+  no Lightning LoRA) as img2img from the grand keep2 at 0.55 denoise, so the citadel keeps its composition while
+  rising into a majestic royal castle: soaring gilded spires, a great golden dome, many proud towers, immense
+  ramparts, and gold-and-crimson royal banners, in the locked golden-hour painterly style. Saved as web/img/bld/keep3.png.
+- Client: the Keep modal loads its tier-3 portrait at level BLD_TIER3 (20) with a richer gilt-and-crimson frame and a
+  gold "Majestic" tag; tier-3 is gated to the Keep only, and the existing tier3 -> tier1 -> icon fallback keeps any
+  missing bake safe. Other buildings still cap at their grand tier-2. Runtime stays a static image swap; zero AI.
+- Verified END TO END: a level-22 Keep loaded keep3.png with the majestic frame and Majestic tag; a guest smoke run
+  (low-level buildings on base/grand art) was clean, confirming no other building reaches for a tier-3 it lacks.
+  Screenshot keep3-modal.png. No JS errors, no regression.
+
 ## DONE (iteration 49: BALANCE FIX, the defender's champion now actually defends)
 - A data-driven balance review found a real, concrete defect (not a vibe): the DEFENDER's hero defense bonus was
   computed and shown ("Defense +X%" from the Bulwark trait, armor relics, and the Panoply) but NEVER applied in any
@@ -917,7 +931,8 @@ NEXT STEPS list below; none are blocking.
    tutorial bullet-proof, screenshot-verify each screen.
 2. ART: [DONE] dedicated splash/title key-art (iteration 11); [DONE] painterly building portraits in the
    upgrade modal (iteration 17); [DONE] city image that grows with keep level via img2img tiers (iteration 24).
-   [DONE] per-building grand visual tiers via img2img (iteration 42). Remaining (optional): a Founder/lord portrait variety. All painterly, offline.
+   [DONE] per-building grand visual tiers via img2img (iteration 42); [DONE] a majestic tier-3 Keep capstone
+   (iteration 50). Remaining (optional): a Founder/lord portrait variety. All painterly, offline.
 3. SOUND + MUSIC: bake an ambient town theme + UI clicks/build-complete/coin/level sfx (offline);
    muted until first click; a mute toggle. Splash video via LTX if viable.
 4. [DONE] WORLD MAP + MARCHES + COMBAT (iteration 2); [DONE] PvP city attacks with a beginner shield

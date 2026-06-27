@@ -52,6 +52,7 @@ function initIcons(root) { (root || document).querySelectorAll("[data-svg]").for
 const ic = (name) => `<span class="ri">${SI[name] || ""}</span>`;
 const RESES = ["grain", "timber", "stone", "iron", "gold"];
 const BLD_TIER2 = 10;    // a building shows its grander baked portrait from this level
+const BLD_TIER3 = 20;    // the Keep rises to its majestic citadel portrait at this level
 const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
 const roman = (n) => ROMAN[n] || ("" + n);
 const fmt = (n) => { n = Math.floor(n); if (n >= 1e6) return (n / 1e6).toFixed(2) + "M"; if (n >= 1e4) return (n / 1e3).toFixed(1) + "k"; return n.toLocaleString(); };
@@ -467,9 +468,9 @@ function renderBuilding(id) {
   showModal(`
     <div class="ph">${b.name} <span class="x">&times;</span></div>
     <div class="bd bldbd">
-      <div class="bportrait${b.level >= BLD_TIER2 ? " grand" : ""}">
-        <img src="img/bld/${b.icon}${b.level >= BLD_TIER2 ? "2" : ""}.png" alt="" onerror="this.onerror=null;this.src='img/bld/${b.icon}.png';this.onerror=function(){this.onerror=null;this.src='img/ico/${b.icon}.png';this.parentElement.classList.add('noart')}"/>
-        <div class="bpover"><div class="bplv">${lvTag}</div>${b.level >= BLD_TIER2 ? '<div class="grandtag">Grand</div>' : ""}</div>
+      <div class="bportrait${b.level >= BLD_TIER2 ? " grand" : ""}${b.icon === "keep" && b.level >= BLD_TIER3 ? " majestic" : ""}">
+        <img src="img/bld/${b.icon}${b.icon === "keep" && b.level >= BLD_TIER3 ? "3" : b.level >= BLD_TIER2 ? "2" : ""}.png" alt="" onerror="this.onerror=null;this.src='img/bld/${b.icon}.png';this.onerror=function(){this.onerror=null;this.src='img/ico/${b.icon}.png';this.parentElement.classList.add('noart')}"/>
+        <div class="bpover"><div class="bplv">${lvTag}</div>${b.icon === "keep" && b.level >= BLD_TIER3 ? '<div class="grandtag maj">Majestic</div>' : b.level >= BLD_TIER2 ? '<div class="grandtag">Grand</div>' : ""}</div>
       </div>
       <p class="bdesc">${b.desc}</p>
       ${prodLine}
