@@ -549,3 +549,12 @@ svg{width:18px;height:18px;vertical-align:middle}
 .healcost{font-size:13px;color:#caa86a;display:inline-flex;align-items:center;gap:4px}
 .healcost .rwc{display:inline-flex;align-items:center;gap:2px;color:var(--gold2)}
 .healcost .rwc svg,.healcost svg{width:15px;height:15px}
+
+/* ---- scouting: intel panel + scout reports ---- */
+.intel{border:1.5px solid #5d7e9e;border-radius:10px;background:linear-gradient(#16222a,#0e161b);padding:10px 12px;margin:10px 0}
+.intelh{font-family:'Cinzel';font-weight:700;font-size:12px;letter-spacing:1px;color:#bcd6e3;display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.intelh svg{stroke:#9fcbe0}.intelh .ago{margin-left:auto;color:#7c93a0;font-weight:400;letter-spacing:0;font-size:11px}
+.intelrow{font-size:13px;color:#9fb6c2;margin-top:2px}.intelrow b{color:#eaf4fa}
+.intelrow svg{width:14px;height:14px;vertical-align:middle}
+.repcard.scout{border-left:3px solid #5d7e9e}
+.res.scout{color:#9fcbe0;font-family:'Cinzel';font-weight:700;font-size:11px;letter-spacing:1px}

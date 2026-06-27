@@ -827,14 +827,33 @@ function marchDialog(x, y) {
 function attackDialog(x, y) {
   const t = MAP.tiles.find((c) => c.x === x && c.y === y && c.type === "city"); if (!t) return;
   const rows = Object.keys(MAP.units).map((u) => `<div class="unitcard"><div class="em">${ic("sword")}</div><div class="mid"><div class="un">${MAP.units[u].name}</div><div class="st">you have ${MAP.troops[u] || 0} &middot; speed ${MAP.units[u].speed}</div></div><input type="number" min="0" max="${MAP.troops[u] || 0}" value="0" data-mu="${u}"/></div>`).join("");
+  // intel from a prior scout (if any) and the scout action
+  let intelHtml = "";
+  if (t.intel) {
+    const inT = t.intel; const ago = Math.max(0, Math.round(((Date.now() / 1000 + (S.now - (S._recv || S.now))) - inT.time)));
+    const garr = Object.entries(inT.troops || {}).filter(([k, v]) => v).map(([k, v]) => fmt(v) + " " + MAP.units[k].name).join(", ");
+    const stores = Object.entries(inT.res || {}).filter(([k, v]) => v).map(([k, v]) => `${ICON[k]}${fmt(v)}`).join(" ");
+    intelHtml = `<div class="intel"><div class="intelh">${ic("map")} Scout report <span class="ago">${hms(ago)} ago</span></div>
+      <div class="intelrow">Garrison: <b>${garr || "none seen"}</b></div>
+      <div class="intelrow">Wall <b>${inT.wall}</b> &middot; Watchtower <b>${inT.watchtower}</b></div>
+      <div class="intelrow">Stores: ${stores || "bare"}</div></div>`;
+  }
+  const canScout = (MAP.watchtower || 0) >= 1;
+  const scoutBtn = canScout
+    ? `<button class="gbtn" id="do-scout" style="background:linear-gradient(#9fc0d6,#5d7e9e);box-shadow:0 4px 0 #2e4858;color:#0e1a22">${ic("map")} Scout ${ICON.grain}300</button>`
+    : `<button class="gbtn" disabled title="Raise a Watchtower to scout">Scout (needs Watchtower)</button>`;
   showModal(`<div class="ph">${ic("sword")} March on ${esc(t.name)} <span class="x">&times;</span></div><div class="bd">
     <div class="foehead"><div><div class="fn">${esc(t.name)}</div><div class="fs">Keep ${t.keep || 1} &middot; ${fmt(t.might || 0)} might &middot; distance ${t.dist}</div></div><div class="foesig">${ic("flag")}</div></div>
-    <p style="color:#caa86a;text-align:center;margin:8px 0 10px;font-size:13px">Beat their host and carry off a share of their stores. A strong wall and a standing army will cost you dearly. Send enough.</p>
-    ${rows}<div class="modal-actions"><button class="gbtn ox" id="do-attack">Sound the war horns</button></div></div>`);
+    ${intelHtml}
+    <p style="color:#caa86a;text-align:center;margin:8px 0 10px;font-size:13px">${t.intel ? "Send enough to beat what your scouts found, and carry off a share of their stores." : "Scout first to learn their strength, or send your host and find out the hard way."}</p>
+    ${rows}<div class="modal-actions" style="gap:8px">${scoutBtn}<button class="gbtn ox" id="do-attack">Sound the war horns</button></div></div>`);
   $("#do-attack").onclick = async () => {
     const troops = {}; $$("#modal [data-mu]").forEach((i) => { const n = +i.value || 0; if (n > 0) troops[i.dataset.mu] = n; });
     if (!Object.keys(troops).length) return toast("Choose some soldiers to send.", true);
     try { const v = await api("attack", { x, y, troops }); applyState(v); sfx("march"); toast("Your host marches to war"); closeModal(); } catch (e) { toast(e.message, true); }
+  };
+  const sb = $("#do-scout"); if (sb) sb.onclick = async () => {
+    try { await api("scout", { x, y }); sfx("march"); toast("Your scout rides out for " + esc(t.name)); closeModal(); } catch (e) { toast(e.message, true); }
   };
 }
 function reportsHtml() {
@@ -842,6 +861,13 @@ function reportsHtml() {
   const rows = S.reports.slice(0, 6).map((r) => {
     const loot = Object.entries(r.loot || r.looted || {}).filter(([k, v]) => v).map(([k, v]) => fmt(v) + " " + k).join(", ");
     let line, win, label;
+    if (r.kind === "scout") {
+      const ok = !r.caught && !r.gone;
+      return `<div class="repcard scout"><div class="rt">${r.gone ? `Scouted <b>${esc(r.target)}</b> &middot; the hold was gone` : r.caught ? `Your scout on <b>${esc(r.target)}</b> was turned back by their watchtower` : `Scouted <b>${esc(r.target)}</b> &middot; ${fmt(Object.values(r.intel.troops || {}).reduce((a, c) => a + c, 0))} soldiers, wall ${r.intel.wall}`}</div><div class="res scout">${ok ? "INTEL" : "CAUGHT"}</div></div>`;
+    }
+    if (r.kind === "spotted") {
+      return `<div class="repcard def"><div class="rt">Your watchtower caught a scout from <b>${esc(r.scout)}</b>. They may march on you.</div><div class="res win">SPOTTED</div></div>`;
+    }
     if (r.kind === "defense") {
       win = r.win; label = win ? "HELD" : "RAIDED";
       const lost = Object.values(r.lost || {}).reduce((a, c) => a + c, 0);
@@ -867,10 +893,11 @@ function renderMarches() {
   const body = panel.querySelector(".mbody"); body.innerHTML = "";
   S.marches.forEach((m, i) => {
     const returning = m.resolved;
-    const dest = m.kind === "city" ? ("War on " + esc(m.target)) : ("Raiding Lv " + m.level);
-    body.appendChild(el(`<div class="qrow"><div class="em2">${returning ? ic("home") : ic("sword")}</div>
-      <div class="qmid"><div class="qnm"><span>${returning ? "Returning home" : dest}</span><span class="lv">(${m.tx}|${m.ty})</span></div>
-      <div class="qt"><span class="mleft" data-mi="${i}">--</span><span>${returning ? "with spoils" : "marching"}</span></div></div></div>`));
+    const scout = m.kind === "scout";
+    const dest = scout ? ("Scouting " + esc(m.target)) : m.kind === "city" ? ("War on " + esc(m.target)) : ("Raiding Lv " + m.level);
+    body.appendChild(el(`<div class="qrow"><div class="em2">${scout ? ic("map") : returning ? ic("home") : ic("sword")}</div>
+      <div class="qmid"><div class="qnm"><span>${returning && !scout ? "Returning home" : dest}</span><span class="lv">(${m.tx}|${m.ty})</span></div>
+      <div class="qt"><span class="mleft" data-mi="${i}">--</span><span>${scout ? "riding out" : returning ? "with spoils" : "marching"}</span></div></div></div>`));
   });
 }
 

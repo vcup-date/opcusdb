@@ -392,6 +392,27 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 23: SCOUTING + a re-entrancy fix for the resolver)
+- Completed the conquest loop with recon. The Watchtower (previously near-useless) now governs scouting both
+  ways: your scout reveals a rival, and your watchtower turns back theirs.
+- /api/scout {x,y}: requires a Watchtower (level >= 1), costs 300 grain + 150 iron in provisions, sends a FAST
+  scout march (speed 22, does not count against the army march cap; 3 scouts max). resolveScout on arrival:
+  if the target's watchtower outranks yours the scout is CAUGHT (no intel, and the target gets a "spotted"
+  warning that war may come); otherwise it returns full INTEL: the target's garrison by unit, wall and
+  watchtower levels, keep, might, and current stores. Intel is cached in p.intel[target] and attached to the
+  map's city tiles; scout/spotted entries join the battle log; scout marches read "Scouting X".
+- The attack dialog now shows the latest scout report (garrison, wall, watchtower, stores, age) above the
+  troop picker, plus a blue Scout button, so you recon then commit informed. Watchtower level is in the map
+  payload to gate the button.
+- FIXED a real recursion bug this surfaced: resolve(p) resolves a scout/attack's target via resolve(target),
+  and two players targeting each other with pending marches caused infinite mutual resolution (stack overflow,
+  500s). Added a re-entrancy guard (a Set of in-flight player names; a recursive resolve returns the current
+  state). This also hardens the pre-existing PvP attack path against the same mutual-resolve case.
+- Verified END TO END with two seeded accounts: a strong-watchtower scout revealed the target's exact army /
+  wall / might / stores; a weak scout against a strong watchtower was caught and the defender got the spotted
+  warning; the recursion guard makes mutual scouts resolve cleanly. Screenshots scout_attack.png (intel +
+  scout button) and scout_map.png (INTEL + SPOTTED reports). No JS errors, no regression to camp/guest play.
+
 ## DONE (iteration 22: BATTLE MUSIC CUE, the fighting scene gets its own score)
 - The battle cinematic played under the calm main theme. Baked a dramatic BATTLE CUE OFFLINE with ACE-Step 1.5
   (gr_battle.toml: pounding war drums + taiko, brass stabs, driving string ostinato, a fierce low choir, D

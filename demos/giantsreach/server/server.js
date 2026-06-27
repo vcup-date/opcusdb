@@ -448,7 +448,7 @@ function newPlayer(name) {
     queue: [], t: { spearman: 0, swordsman: 0, archer: 0, knight: 0 }, train: [], wounded: { spearman: 0, swordsman: 0, archer: 0, knight: 0 },
     tutorial: 0, login: { streak: 0, lastDay: 0, claimed: -1 }, boughtStarter: false,
     x: 400 + Math.floor(Math.random() * 80) - 40, y: 400 + Math.floor(Math.random() * 80) - 40,
-    marches: [], reports: [], cleared: {},
+    marches: [], reports: [], cleared: {}, intel: {},
     tasks: { day: 0, counts: {}, claimed: [] }, chest: { last: 0 },
     relics: [], equipped: { weapon: null, armor: null, banner: null, charm: null }, hero: { level: 1, xp: 0 }, pity: 0, drawN: 0,
     life: { raidsWon: 0, looted: 0, trained: 0, peakMight: 0, logins: 0 }, achv: {},
@@ -500,8 +500,32 @@ function resolveCityAttack(p, m, now) {
   d.lastSeen = d.lastSeen || now;
   m.resolved = true;
 }
+// resolve a scout's arrival: reveal the target's strength, unless their watchtower outranks your own
+function resolveScout(p, m, now) {
+  const d = db.players[m.target];
+  if (!d) { p.reports.unshift({ time: now, kind: "scout", target: m.target, gone: true }); p.reports = p.reports.slice(0, 25); m.resolved = true; return; }
+  resolve(d);
+  const myW = p.b.watchtower || 0, tgtW = d.b.watchtower || 0;
+  if (tgtW > myW) { // their watchtower turns the scout back; the lord is warned
+    p.reports.unshift({ time: now, kind: "scout", target: m.target, caught: true, tgtW });
+    d.reports.unshift({ time: now, kind: "spotted", scout: p.name });
+    d.reports = d.reports.slice(0, 25);
+  } else {
+    const intel = { time: now, troops: Object.assign({}, d.t), wall: d.b.wall || 0, watchtower: tgtW, keep: d.b.keep || 1, might: might(d), res: { grain: Math.floor(d.r.grain), timber: Math.floor(d.r.timber), stone: Math.floor(d.r.stone), iron: Math.floor(d.r.iron) }, wounded: Object.assign({}, d.wounded || {}) };
+    if (!p.intel) p.intel = {}; p.intel[m.target] = intel;
+    p.reports.unshift({ time: now, kind: "scout", target: m.target, caught: false, intel });
+  }
+  p.reports = p.reports.slice(0, 25);
+  m.resolved = true;
+}
 // resolve all time-based state up to now (lazy, deterministic, survives restarts)
+const resolving = new Set(); // re-entrancy guard: a scout/attack resolves its target, which must not recurse back
 function resolve(p) {
+  if (resolving.has(p.name)) return; // already mid-resolution (mutual scout/attack) -> use current state
+  resolving.add(p.name);
+  try { resolveInner(p); } finally { resolving.delete(p.name); }
+}
+function resolveInner(p) {
   const now = NOW();
   // builds
   if (p.queue && p.queue.length) {
@@ -527,6 +551,7 @@ function resolve(p) {
   if (p.marches && p.marches.length) {
     for (let i = p.marches.length - 1; i >= 0; i--) {
       const m = p.marches[i];
+      if (!m.resolved && now >= m.arrive && m.kind === "scout") resolveScout(p, m, now);
       if (!m.resolved && now >= m.arrive && m.kind === "city") resolveCityAttack(p, m, now);
       if (!m.resolved && now >= m.arrive) {
         const def = campGarrison(m.level);
@@ -778,10 +803,10 @@ const ROUTES = {
       const q = db.players[m]; if (!q || m === n) continue;
       if (Math.abs(q.x - p.x) <= R && Math.abs(q.y - p.y) <= R) {
         resolve(q);
-        tiles.push({ type: "city", x: q.x, y: q.y, name: q.name, might: might(q), keep: q.b.keep || 1, shielded: shielded(q), allied: !!(p.alliance && q.alliance === p.alliance), dist: Math.round(Math.hypot(q.x - p.x, q.y - p.y) * 10) / 10 });
+        tiles.push({ type: "city", x: q.x, y: q.y, name: q.name, might: might(q), keep: q.b.keep || 1, shielded: shielded(q), allied: !!(p.alliance && q.alliance === p.alliance), dist: Math.round(Math.hypot(q.x - p.x, q.y - p.y) * 10) / 10, intel: (p.intel && p.intel[q.name]) || null });
       }
     }
-    send(res, 200, { center: { x: p.x, y: p.y }, name: p.name, troops: p.t, units: UNITS, tiles, R, shielded: shielded(p), shieldKeep: SHIELD_KEEP });
+    send(res, 200, { center: { x: p.x, y: p.y }, name: p.name, troops: p.t, units: UNITS, tiles, R, shielded: shielded(p), shieldKeep: SHIELD_KEEP, watchtower: p.b.watchtower || 0 });
   },
   "POST /api/march": async (req, res, b) => {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
@@ -792,7 +817,7 @@ const ROUTES = {
     for (const u in troops) if ((troops[u] | 0) > (p.t[u] || 0)) return send(res, 400, { err: "You do not have that many " + (UNITS[u] ? UNITS[u].name : u) + "." });
     const total = unitsCount(troops); if (total <= 0) return send(res, 400, { err: "Send at least one soldier." });
     const cap = marchCap(p);
-    if ((p.marches || []).length >= cap) return send(res, 400, { err: "All your marches are out (" + cap + " max)." });
+    if ((p.marches || []).filter((m) => m.kind !== "scout").length >= cap) return send(res, 400, { err: "All your marches are out (" + cap + " max)." });
     const dist = Math.hypot(tx - p.x, ty - p.y); let speed = Infinity;
     for (const u in troops) if (troops[u]) speed = Math.min(speed, UNITS[u].speed);
     const hb = heroBonusOf(p);
@@ -815,7 +840,7 @@ const ROUTES = {
     for (const u in troops) if ((troops[u] | 0) > (p.t[u] || 0)) return send(res, 400, { err: "You do not have that many " + (UNITS[u] ? UNITS[u].name : u) + "." });
     if (unitsCount(troops) <= 0) return send(res, 400, { err: "Send at least one soldier." });
     const cap = marchCap(p);
-    if ((p.marches || []).length >= cap) return send(res, 400, { err: "All your marches are out (" + cap + " max)." });
+    if ((p.marches || []).filter((m) => m.kind !== "scout").length >= cap) return send(res, 400, { err: "All your marches are out (" + cap + " max)." });
     const dist = Math.hypot(tx - p.x, ty - p.y); let speed = Infinity;
     for (const u in troops) if (troops[u]) speed = Math.min(speed, UNITS[u].speed);
     const hb = heroBonusOf(p);
@@ -823,6 +848,23 @@ const ROUTES = {
     for (const u in troops) p.t[u] -= troops[u];
     const now = NOW();
     p.marches.push({ kind: "city", target, tx, ty, troops: Object.assign({}, troops), depart: now, arrive: now + travel, ret: now + travel * 2, resolved: false });
+    save(); send(res, 200, view(p));
+  },
+  "POST /api/scout": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p);
+    const tx = b.x | 0, ty = b.y | 0;
+    const target = cityAt(tx, ty, n);
+    if (!target) return send(res, 400, { err: "No rival hold there to scout." });
+    if ((p.b.watchtower || 0) < 1) return send(res, 400, { err: "Raise a Watchtower to send out scouts." });
+    if ((p.marches || []).filter((m) => m.kind === "scout").length >= 3) return send(res, 400, { err: "Your scouts are all out (3 at a time)." });
+    const cost = { grain: 300, iron: 150 };
+    for (const k of Object.keys(cost)) if ((p.r[k] || 0) < cost[k]) return send(res, 400, { err: "A scout needs " + cost.grain + " grain and " + cost.iron + " iron in provisions." });
+    for (const k of Object.keys(cost)) p.r[k] -= cost[k];
+    const dist = Math.hypot(tx - p.x, ty - p.y); const SCOUT_SPEED = 22; // scouts ride light and fast
+    const travel = Math.max(8, Math.round(dist / SCOUT_SPEED * 400 / (1 + vipPerks(p).march / 100)));
+    const now = NOW();
+    p.marches.push({ kind: "scout", target, tx, ty, depart: now, arrive: now + travel, ret: now + travel, resolved: false });
     save(); send(res, 200, view(p));
   },
   "GET /api/reports": async (req, res) => {
