@@ -1265,7 +1265,7 @@ function reportsHtml() {
     if (r.kind === "fort") {
       if (r.gone) return `<div class="repcard loss"><div class="rt">Marched on <b>${esc(r.fortName || r.target)}</b>'s stronghold &middot; it was already gone</div><div class="res loss">GONE</div></div>`;
       const w = r.win; const bounty = w ? [r.razed ? "<b>razed it</b>" : `battered it to <b>level ${r.newLevel}</b>`, r.shards ? `<b>${r.shards}</b> shards` : "", loot ? `<b>${loot}</b>` : ""].filter(Boolean).join(", ") : "";
-      return `<div class="repcard ${w ? "win" : "loss"}"><div class="rt">Assaulted <b>${esc(r.fortName || r.target)}</b>'s stronghold (level ${r.level}) &middot; lost ${Math.round((r.attLoss || 0) * 100)}% of the host${w ? " &middot; " + bounty : ""}</div><div class="res ${w ? "win" : "loss"}">${w ? (r.razed ? "RAZED" : "STORMED") : "REPELLED"}</div></div>`;
+      return `<div class="repcard ${w ? "win" : "loss"}"><div class="rt">Assaulted <b>${esc(r.fortName || r.target)}</b>'s stronghold (level ${r.level}) &middot; lost ${Math.round((r.attLoss || 0) * 100)}% of the host${w ? " &middot; " + bounty : ""}${r.flavor ? `<div class="repflav">${esc(r.flavor)}</div>` : ""}</div><div class="res ${w ? "win" : "loss"}">${w ? (r.razed ? "RAZED" : "STORMED") : "REPELLED"}</div></div>`;
     }
     if (r.kind === "fortgarrison") {
       const n = Object.values(r.troops || {}).reduce((a, c) => a + c, 0);
@@ -1273,7 +1273,7 @@ function reportsHtml() {
     }
     if (r.kind === "fortdef") {
       const held = r.win; const gl = r.lostGarrison ? ` &middot; lost ${fmt(r.lostGarrison)} of your garrison` : "";
-      return `<div class="repcard ${held ? "win" : "loss"} def"><div class="rt">Your banner stronghold was assaulted by <b>${esc(r.attacker)}</b> &middot; ${held ? "the walls held" : r.razed ? "it was <b>razed</b>" : `battered to <b>level ${r.newLevel}</b>`}${gl}</div><div class="res ${held ? "win" : "loss"}">${held ? "HELD" : r.razed ? "RAZED" : "BATTERED"}</div></div>`;
+      return `<div class="repcard ${held ? "win" : "loss"} def"><div class="rt">Your banner stronghold was assaulted by <b>${esc(r.attacker)}</b> &middot; ${held ? "the walls held" : r.razed ? "it was <b>razed</b>" : `battered to <b>level ${r.newLevel}</b>`}${gl}${r.flavor ? `<div class="repflav">${esc(r.flavor)}</div>` : ""}</div><div class="res ${held ? "win" : "loss"}">${held ? "HELD" : r.razed ? "RAZED" : "BATTERED"}</div></div>`;
     }
     if (r.kind === "reinf") {
       const lost = Object.values(r.lost || {}).reduce((a, c) => a + c, 0);
@@ -1282,7 +1282,7 @@ function reportsHtml() {
     if (r.kind === "defense") {
       win = r.win; label = win ? "HELD" : "RAIDED";
       const lost = Object.values(r.lost || {}).reduce((a, c) => a + c, 0);
-      line = `${esc(r.attacker)} stormed your hold &middot; you lost ${fmt(lost)} soldiers${r.raided && loot ? " &middot; they carried off <b>" + loot + "</b>" : win ? " &middot; you threw them back" : ""}`;
+      line = `${esc(r.attacker)} stormed your hold &middot; you lost ${fmt(lost)} soldiers${r.raided && loot ? " &middot; they carried off <b>" + loot + "</b>" : win ? " &middot; you threw them back" : ""}${r.flavor ? `<div class="repflav">${esc(r.flavor)}</div>` : ""}`;
     } else if (r.kind === "city") {
       win = r.win; label = win ? "VICTORY" : "DEFEAT";
       line = `March on <b>${esc(r.target)}</b> &middot; lost ${Math.round(r.attLoss * 100)}% of the host${win && loot ? " &middot; looted <b>" + loot + "</b>" : ""}${r.flavor ? `<div class="repflav">${esc(r.flavor)}</div>` : ""}`;

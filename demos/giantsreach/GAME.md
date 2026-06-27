@@ -392,6 +392,23 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 54: WAR-REPORT NARRATION, the realm's voice on the battle reports)
+- Camp, warlord, and PvP-attacker reports carried a baked flavor line, but the DEFENDER's reports and the stronghold
+  siege reports did not, so the emotional peak of the game (being raided, holding the walls, storming a fortress) read
+  as dry stat lines. Extended the baked-voice corpus to the whole war layer.
+- Server: four new FLAVOR pools, written from the right point of view, of five lines each: defended (you threw them
+  back), overrun (your hold or stronghold fell), stormed (you took a rival fortress), and repulsed (you were thrown
+  off the walls). The PvP defense report, the fort-assault report, and the per-member fort-defense report now each
+  pick a line deterministically by seed, with per-report entropy (the defender's loss fraction; the fort level and a
+  member's garrison losses) so adjacent reports do not echo the same line. Static corpus, picked by seed; zero AI at
+  runtime, no em-dashes.
+- Client: those three report cards now render the narration as an italic line beneath the result, matching the
+  existing camp/warlord/city report styling.
+- Verified END TO END: a live PvP raid and a live stronghold assault produced, for the attacker, "Your sappers earned
+  their bread today. The walls are breached" on the fort report, and for the defender, "They were over the wall before
+  the bell had finished ringing" on both the defense and fort-defense reports; the report panel rendered the italic
+  narration lines. Screenshot war-flavor.png. Server compiles, guest smoke clean (no regression), no em-dashes.
+
 ## DONE (iteration 53: PER-BUILDING FLAVOR, the realm's voice in the upgrade modal)
 - The most-repeated action in the game, raising a building, was mechanical: a stat line and a one-line description.
   Added a baked flavor voice so each building has character, the roadmap's "per-building flavor".
@@ -986,7 +1003,7 @@ NEXT STEPS list below; none are blocking.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime; [DONE] named
    barbarian warlords as elite map camps (iteration 39); [DONE] per-building flavor lines in the upgrade modal
-   (iteration 53). Future: event log narration.
+   (iteration 53); [DONE] defender + siege war-report narration (iteration 54). Future: a season-end realm recap.
 10. [DONE] MOBILE LAYOUT pass (iteration 12); [DONE] SETTINGS + accessibility (iteration 30); [DONE] in-game
     incoming-attack alerts (iteration 31). Remaining (optional): a SERVER SELECT (one realm) screen.
 11. PRODUCTION HARDENING: rate-limiting, input validation, save integrity, error states,

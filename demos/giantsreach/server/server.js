@@ -222,6 +222,38 @@ const FLAVOR = {
     "Coins, a broken crown, a soldier's ring, all swept into the giant's slack palm by some old flood. The dead share with the dead.",
     "Its ribs make a hall taller than any keep. Your scholars copy the runes and go quiet for a long while after.",
   ],
+  // defender held the walls
+  defended: [
+    "Your spears closed the breach and the field went quiet but for the crows.",
+    "They broke on your walls like a wave on old stone, and drew back the lesser for it.",
+    "The gate held, the line held, and the enemy learned the price of your hold.",
+    "Smoke, then silence, then the sound of your own men cheering on the rampart.",
+    "They came for plunder and left a tithe of their own dead in your ditch.",
+  ],
+  // defender was overrun
+  overrun: [
+    "They were over the wall before the bell had finished ringing.",
+    "The line bent, then broke, and the courtyard changed hands in the smoke.",
+    "Your stewards counted the losses twice, hoping the second tally would lie.",
+    "What could be carried was carried; what could not was put to the torch.",
+    "A hard dawn. Not every banner over your hold tonight is yours.",
+  ],
+  // attacker stormed a stronghold
+  stormed: [
+    "Ladders, fire, and one long hour; the gatehouse is yours and the banners come down.",
+    "The ram spoke twice and the gate gave on the third word.",
+    "Your sappers earned their bread today. The walls are breached and the keep lies open.",
+    "Over the parapet and into the bailey; the stronghold answers to your colors now.",
+    "They fought from every stair, but stone changes hands when enough blood is spent.",
+  ],
+  // attacker was thrown off the walls
+  repulsed: [
+    "The ramparts held and your ladders came back lighter than they went up.",
+    "Boiling pitch and steady archers; your host withdrew with little to show.",
+    "The walls were taller than your courage lasted. Regroup and bring more.",
+    "Their garrison was awake and angry. The breach you wanted never opened.",
+    "You spent the day teaching your men the height of those walls.",
+  ],
 };
 // a baked, deterministic flavor line per building, shown in the upgrade modal (varies as the building rises)
 const BLD_FLAVOR = {
@@ -625,7 +657,7 @@ function resolveCityAttack(p, m, now) {
   const flav = pick(r.attWins ? FLAVOR.victory : FLAVOR.defeat, (hstr(m.target) ^ (now >>> 4)) >>> 0);
   p.reports.unshift({ time: now, kind: "city", target: m.target, tx: m.tx, ty: m.ty, win: r.attWins, attLoss: attLossF, sent, loot, surv, wounded: m.wounded, flavor: flav });
   p.reports = p.reports.slice(0, 25);
-  d.reports.unshift({ time: now, kind: "defense", attacker: p.name, win: !r.attWins, defLoss: defLossF, lost: defLost, looted: loot, raided: r.attWins });
+  d.reports.unshift({ time: now, kind: "defense", attacker: p.name, win: !r.attWins, defLoss: defLossF, lost: defLost, looted: loot, raided: r.attWins, flavor: pick(r.attWins ? FLAVOR.overrun : FLAVOR.defended, (hstr(d.name) ^ (now >>> 5) ^ Math.round((defLossF || 0) * 1000)) >>> 0) });
   d.reports = d.reports.slice(0, 25);
   d.lastSeen = d.lastSeen || now;
   m.resolved = true;
@@ -686,7 +718,7 @@ function resolveFortAssault(p, m, now) {
   // the garrisoned defenders take their share of the casualties (the defender's loss fraction)
   const defLossF = r.attWins ? r.loserLoss : r.winnerLoss; const garLost = {};
   for (const owner in gar) { for (const u in gar[owner]) { const before = gar[owner][u] || 0; const keep = Math.max(0, Math.round(before * (1 - defLossF))); if (before - keep > 0) garLost[owner] = (garLost[owner] || 0) + (before - keep); gar[owner][u] = keep; } }
-  const rep = { time: now, kind: "fort", target: m.target, tag: a.tag, fortName: a.name, level: lvl, win: r.attWins, attLoss: r.attWins ? r.winnerLoss : r.loserLoss, sent, wounded: m.wounded };
+  const rep = { time: now, kind: "fort", target: m.target, tag: a.tag, fortName: a.name, level: lvl, win: r.attWins, attLoss: r.attWins ? r.winnerLoss : r.loserLoss, sent, wounded: m.wounded, flavor: pick(r.attWins ? FLAVOR.stormed : FLAVOR.repulsed, (hstr(p.name) ^ (now >>> 5)) >>> 0) };
   if (r.attWins) {
     a.fort.level = Math.max(0, lvl - 1); a.fort.prog = 0; a.fort.shield = now + FORT_SHIELD;
     const razed = a.fort.level <= 0; rep.razed = razed; rep.newLevel = razed ? 0 : a.fort.level;
@@ -699,7 +731,7 @@ function resolveFortAssault(p, m, now) {
     if (razed) delete a.fort;
   } else { m.loot = {}; rep.loot = {}; allyChatPush(a, "", "The stronghold threw back an assault by " + p.name + "."); }
   p.reports.unshift(rep); p.reports = p.reports.slice(0, 25); m.resolved = true;
-  for (const mem of (a.members || [])) { const q = db.players[mem]; if (q && mem !== p.name) { q.reports = q.reports || []; q.reports.unshift({ time: now, kind: "fortdef", attacker: p.name, win: !r.attWins, level: lvl, newLevel: rep.newLevel || 0, razed: !!rep.razed, lostGarrison: garLost[mem] || 0 }); q.reports = q.reports.slice(0, 25); } }
+  for (const mem of (a.members || [])) { const q = db.players[mem]; if (q && mem !== p.name) { q.reports = q.reports || []; q.reports.unshift({ time: now, kind: "fortdef", attacker: p.name, win: !r.attWins, level: lvl, newLevel: rep.newLevel || 0, razed: !!rep.razed, lostGarrison: garLost[mem] || 0, flavor: pick(r.attWins ? FLAVOR.overrun : FLAVOR.defended, (hstr(mem) ^ (now >>> 5) ^ (lvl * 131 + (garLost[mem] || 0))) >>> 0) }); q.reports = q.reports.slice(0, 25); } }
 }
 // ---- alliance rally: banded lords muster a JOINT host against a warlord, fighting as one ----
 const RALLY_MUSTER = Number(process.env.RALLY_MUSTER) || 180;   // seconds the rally gathers before it marches (members may join until then)
