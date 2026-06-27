@@ -392,6 +392,25 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 40: ALLIANCE RALLY, a joint march where banded lords fight as one)
+- Verified first that the early curve and combat scaling are already well-tuned (first builds affordable from the
+  start, 46s to 2m timers, no degenerate combat), so a forced balance tweak would be low value. Built the headline
+  missing MMO feature instead: joint rally marches, the roadmap's "joint rally marches", aimed at the new warlords.
+- Server: a rally is escrowed, lazy, and deterministic. /api/rally calls one on a warlord (the leader's host is
+  pulled from their barracks into the rally); banded members add their own host with /api/rallyjoin during a 180s
+  muster. When the muster ends the COMBINED host marches as one from the leader's city; on arrival a SINGLE combat
+  resolves with the rally leader's champion leading (their hero attack bonus, the warlord's 1.35 defense edge). Each
+  lord keeps survivors in proportion and splits the loot by surviving carry; the warlord's relic and shards go to the
+  lord who called it. Outcomes are delivered through each lord's own lazy resolve (deliverRallies, no cross-player
+  writes), so it survives restarts and offline gaps. One rally per banner; a collapsed rally refunds every host.
+- Client: the Banners panel shows an oxblood rally card (warlord, a live muster countdown, who has mustered, a Join
+  button); the warlord raid dialog gains a "Call a rally" action for banded lords; a rally battle report shows your
+  share of the spoils and (for the caller) the relic. The War Table announces the muster call and each join.
+- Verified END TO END with two banded lords (Rax + Bran): Rax called a rally on Ysolde and Bran joined (host 1000 ->
+  2000, double-join rejected); after muster + march + battle + return both won, each got survivors home (~1993 of
+  2000) and an equal 7,625 loot split and +80 hero XP, and ONLY the caller Rax banked the 60 shards + the relic; the
+  rally cleared after delivery. Screenshot rally-banner.png. No JS errors, guest smoke clean (no regression).
+
 ## DONE (iteration 39: NAMED WARLORD CAMPS, elite PvE with a guaranteed relic)
 - The world map's barbarian camps were anonymous and flat: every level-N camp identical, no aspirational target.
   Added named Warlord camps, the roadmap's "named barbarian warlords", as rare elite camps that reward a strong host.
@@ -767,7 +786,8 @@ NEXT STEPS list below; none are blocking.
    [DONE] relic tier-up fusion (iteration 38). Future: a second hero slot.
 8. [DONE] ALLIANCES (banners) (iteration 13): create/join/leave/browse, timer-shaving help (max(1%,60s),
    20 per order), +1%/member production bonus, War Table chat; [DONE] reinforcement (iteration 27): garrison
-   a member's hold, join their defense, recall. Future: a shared map territory, joint rally marches, member ranks.
+   a member's hold, join their defense, recall; [DONE] joint rally marches on warlords (iteration 40). Future:
+   a shared map territory, member ranks.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime; [DONE] named
    barbarian warlords as elite map camps (iteration 39). Future: per-building flavor, event log narration.

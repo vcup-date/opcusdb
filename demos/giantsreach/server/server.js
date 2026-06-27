@@ -500,7 +500,7 @@ function load() {
     catch (e) { if (fs.existsSync(f)) console.error("db read failed (" + path.basename(f) + "):", e.message); }
   }
   if (loaded && typeof loaded === "object") db = loaded;
-  if (!db.accounts) db.accounts = {}; if (!db.players) db.players = {}; if (!db.alliances) db.alliances = {}; if (!db.meta) db.meta = { created: NOW() };
+  if (!db.accounts) db.accounts = {}; if (!db.players) db.players = {}; if (!db.alliances) db.alliances = {}; if (!db.rallies) db.rallies = {}; if (!db.meta) db.meta = { created: NOW() };
 }
 // durable, atomic write: temp file -> backup the old -> rename over. A crash mid-write never corrupts db.json.
 function writeDbNow() {
@@ -615,6 +615,109 @@ function resolveReinforce(p, m, now) {
   p.reports.unshift({ time: now, kind: "reinfsent", ally: m.target, troops: Object.assign({}, m.troops) }); p.reports = p.reports.slice(0, 25);
   m.resolved = true; m.ret = now; // garrisoned, no return leg
 }
+// ---- alliance rally: banded lords muster a JOINT host against a warlord, fighting as one ----
+const RALLY_MUSTER = Number(process.env.RALLY_MUSTER) || 180;   // seconds the rally gathers before it marches (members may join until then)
+function rallyHost(ra) { const c = {}; for (const nm in ra.parts) { const t = ra.parts[nm].troops || {}; for (const u in t) c[u] = (c[u] || 0) + (t[u] || 0); } return c; }
+function rallyHeadcount(ra) { return unitsCount(rallyHost(ra)); }
+// progress a rally's shared timeline (muster -> march -> the single joint battle). Mutates only the rally object.
+function advanceRally(ra, now) {
+  if (ra.resolved) return;
+  const leader = db.players[ra.leader];
+  if (!leader) { ra.dead = true; return; } // leader vanished: parts are refunded on delivery
+  if (!ra.launched) {
+    if (now < ra.muster) return;
+    const host = rallyHost(ra); let speed = Infinity;
+    for (const u in host) if (host[u]) speed = Math.min(speed, UNITS[u].speed);
+    if (!isFinite(speed)) { ra.dead = true; return; }
+    const dist = Math.hypot(ra.tx - leader.x, ra.ty - leader.y);
+    const hbL = heroBonusOf(leader);
+    const travel = Math.max(12, Math.round(dist / speed * 400 / (1 + (hbL.speed + vipPerks(leader).march) / 100)));
+    ra.launched = true; ra.arrive = ra.muster + travel; ra.ret = ra.arrive + travel;
+  }
+  if (ra.launched && !ra.resolved && now >= ra.arrive) {
+    const host = rallyHost(ra); const hbL = heroBonusOf(leader);
+    const r = combat(host, warlordGarrison(ra.level), 1 + hbL.atk / 100, 1.35); // the rally leader's champion leads the joint host
+    const w = WARLORDS[ra.wi % WARLORDS.length];
+    ra.win = r.attWins; ra.winnerLoss = r.attWins ? r.winnerLoss : 1; ra.warlord = w.name + ", " + w.title;
+    // each part keeps survivors in proportion; loot is split by each part's surviving carry
+    const survByPart = {}; let totalCarry = 0;
+    for (const nm in ra.parts) { const t = ra.parts[nm].troops || {}; const s = {}; let carry = 0;
+      for (const u in t) { const keepN = r.attWins ? Math.max(0, Math.round(t[u] * (1 - r.winnerLoss))) : 0; s[u] = keepN; carry += keepN * UNITS[u].carry; }
+      survByPart[nm] = { surv: s, carry }; totalCarry += carry; }
+    const src = warlordLoot(ra.level); const pool = {}; let poolSum = 0;
+    for (const k of LOOTABLE) { pool[k] = Math.round(src[k] * (1 + hbL.gold / 100)); poolSum += pool[k]; }
+    if (poolSum > totalCarry && poolSum > 0) { const f = totalCarry / poolSum; for (const k in pool) pool[k] = Math.floor(pool[k] * f); }
+    for (const nm in ra.parts) {
+      const part = ra.parts[nm]; const sb = survByPart[nm];
+      const loot = {}; const share = totalCarry > 0 ? sb.carry / totalCarry : 0;
+      for (const k of LOOTABLE) loot[k] = Math.floor((pool[k] || 0) * share);
+      const lostW = {}; for (const u in (part.troops || {})) lostW[u] = (part.troops[u] || 0) - (sb.surv[u] || 0);
+      part.result = { win: r.attWins, surv: sb.surv, loot, wounded: woundedFromLost(lostW) };
+    }
+    if (r.attWins) { // the warlord's relic and shards go to the lord who called the rally
+      ra.shards = 30 + ra.level * 6;
+      ra.relicSeed = (ihash(ra.tx, ra.ty) ^ Math.imul((leader.wlN || 0) + 1, 0x9e3779b9) ^ hstr(leader.name)) >>> 0;
+      leader.wlN = (leader.wlN || 0) + 1;
+    }
+    ra.resolved = true;
+  }
+}
+// deliver any rally outcomes owed to this lord (called from the lord's own resolve, so no cross-player writes)
+function deliverRallies(p, now) {
+  for (const id of Object.keys(db.rallies || {})) {
+    const ra = db.rallies[id]; advanceRally(ra, now);
+    const part = ra.parts && ra.parts[p.name]; if (!part || part.delivered) continue;
+    if (ra.dead) { // the rally collapsed before battle: the lord's escrowed host marches home untouched
+      for (const u in (part.troops || {})) p.t[u] = (p.t[u] || 0) + (part.troops[u] || 0);
+      part.delivered = true;
+      p.reports.unshift({ time: now, kind: "rally", warlord: ra.warlordName || "a warlord", win: false, disbanded: true, sent: Object.assign({}, part.troops) });
+      p.reports = p.reports.slice(0, 25); continue;
+    }
+    if (ra.resolved && now >= ra.ret) {
+      const res = part.result || { win: false, surv: {}, loot: {}, wounded: {} };
+      for (const u in res.surv) p.t[u] = (p.t[u] || 0) + (res.surv[u] || 0);
+      for (const k in res.loot) p.r[k] = (p.r[k] || 0) + (res.loot[k] || 0);
+      if (res.wounded) addWounded(p, res.wounded);
+      const isLeader = p.name === ra.leader;
+      const rep = { time: now, kind: "rally", warlord: ra.warlord, win: res.win, leader: ra.leader, joined: Object.keys(ra.parts).length, sent: Object.assign({}, part.troops), loot: res.loot, surv: res.surv, wounded: res.wounded };
+      if (res.win) {
+        const gain = ra.level * 16; p.hero.xp += gain; rep.heroXp = gain;
+        while (p.hero.xp >= p.hero.level * 100) { p.hero.xp -= p.hero.level * 100; p.hero.level++; rep.heroLevel = p.hero.level; }
+        bump(p, "raid"); life(p, "raidsWon"); life(p, "looted", Object.values(res.loot).reduce((a, c) => a + c, 0)); seasonGain(p, 120);
+        p.cleared = p.cleared || {}; p.cleared[ra.tx + "," + ra.ty] = now + 10800;
+        if (isLeader && ra.relicSeed != null) { // leader banks the warlord's shards + relic
+          p.gems += ra.shards || 0; rep.shards = ra.shards;
+          p.relics = p.relics || [];
+          const it = rollRelic(ra.relicSeed >>> 0, 1);
+          while (p.relics.some((x) => x.seed === it.seed)) it.seed = (it.seed + 0x9e3779b9) >>> 0;
+          p.relics.push(it);
+          rep.relic = { seed: it.seed, slot: it.slot, slotName: SLOT_NAME[it.slot], tier: it.tier, tierName: TIERS[it.tier], aff: it.aff, affName: AFFIX_NAME[it.aff], val: it.val };
+        }
+      }
+      part.delivered = true;
+      p.reports.unshift(rep); p.reports = p.reports.slice(0, 25);
+    }
+  }
+  // sweep rallies whose every part has been delivered
+  for (const id of Object.keys(db.rallies || {})) {
+    const ra = db.rallies[id];
+    if ((ra.resolved && now >= ra.ret) || ra.dead) { if (Object.values(ra.parts).every((pt) => pt.delivered)) delete db.rallies[id]; }
+  }
+}
+function activeRallyOf(p) { // the live rally for this lord's banner, if any
+  if (!p.alliance) return null;
+  for (const id of Object.keys(db.rallies || {})) { const ra = db.rallies[id]; if (ra.tag === p.alliance && !ra.dead) return ra; }
+  return null;
+}
+function rallyView(p, now) {
+  const ra = activeRallyOf(p); if (!ra) return null;
+  const w = WARLORDS[ra.wi % WARLORDS.length];
+  return { id: ra.id, leader: ra.leader, tx: ra.tx, ty: ra.ty, level: ra.level, warlord: w.name + ", " + w.title,
+    muster: ra.muster, launched: !!ra.launched, arrive: ra.arrive || 0, resolved: !!ra.resolved, now,
+    headcount: rallyHeadcount(ra), joined: Object.keys(ra.parts).length,
+    parts: Object.keys(ra.parts).map((nm) => ({ name: nm, count: unitsCount(ra.parts[nm].troops) })),
+    joinedYou: !!ra.parts[p.name], garrison: warlordGarrison(ra.level) };
+}
 // resolve all time-based state up to now (lazy, deterministic, survives restarts)
 const resolving = new Set(); // re-entrancy guard: a scout/attack resolves its target, which must not recurse back
 function resolve(p) {
@@ -694,6 +797,8 @@ function resolveInner(p) {
       }
     }
   }
+  // joint rally outcomes owed to this lord
+  deliverRallies(p, now);
   // resources
   const dt = Math.max(0, now - (p.resTick || now));
   if (dt > 0) {
@@ -759,7 +864,7 @@ function view(p) {
     heroBonus: heroBonusOf(p), pity: p.pity, pityMax: PITY, forgeCost: FORGE_COST, reforgeCost: REFORGE_COST, salvageVals: SALVAGE, fuseN: FUSE_N,
     achievements: achvView(p), achvClaim: achvClaimable(p),
     vip: vipView(p), season: seasonView(p),
-    alliance: allianceView(p), allyTag: p.alliance || null,
+    alliance: allianceView(p), allyTag: p.alliance || null, rally: rallyView(p, NOW()),
     counsel: pick(FLAVOR.counsel, hstr(p.name) ^ curDay()), chronicle: FLAVOR.chronicle,
   };
 }
@@ -964,6 +1069,39 @@ const ROUTES = {
     const mr = { tx, ty, level: t.level, troops: Object.assign({}, troops), depart: now, arrive: now + travel, ret: now + travel * 2, resolved: false };
     if (t.type === "warlord") { mr.kind = "warlord"; mr.wi = t.wi; }
     p.marches.push(mr);
+    save(); send(res, 200, view(p));
+  },
+  // ---- call a joint alliance rally on a warlord: escrow your host; banded lords join until it musters ----
+  "POST /api/rally": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p);
+    if (!p.alliance) return send(res, 400, { err: "Join a banner before you call a rally." });
+    if (activeRallyOf(p)) return send(res, 400, { err: "Your banner already has a rally underway." });
+    const tx = b.x | 0, ty = b.y | 0; const troops = cleanTroops(b.troops);
+    const t = tileAt(tx, ty);
+    if (!t || t.type !== "warlord") return send(res, 400, { err: "A rally can only be called on a warlord." });
+    if (((p.cleared || {})[tx + "," + ty] || 0) > NOW()) return send(res, 400, { err: "That warlord is already broken." });
+    for (const u in troops) if ((troops[u] | 0) > (p.t[u] || 0)) return send(res, 400, { err: "You do not have that many " + (UNITS[u] ? UNITS[u].name : u) + "." });
+    if (unitsCount(troops) <= 0) return send(res, 400, { err: "Commit at least one soldier to the rally." });
+    for (const u in troops) p.t[u] -= troops[u]; // escrow
+    const now = NOW(); const id = "ra" + now.toString(36) + "_" + (hstr(p.name) % 9973).toString(36);
+    db.rallies[id] = { id, tag: p.alliance, leader: n, tx, ty, level: t.level, wi: t.wi, muster: now + RALLY_MUSTER, launched: false, resolved: false, parts: { [n]: { troops: Object.assign({}, troops), joinedAt: now, delivered: false } } };
+    const a = allyOf(p); if (a) { const w = WARLORDS[t.wi % WARLORDS.length]; allyChatPush(a, "", n + " calls a rally on " + w.name + ", " + w.title + ". Join within " + Math.round(RALLY_MUSTER / 60) + " min."); }
+    save(); send(res, 200, view(p));
+  },
+  // ---- join the banner's mustering rally with your own host ----
+  "POST /api/rallyjoin": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p);
+    const ra = activeRallyOf(p); if (!ra) return send(res, 400, { err: "Your banner has no rally to join." });
+    if (ra.launched || NOW() >= ra.muster) return send(res, 400, { err: "The rally has already marched." });
+    if (ra.parts[n]) return send(res, 400, { err: "You have already committed to this rally." });
+    const troops = cleanTroops(b.troops);
+    for (const u in troops) if ((troops[u] | 0) > (p.t[u] || 0)) return send(res, 400, { err: "You do not have that many " + (UNITS[u] ? UNITS[u].name : u) + "." });
+    if (unitsCount(troops) <= 0) return send(res, 400, { err: "Commit at least one soldier to the rally." });
+    for (const u in troops) p.t[u] -= troops[u]; // escrow
+    ra.parts[n] = { troops: Object.assign({}, troops), joinedAt: NOW(), delivered: false };
+    const a = allyOf(p); if (a) allyChatPush(a, "", n + " joins the rally with " + unitsCount(troops) + " soldiers.");
     save(); send(res, 200, view(p));
   },
   "POST /api/attack": async (req, res, b) => {

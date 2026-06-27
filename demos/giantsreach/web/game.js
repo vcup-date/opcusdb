@@ -824,6 +824,7 @@ function renderAlliance() {
     <div class="bd">
       <div class="allyhead"><div><b>${A.members.length}</b> sworn &middot; production <b style="color:var(--gold2)">+${A.bonus}%</b> while banded</div>
         <button class="gbtn ox" id="ally-leave" style="padding:8px 12px">Leave</button></div>
+      ${rallyCard(S.rally, now)}
       <div class="allygrid">
         <div class="allyroster"><div class="ph" style="border:0;padding:6px 0">The sworn</div>${roster}</div>
         <div class="allychat"><div class="ph" style="border:0;padding:6px 0">War table</div>
@@ -845,6 +846,36 @@ function renderAlliance() {
   const send = async () => { const t = $("#chat-txt").value.trim(); if (!t) return; try { const v = await api("alliancechat", { text: t }); applyState(v); renderAlliance(); } catch (e) { toast(e.message, true); } };
   $("#chat-send").onclick = send; $("#chat-txt").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
   const cl = $("#chatlog"); if (cl) cl.scrollTop = cl.scrollHeight;
+  const rj = $("#rally-join"); if (rj) rj.onclick = () => rallyCommitDialog("join");
+}
+// the active joint rally, shown atop the banner panel: who has mustered, the countdown, and a Join
+function rallyCard(R, now) {
+  if (!R) return "";
+  let status, action = "";
+  if (!R.launched) {
+    const rem = Math.max(0, R.muster - now);
+    status = `Mustering &middot; marches in <b class="rmuster">${hmsShort(rem)}</b>`;
+    action = R.joinedYou ? `<span class="rjoined">${ic("shield")} You have committed your host</span>` : `<button class="gbtn grn" id="rally-join" style="padding:8px 12px">Join the rally</button>`;
+  } else if (!R.resolved) { status = `<b style="color:var(--ox2)">The joint host is marching</b>`; if (R.joinedYou) action = `<span class="rjoined">${ic("shield")} Your host rides with them</span>`; }
+  else status = `<b>The clash is decided. The host returns.</b>`;
+  const parts = R.parts.map((pt) => `<span class="rpart">${esc(pt.name)} <em>${fmt(pt.count)}</em></span>`).join("");
+  return `<div class="rallycard"><div class="rcTop"><span class="rcIco">${ic("sword")}</span><div><div class="rcTtl">Rally on ${esc(R.warlord)}</div><div class="rcSub">${status}</div></div></div>
+    <div class="rcParts"><b>${R.joined}</b> lord${R.joined > 1 ? "s" : ""} &middot; <b>${fmt(R.headcount)}</b> mustered ${parts}</div>
+    ${action ? `<div class="rcAct">${action}</div>` : ""}</div>`;
+}
+// commit a host to a rally: "start" calls a new one on a warlord (needs x,y); "join" adds to the banner's muster
+function rallyCommitDialog(mode, x, y) {
+  const rows = Object.keys(S.units).map((u) => `<div class="unitcard"><div class="em">${ic("sword")}</div><div class="mid"><div class="un">${S.units[u].name}</div><div class="st">you have ${S.troops[u] || 0} &middot; speed ${S.units[u].speed}</div></div><input type="number" min="0" max="${S.troops[u] || 0}" value="0" data-cu="${u}"/></div>`).join("");
+  showModal(`<div class="ph">${ic("sword")} ${mode === "start" ? "Call a rally" : "Join the rally"} <span class="x">&times;</span></div><div class="bd">
+    <p style="color:#caa86a;text-align:center;margin-bottom:10px;font-size:13px">Commit a host. It marches as one with your banner when the muster ends. Survivors and spoils return to each lord; the warlord's relic and shards go to whoever called the rally.</p>
+    ${rows}<div class="modal-actions"><button class="gbtn grn" id="do-rally">${mode === "start" ? "Call the rally" : "Commit my host"}</button></div></div>`);
+  modalOpen = null;
+  $("#do-rally").onclick = async () => {
+    const troops = {}; $$("#modal [data-cu]").forEach((i) => { const n = +i.value || 0; if (n > 0) troops[i.dataset.cu] = n; });
+    if (!Object.keys(troops).length) return toast("Commit some soldiers to the rally.", true);
+    try { const v = await api(mode === "start" ? "rally" : "rallyjoin", mode === "start" ? { x, y, troops } : { troops }); sfx("march"); toast(mode === "start" ? "Your banner musters for war" : "You ride with the rally"); applyState(v); closeModal(); openAlliance(); }
+    catch (e) { toast(e.message, true); }
+  };
 }
 function reinforceDialog(member) {
   const rows = Object.keys(S.units).map((u) => `<div class="unitcard"><div class="em">${ic("sword")}</div><div class="mid"><div class="un">${S.units[u].name}</div><div class="st">you have ${S.troops[u] || 0} &middot; speed ${S.units[u].speed}</div></div><input type="number" min="0" max="${S.troops[u] || 0}" value="0" data-ru="${u}"/></div>`).join("");
@@ -1087,8 +1118,9 @@ function marchDialog(x, y) {
     ${t.taunt ? `<div class="taunt ${wl ? "wl" : ""}">${ic(wl ? "sword" : "ruin")}<span>&ldquo;${esc(t.taunt)}&rdquo;</span></div>` : ""}
     <p style="color:#caa86a;text-align:center">Distance ${t.dist}. ${wl ? "An elite host" : "Defended"} by ${garr || "a few barbarians"}.</p>
     <p style="color:#caa86a;text-align:center;margin-bottom:${wl ? 4 : 10}px">Spoils up to <b style="color:#f6e2a0">${loot}</b></p>
-    ${wl ? `<p class="wlreward" style="text-align:center;margin-bottom:10px">${ic("gem")} A felled warlord always yields <b style="color:var(--gold2)">shards and a relic</b>. Bring a strong host.</p>` : ""}
-    ${rows}<div class="modal-actions"><button class="gbtn grn" id="do-march">Send the march</button></div></div>`);
+    ${wl ? `<p class="wlreward" style="text-align:center;margin-bottom:10px">${ic("gem")} A felled warlord always yields <b style="color:var(--gold2)">shards and a relic</b>. Bring a strong host, or rally your banner.</p>` : ""}
+    ${rows}<div class="modal-actions">${wl && S.allyTag ? `<button class="gbtn" id="do-rally-call" ${S.rally ? "disabled title=\"a rally is already underway\"" : ""}>${ic("ally")} Call a rally</button>` : ""}<button class="gbtn grn" id="do-march">Send the march</button></div></div>`);
+  const rc = $("#do-rally-call"); if (rc && !S.rally) rc.onclick = () => rallyCommitDialog("start", x, y);
   $("#do-march").onclick = async () => {
     const troops = {}; $$("#modal [data-mu]").forEach((i) => { const n = +i.value || 0; if (n > 0) troops[i.dataset.mu] = n; });
     if (!Object.keys(troops).length) return toast("Choose some soldiers to send.", true);
@@ -1163,6 +1195,13 @@ function reportsHtml() {
       win = r.win; label = win ? "SLAIN" : "DEFEAT";
       const bounty = win ? [r.relic ? `a <b>${esc(r.relic.tierName)}</b> relic` : "", r.shards ? `<b>${r.shards}</b> shards` : "", loot ? `<b>${loot}</b>` : ""].filter(Boolean).join(", ") : "";
       line = `Felled <b>${esc(r.warlord || "a warlord")}</b> &middot; lost ${Math.round(r.attLoss * 100)}% of the host${win && bounty ? " &middot; took " + bounty : ""}${r.flavor ? `<div class="repflav">${esc(r.flavor)}</div>` : ""}`;
+    } else if (r.kind === "rally") {
+      if (r.disbanded) { win = false; label = "STOOD DOWN"; line = `The rally on <b>${esc(r.warlord || "a warlord")}</b> was stood down &middot; your host marched home`; }
+      else {
+        win = r.win; label = win ? "SLAIN" : "DEFEAT";
+        const bounty = win ? [r.relic ? `a <b>${esc(r.relic.tierName)}</b> relic` : "", r.shards ? `<b>${r.shards}</b> shards` : "", loot ? `<b>${loot}</b>` : ""].filter(Boolean).join(", ") : "";
+        line = `Rally on <b>${esc(r.warlord || "a warlord")}</b> with ${r.joined || 1} lord${(r.joined || 1) > 1 ? "s" : ""} &middot; lost ${Math.round((1 - (Object.values(r.surv || {}).reduce((a, c) => a + c, 0) / Math.max(1, Object.values(r.sent || {}).reduce((a, c) => a + c, 0)))) * 100)}% of your host${win && bounty ? " &middot; your share " + bounty : ""}`;
+      }
     } else {
       win = r.win; label = win ? "VICTORY" : "DEFEAT";
       line = `Raid on a level <b>${r.level}</b> camp &middot; lost ${Math.round(r.attLoss * 100)}% of the host${win && loot ? " &middot; looted <b>" + loot + "</b>" : ""}${r.flavor ? `<div class="repflav">${esc(r.flavor)}</div>` : ""}`;
