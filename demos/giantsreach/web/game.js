@@ -196,7 +196,7 @@ function applyState(v) {
   const tb = $("#rl-tasks-bdg"); if (tb) tb.classList.toggle("hidden", !taskClaim);
   const hb = $("#rl-honors-bdg"); if (hb) hb.classList.toggle("hidden", !v.achvClaim);
   if (v.vip) { const vl = $("#vip-lv"); if (vl) vl.textContent = v.vip.level; const vb = $("#vip-bdg"); if (vb) vb.classList.toggle("hidden", !v.vip.dailyReady); }
-  renderSeasonBar();
+  renderSeasonBar(); renderIncoming(v);
   const drb = $("#draw-bdg"); if (drb) drb.classList.toggle("hidden", !(v.season && v.season.claimable));
   const canHelp = !!(v.alliance && v.alliance.members.some((m) => (m.orders || []).some((o) => !o.helpedByYou && !o.maxed)));
   const ab = $("#rl-ally-bdg"); if (ab) ab.classList.toggle("hidden", !canHelp);
@@ -219,6 +219,20 @@ function applyState(v) {
   if (modalOpen) refreshModal();
 }
 let lastReport = 0;
+// incoming enemy attacks: warn the lord with a pulsing banner + sound on a fresh threat
+let incomingAlerted = new Set();
+function renderIncoming(v) {
+  const box = $("#incoming"); if (!box) return;
+  const inc = v.incoming || []; const keys = new Set(inc.map((i) => i.from + "|" + Math.round(i.arrive)));
+  for (const i of inc) { const k = i.from + "|" + Math.round(i.arrive); if (!incomingAlerted.has(k)) { incomingAlerted.add(k); sfx("defeat"); toast("A host marches on you! " + esc(i.from) + " approaches.", true); } }
+  for (const k of [...incomingAlerted]) if (!keys.has(k)) incomingAlerted.delete(k);
+  if (!inc.length) { box.classList.add("hidden"); box.innerHTML = ""; return; }
+  const soon = inc[0];
+  box.classList.remove("hidden");
+  box.innerHTML = `<span class="incico">${ic("sword")}</span><div class="inctxt"><div class="inct1">A host marches on you</div>
+    <div class="inct2"><b>${esc(soon.from)}</b> &middot; ~${fmt(soon.total)} strong &middot; <span class="inccd" data-arr="${soon.arrive}">--</span>${inc.length > 1 ? ` &middot; +${inc.length - 1} more` : ""}</div></div>`;
+  box.onclick = openMap;
+}
 
 // ---- the battle cinematic: a fighting scene with win/lose, casualties and spoils ----
 let battleBusy = false;
@@ -276,6 +290,7 @@ function loop(t) {
   $$("#marchpanel .mleft").forEach((e) => { const m = S.marches[+e.dataset.mi]; if (!m) return; const rem = (m.resolved ? m.ret : m.arrive) - now; e.textContent = rem <= 0 ? "arriving" : hms(rem); });
   $$("#townspots .tmr").forEach((e) => { const q = S.queue[+e.dataset.q]; if (!q) { e.textContent = ""; return; } const rem = q.finish - now; e.textContent = rem <= 0 ? "done" : hms(rem); });
   updateMapMarches(now);
+  const cd = $("#incoming .inccd"); if (cd) { const rem = +cd.dataset.arr - now; cd.textContent = rem <= 0 ? "arriving" : hms(rem); }
 }
 function gemsFor(sec) { if (sec <= 60) return 1; if (sec <= 3600) return Math.max(1, Math.round((19 / 3540) * (sec - 60) + 1)); if (sec <= 86400) return Math.round((240 / 82800) * (sec - 3600) + 20); return Math.round((740 / 518400) * (sec - 86400) + 260); }
 
@@ -945,13 +960,18 @@ function buildMapMarchLayer() {
     svg += `<line x1="${hx}" y1="${hy}" x2="${tx}" y2="${ty}" stroke="${col}" stroke-width="1.5" stroke-dasharray="3 4" opacity="0.45"/>`;
     svg += `<g class="mmark" data-mi="${i}"><circle r="11" fill="none" stroke="${col}" stroke-width="1.5" opacity="0.5"><animate attributeName="r" values="6;13;6" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.55;0;0.55" dur="1.5s" repeatCount="indefinite"/></circle><circle r="6.5" fill="${col}" stroke="#160d05" stroke-width="2"/></g>`;
   });
+  (S.incoming || []).forEach((m, i) => {
+    const [fxp, fyp] = mapPos(m.fx - c.x, m.fy - c.y, R); const col = "#ff4d2a";
+    svg += `<line x1="${fxp}" y1="${fyp}" x2="${hx}" y2="${hy}" stroke="${col}" stroke-width="1.8" stroke-dasharray="2 4" opacity="0.55"/>`;
+    svg += `<g class="imark" data-ii="${i}"><circle r="13" fill="none" stroke="${col}" stroke-width="2" opacity="0.6"><animate attributeName="r" values="7;15;7" dur="1.1s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.7;0;0.7" dur="1.1s" repeatCount="indefinite"/></circle><circle r="7" fill="${col}" stroke="#160d05" stroke-width="2"/></g>`;
+  });
   inner.insertAdjacentHTML("beforeend", svg + "</svg>");
   updateMapMarches(Date.now() / 1000 + (S.now - (S._recv || S.now)));
 }
 function updateMapMarches(now) {
   const layer = $("#marchlayer"); if (!layer || !MAP || !S) return;
-  const marks = layer.querySelectorAll(".mmark");
-  if (marks.length !== (S.marches || []).length) { buildMapMarchLayer(); return; } // marches changed -> rebuild
+  const marks = layer.querySelectorAll(".mmark"); const imarks = layer.querySelectorAll(".imark");
+  if (marks.length !== (S.marches || []).length || imarks.length !== (S.incoming || []).length) { buildMapMarchLayer(); return; }
   const c = MAP.center, R = MAP.R, [hx, hy] = mapPos(0, 0, R);
   marks.forEach((g) => {
     const m = S.marches[+g.dataset.mi]; if (!m) return;
@@ -960,6 +980,12 @@ function updateMapMarches(now) {
     if (!m.resolved) { const t = Math.max(0, Math.min(1, (now - m.depart) / (m.arrive - m.depart))); px = hx + (tx - hx) * t; py = hy + (ty - hy) * t; }
     else { const t = Math.max(0, Math.min(1, (now - m.arrive) / (m.ret - m.arrive))); px = tx + (hx - tx) * t; py = ty + (hy - ty) * t; }
     g.setAttribute("transform", `translate(${px},${py})`);
+  });
+  imarks.forEach((g) => {
+    const m = S.incoming[+g.dataset.ii]; if (!m) return;
+    const [fxp, fyp] = mapPos(m.fx - c.x, m.fy - c.y, R);
+    const t = Math.max(0, Math.min(1, (now - m.depart) / (m.arrive - m.depart)));
+    g.setAttribute("transform", `translate(${fxp + (hx - fxp) * t},${fyp + (hy - fyp) * t})`);
   });
 }
 function setupMapPanZoom(side, CELL) {

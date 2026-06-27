@@ -628,6 +628,20 @@ function resolveInner(p) {
   if (!p.life) p.life = { raidsWon: 0, looted: 0, trained: 0, peakMight: 0, logins: 0 };
   const mt = might(p); if (mt > (p.life.peakMight || 0)) p.life.peakMight = mt;
 }
+// hosts marching on this lord right now (so the defender is warned and can prepare)
+function incomingFor(p) {
+  const now = NOW(); const out = [];
+  for (const on of Object.keys(db.players)) {
+    if (on === p.name) continue;
+    const q = db.players[on]; if (!q || !q.marches) continue;
+    for (const m of q.marches) {
+      if (m.kind === "city" && m.target === p.name && !m.resolved && m.arrive > now) {
+        out.push({ from: on, fx: q.x, fy: q.y, depart: m.depart, arrive: m.arrive, total: unitsCount(m.troops) });
+      }
+    }
+  }
+  return out.sort((a, b) => a.arrive - b.arrive);
+}
 // snapshot for the client
 function view(p) {
   resolve(p);
@@ -652,6 +666,7 @@ function view(p) {
     tutorial: p.tutorial, login: p.login, daily: DAILY, packs: PACKS, starter: STARTER, boughtStarter: !!p.boughtStarter,
     coords: { x: p.x, y: p.y },
     marches: (p.marches || []).map((m) => ({ tx: m.tx, ty: m.ty, level: m.level, depart: m.depart, arrive: m.arrive, ret: m.ret, resolved: m.resolved, troops: m.troops, kind: m.kind || "camp", target: m.target || null })),
+    incoming: incomingFor(p),
     reports: (p.reports || []).slice(0, 12),
     tasks: tasksView(p),
     chest: { ready: NOW() - ((p.chest && p.chest.last) || 0) >= CHEST_COOLDOWN, nextAt: ((p.chest && p.chest.last) || 0) + CHEST_COOLDOWN, reward: CHEST_REWARD },

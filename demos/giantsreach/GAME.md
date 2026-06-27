@@ -392,6 +392,22 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 31: INCOMING ATTACK WARNINGS, a host marches on you)
+- Closed the last PvP defensive gap: an attacker's march was invisible to the target until it landed (the
+  post-hoc defense report). Now the defender is WARNED while the enemy is still on the road and can prepare.
+- Server: incomingFor(p) scans every other lord's marches for an unresolved city attack aimed at p that has not
+  yet arrived, returning the attacker's name, home coords, depart/arrive times, and total host size; exposed as
+  `incoming` in /api/state (sorted soonest-first).
+- Client: a prominent pulsing oxblood HUD banner ("A HOST MARCHES ON YOU" + attacker, an estimate of the host
+  size, and a live countdown; "+N more" when several converge), which opens the world map on click. A defeat
+  sting and a toast fire once per fresh threat (tracked by from+arrive so it never nags). On the world map the
+  incoming host is drawn as a bright-red dashed line from the attacker's hold with a fast-pulsing marker
+  advancing on your home star, alongside your own marches.
+- Verified END TO END with two accounts: Cwar's live attack on Adef surfaced in Adef's state as
+  incoming [Cwar, ~245 strong], the HUD banner read "A HOST MARCHES ON YOU / Cwar · ~215 strong · 3:56" with a
+  ticking countdown, and the map drew the advancing red marker. A guest with no threats keeps the banner
+  hidden. Screenshots incoming_banner.png, incoming_hud.png, incoming_map.png. No JS errors, no regression.
+
 ## DONE (iteration 30: SETTINGS + ACCESSIBILITY)
 - There was only a mute toggle and no real settings. Built a proper Settings panel in the Steward (gear).
 - SOUND: independent Music and Effects volume sliders (0-100) and a Mute-all toggle. audio.js gained per-channel
@@ -626,8 +642,8 @@ NEXT STEPS list below; none are blocking.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime. Future:
    per-building flavor, named barbarian warlords, event log narration.
-10. [DONE] MOBILE LAYOUT pass (iteration 12); [DONE] SETTINGS + accessibility (reduce motion, volume) (iteration
-    30). Remaining (optional): a SERVER SELECT (one realm) screen, push-style in-game alerts.
+10. [DONE] MOBILE LAYOUT pass (iteration 12); [DONE] SETTINGS + accessibility (iteration 30); [DONE] in-game
+    incoming-attack alerts (iteration 31). Remaining (optional): a SERVER SELECT (one realm) screen.
 11. PRODUCTION HARDENING: rate-limiting, input validation, save integrity, error states,
     a real README, and only THEN a git checkpoint.
 
