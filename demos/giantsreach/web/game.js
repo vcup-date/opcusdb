@@ -202,6 +202,7 @@ function applyState(v) {
   const ab = $("#rl-ally-bdg"); if (ab) ab.classList.toggle("hidden", !canHelp);
   const woundedN = Object.values(v.wounded || {}).reduce((a, c) => a + c, 0);
   const wb = $("#rl-army-bdg"); if (wb) wb.classList.toggle("hidden", woundedN <= 0);
+  const fb = $("#rl-forge-bdg"); if (fb) fb.classList.toggle("hidden", !(v.hero && v.hero.points > 0));
   // a freshly resolved battle: play the cinematic for your own attacks, toast incoming raids
   if (v.reports && v.reports.length) {
     const r = v.reports[0];
@@ -585,6 +586,17 @@ function renderForge() {
   }).join("");
   const bonusLine = [["atk", "Attack"], ["def", "Defense"], ["speed", "March"], ["gold", "Spoils"]]
     .map(([k, n]) => `<span class="hb">${n} <b>+${hb[k]}%</b></span>`).join("");
+  const pts = h.points || 0;
+  const traitCards = (S.traitDefs || []).map((tr) => {
+    const rank = (h.traits && h.traits[tr.id]) || 0; const max = S.traitMax || 3;
+    const dots = Array.from({ length: max }, (_, i) => `<span class="tdot ${i < rank ? "on" : ""}"></span>`).join("");
+    const canBuy = pts > 0 && rank < max;
+    return `<div class="traitcard ${rank ? "has" : ""}"><span class="ti">${ic(tr.icon)}</span>
+      <div class="tmid"><div class="tn">${tr.name}${rank > 1 ? ` <span class="trk">x${rank}</span>` : ""}</div><div class="td">${tr.desc}</div><div class="tdots">${dots}</div></div>
+      ${canBuy ? `<button class="tbuy" data-trait="${tr.id}">+</button>` : (rank >= max ? `<span class="tmaxed">max</span>` : "")}</div>`;
+  }).join("");
+  const traitsSec = `<div class="traitsec"><div class="ph" style="border:0;padding:6px 0;display:flex;align-items:center;gap:8px">${ic("medal")} Champion's Traits ${pts ? `<span class="tpts">${pts} point${pts > 1 ? "s" : ""} to spend</span>` : `<span class="tg" style="margin-left:auto">next at Level ${h.nextAt}</span>`}</div>
+    <div class="traitgrid">${traitCards}</div></div>`;
   const sv = S.salvageVals || [5, 15, 40, 100]; const rfc = S.reforgeCost || 45;
   const stashRelics = (S.relics || []).slice().sort((a, b) => b.tier - a.tier || b.val - a.val);
   const stash = stashRelics.map((it) => `<div class="relic t${it.tier}">
@@ -602,6 +614,7 @@ function renderForge() {
           <div class="xpbar"><i style="width:${Math.min(100, 100 * h.xp / h.xpNeed)}%"></i></div>
           <div class="hbonus">${bonusLine}</div></div>
       </div>
+      ${traitsSec}
       <div class="eqrow">${slots}</div>
       <div class="forgebox">
         <div class="fdesc"><b>Work the Forge</b><div class="tg">Each strike yields a relic. Pity: <b style="color:var(--gold2)">${S.pity}/${S.pityMax}</b> until a guaranteed Epic or better.</div></div>
@@ -634,6 +647,10 @@ function renderForge() {
   });
   $$("#modal [data-salvageall]").forEach((c) => c.onclick = async () => {
     try { const v = await api("salvage", { maxTier: +c.dataset.salvageall }); sfx("coin"); toast(`Salvaged ${v.count} relics for ${fmt(v.gained)} shards`); applyState(v); renderForge(); } catch (e) { toast(e.message, true); }
+  });
+  $$("#modal [data-trait]").forEach((c) => c.onclick = async () => {
+    const tr = (S.traitDefs || []).find((x) => x.id === c.dataset.trait);
+    try { const v = await api("trait", { id: c.dataset.trait }); sfx("level"); toast(`Your champion takes ${tr ? tr.name : "a trait"}`); applyState(v); renderForge(); } catch (e) { toast(e.message, true); }
   });
 }
 

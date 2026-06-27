@@ -392,6 +392,22 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 37: CHAMPION'S TRAITS, build-defining hero choices)
+- The hero levelled and equipped relics but every champion grew identically. Added rankable traits (the roadmap
+  "hero skills") so the player makes lasting, build-defining choices as the hero levels.
+- Server: a HERO_TRAITS table of seven (Warmonger +atk, Bulwark +def, Outrider +march speed, Plunderer +spoils,
+  Quartermaster +1 march slot, Master Mason +build speed, Drillmaster +train speed), each rankable up to 3. The
+  champion earns one trait point every 5 hero levels (traitPoints/traitsSpent track earned vs spent). heroTraitBonus
+  folds into every relevant system: heroBonusOf (atk/def/speed/gold for combat, loot, march), buildSpeedMult,
+  marchCap, and the train route's per-unit time. /api/trait spends a point with full guards (unknown id, no points
+  with a helpful message, already-mastered at rank 3). view() exposes hero.points/nextAt/traits + traitDefs/traitMax.
+- Client: a "Champion's Traits" section in the Forge with seven trait cards (icon, name, rank dots, "+" to spend),
+  a "N points to spend" pill or "next at Level X" hint, and a Forge rail badge that lights when points are unspent.
+- Verified END TO END: a Level 22 hero reads 1 spare point (4 earned, 3 spent on Warmonger x2 + Outrider x1) with
+  nextAt 25; spending Bulwark decrements to 0 points and records {warmonger:2,outrider:1,bulwark:1}; a further spend
+  returns "No trait points. Your champion earns one every 5 levels." The hero bar reflects the trait bonuses in its
+  affix line (Atk +54% / Def +42% / March +12%). Screenshot traits.png. No JS errors, guest smoke clean (no regression).
+
 ## DONE (iteration 36: THE PANOPLY, a hero set bonus)
 - The hero was shallow beyond levelling and equipping four relics. Added a set bonus that rewards completing
   and refining the loadout, giving the whole relic economy (Forge, ruins, reforge, salvage) a long-term goal.
@@ -711,8 +727,9 @@ NEXT STEPS list below; none are blocking.
    free + gold tracks (iteration 10). Remaining: returning-player rewards. The retention suite is now
    broad; next best step is likely ALLIANCES (item 8) or a full MOBILE LAYOUT pass (item 10).
 7. [DONE] EQUIPMENT + HEROES (iteration 7): a hero with a gear loadout, deterministic Forge gacha with a
-   transparent pity counter, hero buffs to combat/loot/march; [DONE] relic salvage + reforge (iteration 35).
-   Future: a second hero slot, set bonuses, hero skills, tier-up fusion.
+   transparent pity counter, hero buffs to combat/loot/march; [DONE] relic salvage + reforge (iteration 35);
+   [DONE] the Panoply set bonus (iteration 36); [DONE] rankable Champion's Traits, the "hero skills" (iteration 37).
+   Future: a second hero slot, relic tier-up fusion.
 8. [DONE] ALLIANCES (banners) (iteration 13): create/join/leave/browse, timer-shaving help (max(1%,60s),
    20 per order), +1%/member production bonus, War Table chat; [DONE] reinforcement (iteration 27): garrison
    a member's hold, join their defense, recall. Future: a shared map territory, joint rally marches, member ranks.

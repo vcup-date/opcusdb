@@ -317,9 +317,9 @@ const VIP_DAILY_PTS = 60; // the free daily VIP audience
 function vipLevel(p) { const pts = (p.vip && p.vip.points) || 0; let lv = 0; for (let i = 0; i < VIP_LEVELS.length; i++) if (pts >= VIP_LEVELS[i].pts) lv = i; return lv; }
 function vipPerks(p) { return VIP_LEVELS[vipLevel(p)]; }
 function vipGain(p, amt) { if (!p.vip) p.vip = { points: 0, lastDaily: 0 }; p.vip.points += amt; }
-function buildSpeedMult(p) { return 1 - vipPerks(p).build / 100; }
+function buildSpeedMult(p) { return Math.max(0.4, 1 - (vipPerks(p).build + heroTraitBonus(p).buildPct) / 100); }
 function vipDailyReady(p) { return curDay() > ((p.vip && p.vip.lastDaily) || 0); }
-function marchCap(p) { return 5 + vipPerks(p).slots; }
+function marchCap(p) { return 5 + vipPerks(p).slots + heroTraitBonus(p).marchSlot; }
 function vipView(p) {
   const lv = vipLevel(p); const cur = VIP_LEVELS[lv]; const next = VIP_LEVELS[lv + 1] || null;
   return {
@@ -437,6 +437,24 @@ function delveReward(x, y) {
   if (r < 75) { return { kind: "gems", gems: 20 + (h % 41) }; }
   return { kind: "relic", relic: rollRelic((h ^ 0x5bd1e995) >>> 0, 1) }; // a find is always at least Rare
 }
+// the champion's traits: a build-defining choice, one rank earned every 5 hero levels (each trait up to rank 3)
+const HERO_TRAITS = [
+  { id: "warmonger", name: "Warmonger", icon: "sword", desc: "+6 attack", atk: 6 },
+  { id: "bulwark", name: "Bulwark", icon: "shield", desc: "+6 defense", def: 6 },
+  { id: "outrider", name: "Outrider", icon: "horse", desc: "+12 march speed", speed: 12 },
+  { id: "plunderer", name: "Plunderer", icon: "gem", desc: "+12 spoils", gold: 12 },
+  { id: "quartermaster", name: "Quartermaster", icon: "flag", desc: "+1 march slot", marchSlot: 1 },
+  { id: "mason", name: "Master Mason", icon: "hammer", desc: "+6% build speed", buildPct: 6 },
+  { id: "drillmaster", name: "Drillmaster", icon: "anvil", desc: "+8% training speed", trainPct: 8 },
+];
+const TRAIT_MAX = 3, TRAIT_EVERY = 5;
+function traitPoints(p) { return Math.floor(((p.hero && p.hero.level) || 1) / TRAIT_EVERY); }
+function traitsSpent(p) { const t = (p.hero && p.hero.traits) || {}; let s = 0; for (const k in t) s += t[k] || 0; return s; }
+function heroTraitBonus(p) {
+  const t = (p.hero && p.hero.traits) || {}; const out = { atk: 0, def: 0, speed: 0, gold: 0, marchSlot: 0, buildPct: 0, trainPct: 0 };
+  for (const tr of HERO_TRAITS) { const r = t[tr.id] || 0; if (!r) continue; for (const k in out) if (tr[k]) out[k] += tr[k] * r; }
+  return out;
+}
 function heroBonusOf(p) {
   const b = { atk: 0, def: 0, speed: 0, gold: 0 };
   let count = 0, tierSum = 0;
@@ -445,6 +463,7 @@ function heroBonusOf(p) {
   // the Panoply: a set bonus added to every affix, scaling with how full and how fine the loadout is
   const panoply = count + tierSum; // 0 (bare) .. 16 (four Legendaries)
   for (const k of ["atk", "def", "speed", "gold"]) b[k] += panoply;
+  const tb = heroTraitBonus(p); b.atk += tb.atk; b.def += tb.def; b.speed += tb.speed; b.gold += tb.gold; // trait bonuses
   b.panoply = panoply; b.slotsFilled = count;
   return b;
 }
@@ -482,7 +501,7 @@ function newPlayer(name) {
     x: 400 + Math.floor(Math.random() * 80) - 40, y: 400 + Math.floor(Math.random() * 80) - 40,
     marches: [], reports: [], cleared: {}, intel: {}, delved: {},
     tasks: { day: 0, counts: {}, claimed: [] }, chest: { last: 0 },
-    relics: [], equipped: { weapon: null, armor: null, banner: null, charm: null }, hero: { level: 1, xp: 0 }, pity: 0, drawN: 0,
+    relics: [], equipped: { weapon: null, armor: null, banner: null, charm: null }, hero: { level: 1, xp: 0, traits: {} }, pity: 0, drawN: 0,
     life: { raidsWon: 0, looted: 0, trained: 0, peakMight: 0, logins: 0 }, achv: {},
     vip: { points: 0, lastDaily: 0 },
     season: { id: -1, xp: 0, level: 0, claimed: [], claimedP: [], premium: false },
@@ -702,7 +721,8 @@ function view(p) {
     relics: (p.relics || []).map((it) => ({ seed: it.seed, slot: it.slot, slotName: SLOT_NAME[it.slot], tier: it.tier, tierName: TIERS[it.tier], aff: it.aff, affName: AFFIX_NAME[it.aff], val: it.val })),
     equipped: Object.fromEntries(SLOTS.map((s) => { const it = p.equipped && p.equipped[s]; return [s, it ? { seed: it.seed, slot: it.slot, slotName: SLOT_NAME[it.slot], tier: it.tier, tierName: TIERS[it.tier], aff: it.aff, affName: AFFIX_NAME[it.aff], val: it.val } : null]; })),
     slots: SLOTS, slotNames: SLOT_NAME, affNames: AFFIX_NAME, tierNames: TIERS,
-    hero: { level: p.hero.level, xp: p.hero.xp, xpNeed: p.hero.level * 100 },
+    hero: { level: p.hero.level, xp: p.hero.xp, xpNeed: p.hero.level * 100, traits: p.hero.traits || {}, points: Math.max(0, traitPoints(p) - traitsSpent(p)), nextAt: (Math.floor(((p.hero.level) / TRAIT_EVERY)) + 1) * TRAIT_EVERY },
+    traitDefs: HERO_TRAITS, traitMax: TRAIT_MAX,
     heroBonus: heroBonusOf(p), pity: p.pity, pityMax: PITY, forgeCost: FORGE_COST, reforgeCost: REFORGE_COST, salvageVals: SALVAGE,
     achievements: achvView(p), achvClaim: achvClaimable(p),
     vip: vipView(p), season: seasonView(p),
@@ -808,7 +828,7 @@ const ROUTES = {
     const c = UNITS[unit].cost;
     for (const k of Object.keys(c)) if ((p.r[k] || 0) < c[k] * num) return send(res, 400, { err: "Not enough resources for " + num + "." });
     for (const k of Object.keys(c)) p.r[k] -= c[k] * num;
-    const per = unitTime(unit, p.b.barracks || 1);
+    const per = Math.max(1, Math.round(unitTime(unit, p.b.barracks || 1) * (1 - heroTraitBonus(p).trainPct / 100)));
     p.train.push({ unit, n: num, done: 0, start: NOW(), per });
     bump(p, "train", num); bump(p, "spend", sumCost(c, num)); life(p, "trained", num); seasonGain(p, Math.min(num, 60));
     save(); send(res, 200, view(p));
@@ -1058,6 +1078,17 @@ const ROUTES = {
     const r = prng((hstr(p.name) ^ Math.imul(p.reforgeN, 0x85ebca6b) ^ seed) >>> 0);
     const old = it.val; it.val = lo + Math.floor(r() * (hi - lo + 1));
     save(); send(res, 200, Object.assign({ old, val: it.val }, view(p)));
+  },
+  // ---- spend a hero trait point ----
+  "POST /api/trait": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p);
+    const tr = HERO_TRAITS.find((x) => x.id === b.id); if (!tr) return send(res, 400, { err: "no such trait" });
+    if (!p.hero.traits) p.hero.traits = {};
+    if (Math.max(0, traitPoints(p) - traitsSpent(p)) <= 0) return send(res, 400, { err: "No trait points. Your champion earns one every " + TRAIT_EVERY + " levels." });
+    if ((p.hero.traits[tr.id] || 0) >= TRAIT_MAX) return send(res, 400, { err: tr.name + " is already mastered." });
+    p.hero.traits[tr.id] = (p.hero.traits[tr.id] || 0) + 1;
+    save(); send(res, 200, view(p));
   },
   // ---- achievements: claim every newly-earned tier of one milestone ----
   "POST /api/achv": async (req, res, b) => {
