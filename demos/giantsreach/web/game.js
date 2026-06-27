@@ -784,11 +784,34 @@ function renderAllyBrowse() {
 }
 
 // leaderboard
-$("#ic-board").onclick = async () => {
-  try { const v = await api("leaderboard"); const rows = v.rows.map((r, i) => `<div class="statline"><span class="k">${i + 1}. ${r.name}</span><span class="v">${fmt(r.might)} might &middot; Keep ${roman(r.keep)}</span></div>`).join("");
-    showModal(`<div class="ph">${ic("trophy")} Realm Ladder <span class="x">&times;</span></div><div class="bd">${rows || '<div class="empty">No lords yet.</div>'}</div>`); modalOpen = null;
-  } catch (e) { toast(e.message, true); }
-};
+let LADDER = null, ladderTab = "lords";
+$("#ic-board").onclick = async () => { try { LADDER = await api("leaderboard"); ladderTab = "lords"; renderLadder(); modalOpen = null; } catch (e) { toast(e.message, true); } };
+function ladderRow(rank, portrait, name, tag, right, me) {
+  return `<div class="lrow ${me ? "me" : ""}"><div class="lrank ${rank <= 3 ? "top" : ""}">${rank}</div>
+    <div class="lpor"><img src="img/lord/lord${portrait || 0}.png" alt="" onerror="this.style.opacity=0"/></div>
+    <div class="lname">${esc(name)}${tag ? ` <span class="tagchip">${esc(tag)}</span>` : ""}</div>
+    <div class="lright">${right}</div></div>`;
+}
+function renderLadder() {
+  if (!LADDER) return; const L = LADDER; const meName = S && S.name;
+  const tabs = `<div class="ltabs">
+    <button class="ltab ${ladderTab === "lords" ? "on" : ""}" data-tab="lords">Lords</button>
+    <button class="ltab ${ladderTab === "raiders" ? "on" : ""}" data-tab="raiders">Warlords</button>
+    <button class="ltab ${ladderTab === "banners" ? "on" : ""}" data-tab="banners">Banners</button></div>`;
+  let body = "";
+  if (ladderTab === "lords") {
+    body = (L.lords || []).map((r) => ladderRow(r.rank, r.portrait, r.name, r.tag, `${fmt(r.might)} might &middot; Keep ${roman(r.keep)}`, r.name === meName)).join("") || `<div class="empty">No lords yet.</div>`;
+    if (L.you && L.you.rank > 20) body += `<div class="lyou">Your rank &middot; ${ladderRow(L.you.rank, L.you.portrait, L.you.name, L.you.tag, `${fmt(L.you.might)} might &middot; Keep ${roman(L.you.keep)}`, true)}</div>`;
+  } else if (ladderTab === "raiders") {
+    body = (L.raiders || []).map((r) => ladderRow(r.rank, r.portrait, r.name, r.tag, `${fmt(r.raidsWon)} raids won`, r.name === meName)).join("") || `<div class="empty">No camps cleared yet. Be the first.</div>`;
+  } else {
+    body = (L.banners || []).map((r) => `<div class="lrow"><div class="lrank ${r.rank <= 3 ? "top" : ""}">${r.rank}</div><div class="lpor banner">${ic("ally")}</div><div class="lname">${esc(r.name)} <span class="tagchip">${esc(r.tag)}</span></div><div class="lright">${r.members} sworn &middot; ${fmt(r.might)} might</div></div>`).join("") || `<div class="empty">No banners raised yet.</div>`;
+  }
+  showModal(`<div class="ph">${ic("trophy")} The Realm Ladder <span class="sub2">${L.total} lords contend</span> <span class="x">&times;</span></div>
+    <div class="bd">${tabs}<div class="lladder">${body}</div></div>`);
+  modalOpen = null;
+  $$("#modal .ltab").forEach((b) => b.onclick = () => { ladderTab = b.dataset.tab; renderLadder(); });
+}
 $("#ic-settings").onclick = () => {
   showModal(`<div class="ph">${ic("gear")} The Steward <span class="x">&times;</span></div><div class="bd">
     ${S.counsel ? `<div class="counsel">${ic("scroll")}<div><div class="ck">Your steward counsels</div>&ldquo;${esc(S.counsel)}&rdquo;</div></div>` : ""}

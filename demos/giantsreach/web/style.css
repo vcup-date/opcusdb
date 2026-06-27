@@ -581,3 +581,23 @@ svg{width:18px;height:18px;vertical-align:middle}
 .rbtn{font-family:'Cinzel';font-weight:700;font-size:11px;color:#11250a;background:linear-gradient(#a6e07a,#5d9e36);border:none;border-radius:7px;padding:4px 11px;cursor:pointer;box-shadow:0 2px 0 var(--grnln)}
 .rbtn:hover{filter:brightness(1.07)}.rbtn:active{transform:translateY(1px);box-shadow:none}
 .rbtn.recall{color:#2a1a06;background:linear-gradient(#f4dd9a,#d3a544);box-shadow:0 2px 0 var(--goldln)}
+
+/* ---- the realm ladder ---- */
+.ph .sub2{margin-left:auto;margin-right:10px;font-family:'Spectral';font-weight:400;letter-spacing:0;text-transform:none;font-size:12px;color:#caa86a}
+.ltabs{display:flex;gap:6px;margin-bottom:10px}
+.ltab{flex:1;font-family:'Cinzel';font-weight:700;font-size:12px;letter-spacing:1px;color:#caa86a;background:#160d05;border:1.5px solid #4a3a1c;border-radius:9px;padding:8px 0;cursor:pointer}
+.ltab.on{color:#2a1a06;background:linear-gradient(#f4dd9a,#cf9f3f);border-color:var(--gold)}
+.ltab:hover:not(.on){border-color:var(--gold);color:var(--gold2)}
+.lladder{display:flex;flex-direction:column;gap:5px;max-height:54vh;overflow-y:auto}
+.lrow{display:flex;align-items:center;gap:11px;padding:7px 11px;border:1.5px solid #3a2d14;border-radius:9px;background:#140d05}
+.lrow.me{border-color:var(--gold);box-shadow:0 0 12px #f6e2a044;background:linear-gradient(#241808,#160d05)}
+.lrank{width:26px;text-align:center;font-family:'Cinzel';font-weight:900;font-size:15px;color:#8a7448;flex:none}
+.lrank.top{color:var(--gold2)}
+.lpor{width:38px;height:38px;border-radius:9px;border:1.5px solid var(--gold);overflow:hidden;flex:none;background:radial-gradient(circle at 40% 32%,#5d471f,#1d1206);display:grid;place-items:center}
+.lpor img{width:100%;height:100%;object-fit:cover}
+.lpor.banner svg{width:20px;height:20px}
+.lname{flex:1;min-width:0;font-family:'Cinzel';font-weight:700;color:var(--gold2);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lright{flex:none;color:#caa86a;font-size:12.5px;text-align:right}
+.lyou{margin-top:9px;padding-top:9px;border-top:1px dashed #5a431f}
+.lyou>.lrow{margin-top:4px}
+.lyou::before{content:"Your standing";font-family:'Cinzel';font-size:10px;letter-spacing:1px;color:#8a7448;text-transform:uppercase}

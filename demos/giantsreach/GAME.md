@@ -392,6 +392,21 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 28: THE REALM LADDER, a real competitive hub)
+- The leaderboard was a plain top-20-by-might list, despite "climb the realm ladder" being the stated endgame.
+  Rebuilt it into a tabbed competitive hub.
+- /api/leaderboard now returns three categories plus YOUR own rank: LORDS (top 20 by might, each with rank,
+  lord portrait, alliance tag, might + keep), WARLORDS (top 15 by lifetime raids won), and BANNERS (top 15
+  alliances by combined member might). The requester's might rank is always computed, even when outside the
+  top 20.
+- Client: a tabbed ladder modal (Lords / Warlords / Banners) with gold rank badges (top 3 highlighted), the
+  lord's chosen portrait thumbnail, alliance tag chips, and a header count ("N lords contend"). Your own row
+  is gold-highlighted; if you rank outside the top 20 a "Your standing" footer pins your row at the bottom.
+- Verified END TO END: seeded a 25-lord realm with varied might, portraits, raids and two banners; the API
+  returned the correct top lords / warlords (by raids) / banners (by might) and put the weak requester at rank
+  25; all three tabs render with portraits and tags, and the "Your standing" footer shows the highlighted self
+  row. Screenshots ladder_lords.png, ladder_warlords.png, ladder_banners.png, ladder_youfoot.png. No JS errors.
+
 ## DONE (iteration 27: ALLIANCE REINFORCEMENT, banding together matters in war)
 - Alliances gave a production bonus, build-help, and chat, but did not matter in battle. Now you can send
   troops to GARRISON a banded member's hold; they join every defense of that hold until recalled or slain.

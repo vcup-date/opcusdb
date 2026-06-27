@@ -817,9 +817,16 @@ const ROUTES = {
     const p = db.players[n]; p.portrait = Math.max(0, Math.min(3, b.i | 0)); save(); send(res, 200, { portrait: p.portrait });
   },
   "GET /api/leaderboard": async (req, res) => {
-    const rows = Object.values(db.players).map((p) => { resolve(p); return { name: p.name, might: might(p), keep: p.b.keep || 1 }; })
-      .sort((a, b) => b.might - a.might).slice(0, 20);
-    send(res, 200, { rows });
+    const me = authName(req);
+    const all = Object.values(db.players).map((p) => { resolve(p); return { name: p.name, might: might(p), keep: p.b.keep || 1, portrait: p.portrait || 0, tag: p.alliance || null, raidsWon: (p.life && p.life.raidsWon) || 0 }; });
+    const byMight = all.slice().sort((a, b) => b.might - a.might);
+    const lords = byMight.slice(0, 20).map((r, i) => Object.assign({ rank: i + 1 }, r));
+    const mi = byMight.findIndex((r) => r.name === me);
+    const you = mi >= 0 ? { rank: mi + 1, might: byMight[mi].might, keep: byMight[mi].keep, portrait: byMight[mi].portrait, tag: byMight[mi].tag, name: me } : null;
+    const raiders = all.filter((r) => r.raidsWon > 0).sort((a, b) => b.raidsWon - a.raidsWon).slice(0, 15).map((r, i) => ({ rank: i + 1, name: r.name, raidsWon: r.raidsWon, portrait: r.portrait, tag: r.tag }));
+    const banners = Object.values(db.alliances).map((a) => { let mt = 0; for (const m of (a.members || [])) { const q = db.players[m]; if (q) mt += might(q); } return { tag: a.tag, name: a.name, members: (a.members || []).length, might: mt }; })
+      .sort((a, b) => b.might - a.might).slice(0, 15).map((r, i) => Object.assign({ rank: i + 1 }, r));
+    send(res, 200, { lords, you, raiders, banners, total: all.length });
   },
   "GET /api/map": async (req, res) => {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
