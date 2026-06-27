@@ -392,6 +392,20 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 55: THE TERRITORY LADDER, a realm scoreboard for the stronghold war)
+- The alliance stronghold war (found, pledge, garrison, assault, raze) generated real stakes but had no realm-wide
+  scoreboard, so there was nothing to compete over. Added a Territory standing to the Realm Ladder.
+- Server: the leaderboard now computes a banner-stats list once and derives two views from it. The Banners tab still
+  ranks by total member might (now carrying each banner's stronghold level), and a new "territory" list ranks only
+  the banners that hold a stronghold, by its level then by might, also reporting the total troops garrisoned in it.
+- Client: a fourth Realm Ladder tab, Territory, lists the banners by stronghold with a gold fort marker, the
+  stronghold level and might on the right, and the garrison strength as a subtitle (or "ungarrisoned"); the Banners
+  tab now shows a small gold stronghold badge on each row.
+- Verified END TO END: with four banners (forts at 8, 5, 3, and none), the territory list ranked Ravens(8) >
+  Wolves(5) > Stags(3) and correctly excluded the fortless banner, reporting garrison counts (1300, 1200, 0); the
+  Banners tab showed each fort level. The Territory tab rendered three ranked rows, top "Stronghold 8". Screenshot
+  territory-ladder.png. No JS errors, guest smoke clean (no regression), no em-dashes.
+
 ## DONE (iteration 54: WAR-REPORT NARRATION, the realm's voice on the battle reports)
 - Camp, warlord, and PvP-attacker reports carried a baked flavor line, but the DEFENDER's reports and the stronghold
   siege reports did not, so the emotional peak of the game (being raided, holding the walls, storming a fortress) read
