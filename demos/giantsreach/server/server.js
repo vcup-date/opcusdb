@@ -223,6 +223,19 @@ const FLAVOR = {
     "Its ribs make a hall taller than any keep. Your scholars copy the runes and go quiet for a long while after.",
   ],
 };
+// a baked, deterministic flavor line per building, shown in the upgrade modal (varies as the building rises)
+const BLD_FLAVOR = {
+  keep: ["From this seat your word carries to the last farmstead in the hold.", "Higher walls cast a longer shadow; the Reach learns your name from these towers.", "A throne is only as tall as the stone beneath it. Raise the stone."],
+  granary: ["A full granary is a quiet hold; a thin one breeds desperate men.", "Grain feeds the plow-hand and the spearman alike. Stack it high.", "Winter asks one question of every lord, and the granary answers it."],
+  sawmill: ["Every wall and rafter in the Reach began as a felled trunk here.", "The river turns the wheel, and the wheel turns timber into power.", "Good timber, seasoned slow, outlasts the hand that cut it."],
+  quarry: ["Stone remembers. What you build of it will outlive your banner.", "The giants were cut from stone like this, long before your line.", "Each block hauled up is another year your walls will stand."],
+  mine: ["Iron buys what gold cannot: the edge that holds when it matters.", "Deep and dark, the seam gives blades, plate, and quiet leverage.", "The forge is hungry. Feed it ore and it feeds you war."],
+  market: ["Coin moves faster than any march, and reaches farther.", "A busy market is a city that need not raid to grow rich.", "Caravans bring gold, gossip, and the occasional useful spy."],
+  barracks: ["Drill until the spear is an extension of the arm, not a burden in it.", "An army is made in the quiet yard, long before the loud field.", "Every soldier trained here is a question the enemy must answer."],
+  wall: ["A wall is a sentence the besieger must read very slowly.", "Stone does not tire, does not flee, does not ask for pay.", "Let them come. These ramparts have turned back prouder hosts."],
+  watchtower: ["Forewarned is half-defended; the tower buys you the other half.", "From up here a march is only dust on the road, hours before it bites.", "The watch never sleeps, so the hold may."],
+};
+function buildFlavor(bid, lv) { const a = BLD_FLAVOR[bid]; if (!a) return ""; return pick(a, hstr(bid) ^ ((lv | 0) * 2654435761)); }
 function pick(arr, seed) { return arr[(seed >>> 0) % arr.length]; }
 // deterministic battle resolver (Travian-style mixed-arms, no RNG)
 function combat(att, def, atkMult, defMult) {
@@ -910,7 +923,7 @@ function view(p) {
   const buildings = Object.keys(BUILD).map((bid) => {
     const lv = p.b[bid] || 0;
     return {
-      id: bid, name: BUILD[bid].name, icon: BUILD[bid].icon, desc: BUILD[bid].desc,
+      id: bid, name: BUILD[bid].name, icon: BUILD[bid].icon, desc: BUILD[bid].desc, flavor: buildFlavor(bid, lv),
       level: lv, max: BUILD[bid].max, prod: BUILD[bid].prod || null,
       cost: buildCost(bid, lv), time: Math.max(3, Math.floor(buildTime(bid, lv, keep) * buildSpeedMult(p))),
       prodNow: prodPerHour(bid, lv), prodNext: prodPerHour(bid, lv + 1),

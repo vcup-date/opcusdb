@@ -473,6 +473,7 @@ function renderBuilding(id) {
         <div class="bpover"><div class="bplv">${lvTag}</div>${b.icon === "keep" && b.level >= BLD_TIER3 ? '<div class="grandtag maj">Majestic</div>' : b.level >= BLD_TIER2 ? '<div class="grandtag">Grand</div>' : ""}</div>
       </div>
       <p class="bdesc">${b.desc}</p>
+      ${b.flavor ? `<p class="bflavor">${ic("scroll")}<span>&ldquo;${esc(b.flavor)}&rdquo;</span></p>` : ""}
       ${prodLine}
       <div class="statline"><span class="k">Build time</span><span class="v">${hms(b.time)}</span></div>
       <div class="costrow">${costHtml || '<span class="k">free</span>'}</div>

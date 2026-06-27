@@ -541,7 +541,9 @@ svg{width:18px;height:18px;vertical-align:middle}
 .grandtag{font-family:'Cinzel';font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#2a1a06;background:linear-gradient(#f4dd9a,#d3a544);border:1px solid var(--goldln);border-radius:8px;padding:3px 9px;margin-right:auto;box-shadow:0 1px 3px #000a}
 .bplv{font-family:'Cinzel';font-weight:700;font-size:13px;letter-spacing:1px;color:var(--gold2);background:#140d05cc;border:1px solid var(--gold);border-radius:8px;padding:4px 11px;text-shadow:0 1px 2px #000}
 .bplv .to{color:#bfe39f}
-.bdesc{color:#cbb88f;font-size:13.5px;line-height:1.5;margin:0 0 12px}
+.bdesc{color:#cbb88f;font-size:13.5px;line-height:1.5;margin:0 0 10px}
+.bflavor{display:flex;gap:8px;align-items:flex-start;margin:0 0 12px;padding:9px 11px;border-left:3px solid var(--gold);border-radius:8px;background:linear-gradient(90deg,#241808,#1a1006);color:#d8c08a;font-style:italic;font-size:12.5px;line-height:1.45}
+.bflavor svg{width:15px;height:15px;flex:none;stroke:var(--gold2);margin-top:1px}
 @media (max-width:760px){.bportrait{height:150px;margin:0 -13px 11px}}
 
 /* ---- the battle cinematic (fighting scene, win/lose) ---- */

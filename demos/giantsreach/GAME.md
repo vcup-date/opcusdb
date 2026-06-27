@@ -392,6 +392,19 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 53: PER-BUILDING FLAVOR, the realm's voice in the upgrade modal)
+- The most-repeated action in the game, raising a building, was mechanical: a stat line and a one-line description.
+  Added a baked flavor voice so each building has character, the roadmap's "per-building flavor".
+- Server: a BLD_FLAVOR corpus of three evocative lines per building (all nine), in the realm's medieval voice. A new
+  buildFlavor(bid, level) picks one deterministically from the building id hashed against the level, so the note
+  shifts as the building rises, and the building view now carries a flavor field. Baked static corpus, picked by
+  seed; zero AI at runtime, no em-dashes.
+- Client: the upgrade modal shows the flavor under the description as a gold-bordered italic quote with a scroll mark,
+  in the locked carved-oak style.
+- Verified END TO END: a guest's building view returned a flavor line per building; the keep's line cycled across
+  levels 1/2/3/5/10/20 (deterministic, not static); the barracks modal rendered "An army is made in the quiet yard,
+  long before the loud field." Screenshot bflavor.png. No JS errors, guest smoke clean (no regression).
+
 ## DONE (iteration 51: PRODUCTION QA SWEEP + favicon)
 - A full new-player QA pass: a BRAND-NEW guest account (not a seeded one) was walked through every major screen with
   an automated JS-error collector and a horizontal-overflow detector, screenshotting each: the splash, the steward
@@ -972,7 +985,8 @@ NEXT STEPS list below; none are blocking.
    fort card and assault dialog (iteration 48). Future: alliance ranks gating fort actions.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime; [DONE] named
-   barbarian warlords as elite map camps (iteration 39). Future: per-building flavor, event log narration.
+   barbarian warlords as elite map camps (iteration 39); [DONE] per-building flavor lines in the upgrade modal
+   (iteration 53). Future: event log narration.
 10. [DONE] MOBILE LAYOUT pass (iteration 12); [DONE] SETTINGS + accessibility (iteration 30); [DONE] in-game
     incoming-attack alerts (iteration 31). Remaining (optional): a SERVER SELECT (one realm) screen.
 11. PRODUCTION HARDENING: rate-limiting, input validation, save integrity, error states,
