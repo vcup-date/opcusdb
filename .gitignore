@@ -19,3 +19,10 @@ run-chat.sh
 # Godot import cache
 .godot/
 *.import
+
+# offline resource-generation tooling (asset baking) is kept out of the shipped product
+*_bake.py
+*_gen.py
+*_sprite.py
+gw_*.py
+audit_sprites.py

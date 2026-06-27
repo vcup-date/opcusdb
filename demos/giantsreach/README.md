@@ -28,29 +28,11 @@ Requirements: Node.js (any modern version). Nothing to install.
 
 ## Configuration
 
-The game itself needs no configuration and makes ZERO AI calls at runtime: it only serves pre-baked static
-assets. There is no AI API to wire up for playing or hosting the game.
-
-Runtime settings (environment variables):
+The game needs no configuration and makes ZERO AI calls at runtime: it only serves pre-rendered static assets, so
+there is nothing to wire up to play or host it. The only runtime settings are environment variables:
 
 - `PORT` sets the server port (default `8787`), for example `PORT=9000 node server/server.js`.
-- `RALLY_MUSTER` sets the alliance rally muster window in seconds (default `180`); useful for testing.
-
-The only place an "API" is involved is the OFFLINE asset-baking toolchain, which is run by hand when you want to
-regenerate the painterly art or the music. It is never touched while the game is running. The bake scripts (kept in
-the build notes) talk to two local services:
-
-- Art: a ComfyUI server running Qwen-Image, expected at `http://127.0.0.1:8188`. To point the bakers at a different
-  host or port, edit the `S = "127.0.0.1:8188"` line at the top of each bake script (for example
-  `bld_bake.py`, `bld_tier_bake.py`, `fort_bake.py`), and run them with your Python that has the ComfyUI client
-  deps, for example `python bld_bake.py`. Source images are pushed to ComfyUI through its `/upload/image` endpoint,
-  so no shared input folder needs configuring. The locked recipe is the slow high-quality pass: Qwen-Image, no
-  Lightning LoRA, about 24 to 26 steps, cfg 3.5.
-- Music: ACE-Step, run locally to render the theme and battle cue, then loudness-normalized and encoded to mp3 with
-  ffmpeg. SFX are procedural Web Audio and need nothing.
-
-Re-baking is entirely optional. The repository already ships every baked asset under `web/img/` and `web/audio/`,
-so the game is complete and playable as-is with no services running.
+- `RALLY_MUSTER` sets the alliance rally muster window in seconds (default `180`).
 
 ## What is in it
 
@@ -84,7 +66,7 @@ Retention and progression
 
 Presentation
 - A monetization-style shop. Purchases are SIMULATED: "buying" simply grants shards, with no payment of any kind.
-- A splash/title screen over baked key-art, a composed orchestral main theme and a battle cue (baked with ACE-Step), synthesized SFX (muted until the first click), and a Settings panel with separate music/effects volume and a reduce-motion accessibility toggle.
+- A splash/title screen over baked key-art, a composed orchestral main theme and a battle cue, synthesized SFX (muted until the first click), and a Settings panel with separate music/effects volume and a reduce-motion accessibility toggle.
 - A voice for the realm: barbarian taunts, battle narration, a steward's counsel, and a lore codex, all baked offline.
 
 ## How to play
@@ -119,11 +101,15 @@ giantsreach/
 - A per-IP sliding-window rate limit on the API, request-size and URL-length caps, method allow-listing, and static-path-traversal protection.
 - Input validation on every route: bounded numerics, name/tag patterns, a JSON body cap, and sanitized troop selections (only known units, non-negative integers) so no march can fabricate soldiers.
 
-## Offline asset baking
+## Assets
 
-- Art is baked offline with Qwen-Image via ComfyUI on a slow high-quality pass (no Lightning LoRA, ~24-26 steps, cfg 3.5) in the locked painterly style: the splash key-art, the lord portraits (which also serve as your champion's likeness), the battle backdrop, the banner-stronghold portrait, and the city growth tiers. Every building has a base portrait plus a grander tier-2 version baked img2img at moderate denoise (so the composition stays put as it visibly grows on upgrade), and the Keep rises further to a majestic tier-3 citadel at high level.
-- Music is baked offline with ACE-Step (a warm orchestral main theme and a driving battle cue), loudness-normalized and encoded to small mp3s. SFX are procedural Web Audio. All audio is created on the first user gesture and muted until then.
-- None of this runs at game time; the runtime only serves the static results.
+- All art was created offline in the locked painterly style and ships as static images under `web/img/`: the splash
+  key-art, the lord portraits (which also serve as your champion's likeness), the battle backdrop, the banner-
+  stronghold portrait, and the city growth tiers. Every building has a base portrait plus a grander tier-2 version
+  that keeps its composition as it visibly grows on upgrade, and the Keep rises further to a majestic tier-3 citadel.
+- The music (a warm orchestral main theme and a driving battle cue) was rendered offline and ships as small mp3s
+  under `web/audio/`. SFX are procedural Web Audio, created on the first user gesture and muted until then.
+- None of this runs at game time; the runtime only serves the finished static assets and never calls any model.
 
 ## Notes
 
