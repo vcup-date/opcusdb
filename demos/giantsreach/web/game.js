@@ -710,8 +710,15 @@ function renderAlliance() {
       if (o.maxed) return `<div class="aord">${esc(o.name)} ${roman(o.to)} &middot; full</div>`;
       return `<div class="aord"><span>${esc(o.name)} ${roman(o.to)} &middot; ${hmsShort(rem)} <em>(${o.helps}/${A.helpMax})</em></span><button class="ahelp" data-m="${esc(m.name)}" data-i="${o.i}">Aid</button></div>`;
     }).join("");
+    const isMe = m.name === S.name;
+    const garr = m.garrison > 0 ? `<span class="garr">${ic("shield")}${fmt(m.garrison)} garrisoned</span>` : "";
+    let reinfBtn = "";
+    if (!isMe) {
+      reinfBtn = `<button class="rbtn" data-reinf="${esc(m.name)}">Reinforce</button>`;
+      if (m.yourReinf > 0) reinfBtn += `<button class="rbtn recall" data-recall="${esc(m.name)}">Recall ${fmt(m.yourReinf)}</button>`;
+    }
     return `<div class="amem"><div class="amName">${m.leader ? ic("crown") : ""}${esc(m.name)}</div>
-      <div class="amStat">${fmt(m.might)} might &middot; Keep ${roman(m.keep)}</div>${orders ? `<div class="aords">${orders}</div>` : ""}</div>`;
+      <div class="amStat">${fmt(m.might)} might &middot; Keep ${roman(m.keep)} ${garr}</div>${orders ? `<div class="aords">${orders}</div>` : ""}${reinfBtn ? `<div class="areinf">${reinfBtn}</div>` : ""}</div>`;
   }).join("");
   const chat = (A.chat || []).map((c) => c.from ? `<div class="cmsg"><b>${esc(c.from)}</b> ${esc(c.text)}</div>` : `<div class="cmsg sys">${esc(c.text)}</div>`).join("") || `<div class="empty">No words yet. Hail your banner.</div>`;
   showModalWide(`<div class="ph">${ic("ally")} ${esc(A.name)} <span class="tagchip">${esc(A.tag)}</span> <span class="x">&times;</span></div>
@@ -731,9 +738,27 @@ function renderAlliance() {
     try { const v = await api("alliancehelp", { member: btn.dataset.m, i: +btn.dataset.i }); sfx("done"); toast("You sped " + esc(btn.dataset.m) + "'s work by " + hmsShort(v.shaved)); applyState(v); renderAlliance(); }
     catch (e) { toast(e.message, true); }
   });
+  $$("#modal [data-reinf]").forEach((btn) => btn.onclick = () => reinforceDialog(btn.dataset.reinf));
+  $$("#modal [data-recall]").forEach((btn) => btn.onclick = async () => {
+    try { const v = await api("recall", { member: btn.dataset.recall }); sfx("march"); toast(fmt(v.recalled) + " soldiers marched home"); applyState(v); renderAlliance(); }
+    catch (e) { toast(e.message, true); }
+  });
   const send = async () => { const t = $("#chat-txt").value.trim(); if (!t) return; try { const v = await api("alliancechat", { text: t }); applyState(v); renderAlliance(); } catch (e) { toast(e.message, true); } };
   $("#chat-send").onclick = send; $("#chat-txt").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
   const cl = $("#chatlog"); if (cl) cl.scrollTop = cl.scrollHeight;
+}
+function reinforceDialog(member) {
+  const rows = Object.keys(S.units).map((u) => `<div class="unitcard"><div class="em">${ic("sword")}</div><div class="mid"><div class="un">${S.units[u].name}</div><div class="st">you have ${S.troops[u] || 0} &middot; speed ${S.units[u].speed}</div></div><input type="number" min="0" max="${S.troops[u] || 0}" value="0" data-ru="${u}"/></div>`).join("");
+  showModal(`<div class="ph">${ic("ally")} Reinforce ${esc(member)} <span class="x">&times;</span></div><div class="bd">
+    <p style="color:#caa86a;text-align:center;margin-bottom:10px;font-size:13px">Send troops to garrison ${esc(member)}'s hold. They will fight in every defense until you recall them or they fall.</p>
+    ${rows}<div class="modal-actions"><button class="gbtn grn" id="do-reinf">Send to the walls</button></div></div>`);
+  modalOpen = null;
+  $("#do-reinf").onclick = async () => {
+    const troops = {}; $$("#modal [data-ru]").forEach((i) => { const n = +i.value || 0; if (n > 0) troops[i.dataset.ru] = n; });
+    if (!Object.keys(troops).length) return toast("Choose some soldiers to send.", true);
+    try { const v = await api("reinforce", { member, troops }); applyState(v); sfx("march"); toast("Your host marches to " + esc(member) + "'s aid"); openAlliance(); }
+    catch (e) { toast(e.message, true); }
+  };
 }
 function renderAllyBrowse() {
   const rows = (ALLYLIST || []).map((a) => `<div class="allyrow"><div><div class="arn">${esc(a.name)} <span class="tagchip">${esc(a.tag)}</span></div><div class="ars">${a.members} sworn &middot; ${fmt(a.might)} might</div></div><button class="gbtn grn" data-join="${esc(a.tag)}" style="padding:8px 14px">Join</button></div>`).join("") || `<div class="empty">No banners yet. Found the first.</div>`;
@@ -822,7 +847,7 @@ function renderMap() {
 // active marches drawn moving along their path on the world map
 const MAP_CELL = 30, MAP_STEP = 32; // cell + 2px gap
 function mapPos(dx, dy, R) { return [(dx + R) * MAP_STEP + MAP_CELL / 2, (dy + R) * MAP_STEP + MAP_CELL / 2]; }
-function marchColor(m) { return m.kind === "scout" ? "#6fb4d6" : m.kind === "city" ? "#e2613f" : "#f6e2a0"; }
+function marchColor(m) { return m.kind === "scout" ? "#6fb4d6" : m.kind === "reinforce" ? "#7fc25a" : m.kind === "city" ? "#e2613f" : "#f6e2a0"; }
 function buildMapMarchLayer() {
   const inner = $("#mapinner"); if (!inner || !MAP || !S) return;
   const old = $("#marchlayer"); if (old) old.remove();
@@ -930,6 +955,14 @@ function reportsHtml() {
     if (r.kind === "spotted") {
       return `<div class="repcard def"><div class="rt">Your watchtower caught a scout from <b>${esc(r.scout)}</b>. They may march on you.</div><div class="res win">SPOTTED</div></div>`;
     }
+    if (r.kind === "reinfsent") {
+      const n = Object.values(r.troops || {}).reduce((a, c) => a + c, 0);
+      return `<div class="repcard scout"><div class="rt">Sent <b>${fmt(n)}</b> soldiers to garrison <b>${esc(r.ally)}</b></div><div class="res scout">AID</div></div>`;
+    }
+    if (r.kind === "reinf") {
+      const lost = Object.values(r.lost || {}).reduce((a, c) => a + c, 0);
+      return `<div class="repcard ${r.win ? "win" : "loss"} def"><div class="rt">Your garrison at <b>${esc(r.ally)}</b> fought off <b>${esc(r.attacker)}</b> &middot; lost ${fmt(lost)} soldiers</div><div class="res ${r.win ? "win" : "loss"}">${r.win ? "HELD" : "FELL"}</div></div>`;
+    }
     if (r.kind === "defense") {
       win = r.win; label = win ? "HELD" : "RAIDED";
       const lost = Object.values(r.lost || {}).reduce((a, c) => a + c, 0);
@@ -955,9 +988,9 @@ function renderMarches() {
   const body = panel.querySelector(".mbody"); body.innerHTML = "";
   S.marches.forEach((m, i) => {
     const returning = m.resolved;
-    const scout = m.kind === "scout";
-    const dest = scout ? ("Scouting " + esc(m.target)) : m.kind === "city" ? ("War on " + esc(m.target)) : ("Raiding Lv " + m.level);
-    body.appendChild(el(`<div class="qrow"><div class="em2">${scout ? ic("map") : returning ? ic("home") : ic("sword")}</div>
+    const scout = m.kind === "scout"; const reinf = m.kind === "reinforce";
+    const dest = scout ? ("Scouting " + esc(m.target)) : reinf ? ("Aiding " + esc(m.target)) : m.kind === "city" ? ("War on " + esc(m.target)) : ("Raiding Lv " + m.level);
+    body.appendChild(el(`<div class="qrow"><div class="em2">${scout ? ic("map") : reinf ? ic("ally") : returning ? ic("home") : ic("sword")}</div>
       <div class="qmid"><div class="qnm"><span>${returning && !scout ? "Returning home" : dest}</span><span class="lv">(${m.tx}|${m.ty})</span></div>
       <div class="qt"><span class="mleft" data-mi="${i}">--</span><span>${scout ? "riding out" : returning ? "with spoils" : "marching"}</span></div></div></div>`));
   });

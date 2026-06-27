@@ -392,6 +392,25 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 27: ALLIANCE REINFORCEMENT, banding together matters in war)
+- Alliances gave a production bonus, build-help, and chat, but did not matter in battle. Now you can send
+  troops to GARRISON a banded member's hold; they join every defense of that hold until recalled or slain.
+- /api/reinforce {member, troops} launches a reinforce march (counts against the army cap, not scouts) that on
+  arrival adds the troops to the target's reinforcements garrison (keyed by sender). resolveCityAttack now
+  forms the defending host from the lord's own troops PLUS every reinforcement contingent; casualties are
+  distributed proportionally, owner losses become wounded as before, and each reinforcing ally loses their
+  share and gets a report of how the garrison fared. /api/recall {member} marches your survivors home.
+- Reports to all three parties: the attacker (their attack), the defender (the defense, now bolstered), and
+  each reinforcer (kind "reinf": held/fell + losses; plus a "reinfsent" log when troops arrive).
+- Client: the alliance roster shows each member's "N garrisoned" badge, a green Reinforce button (a troop
+  picker, "Send to the walls") and a gold Recall button when you have troops there. Reinforce marches read
+  "Aiding X", draw GREEN on the world-map overlay, and the battle log shows the new report kinds.
+- Verified END TO END with three accounts: a weak defender who would have fallen alone HELD once a banded ally
+  garrisoned 290 troops (attacker lost 85%); casualties split proportionally (the reinforcer lost 61%, same as
+  the defender), all three got their reports, and recall returned the 113 survivors. The resolver re-entrancy
+  guard handles the nested defender resolve. Screenshots reinf_roster.png (garrison + buttons) and
+  reinf_dialog.png. No JS errors, no regression.
+
 ## DONE (iteration 26: MARCHES VISUALIZED ON THE WORLD MAP)
 - Balance check first: measured the new-player early curve and it is well-tuned (starting stores cover ~15
   builds, every early build is cheap and under 69s so the first several finish FREE instantly, 2 build slots).
@@ -556,8 +575,8 @@ NEXT STEPS list below; none are blocking.
    with a transparent pity counter, hero buffs to combat/loot/march. Future: relic salvage/fusion
    to upgrade tiers, a second hero slot, set bonuses, hero skills.
 8. [DONE] ALLIANCES (banners) (iteration 13): create/join/leave/browse, timer-shaving help (max(1%,60s),
-   20 per order), +1%/member production bonus, War Table chat. Future: a shared map territory, rallies
-   (joint marches), alliance tech/treasury, member ranks.
+   20 per order), +1%/member production bonus, War Table chat; [DONE] reinforcement (iteration 27): garrison
+   a member's hold, join their defense, recall. Future: a shared map territory, joint rally marches, member ranks.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime. Future:
    per-building flavor, named barbarian warlords, event log narration.

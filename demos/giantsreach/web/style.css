@@ -573,3 +573,11 @@ svg{width:18px;height:18px;vertical-align:middle}
 .ptile.sel .pnm{color:var(--gold2)}
 .ptile.sel::after{content:"\2713";position:absolute;top:5px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--grn);color:#11250a;font-weight:900;font-size:12px;display:grid;place-items:center;box-shadow:0 2px 5px #0008}
 @media (max-width:760px){.pgrid{grid-template-columns:repeat(2,1fr)}}
+
+/* ---- alliance reinforcement ---- */
+.amStat .garr{display:inline-flex;align-items:center;gap:3px;margin-left:8px;color:#bfe39f;font-size:12px}
+.amStat .garr svg{width:13px;height:13px;stroke:#7fc25a}
+.areinf{display:flex;gap:6px;margin-top:7px}
+.rbtn{font-family:'Cinzel';font-weight:700;font-size:11px;color:#11250a;background:linear-gradient(#a6e07a,#5d9e36);border:none;border-radius:7px;padding:4px 11px;cursor:pointer;box-shadow:0 2px 0 var(--grnln)}
+.rbtn:hover{filter:brightness(1.07)}.rbtn:active{transform:translateY(1px);box-shadow:none}
+.rbtn.recall{color:#2a1a06;background:linear-gradient(#f4dd9a,#d3a544);box-shadow:0 2px 0 var(--goldln)}

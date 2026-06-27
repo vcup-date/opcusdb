@@ -377,7 +377,10 @@ function allianceView(p) {
     tag: a.tag, name: a.name, leader: a.leader, created: a.created, bonus: allyProdBonus(p),
     members: (a.members || []).map((m) => {
       const q = db.players[m]; if (q) resolve(q);
-      return { name: m, might: q ? might(q) : 0, keep: q ? (q.b.keep || 1) : 1, leader: m === a.leader, orders: m === p.name ? [] : memberOrders(m, p.name) };
+      const reinf = (q && q.reinforcements) || {};
+      let garrison = 0; for (const f in reinf) for (const u in reinf[f]) garrison += reinf[f][u] || 0;
+      let yourReinf = 0; const mine = reinf[p.name]; if (mine) for (const u in mine) yourReinf += mine[u] || 0;
+      return { name: m, might: q ? might(q) : 0, keep: q ? (q.b.keep || 1) : 1, leader: m === a.leader, orders: m === p.name ? [] : memberOrders(m, p.name), garrison, yourReinf };
     }).sort((x, y) => y.might - x.might),
     chat: (a.chat || []).slice(-30),
     helpMax: HELP_MAX,
@@ -454,7 +457,7 @@ function newPlayer(name) {
     life: { raidsWon: 0, looted: 0, trained: 0, peakMight: 0, logins: 0 }, achv: {},
     vip: { points: 0, lastDaily: 0 },
     season: { id: -1, xp: 0, level: 0, claimed: [], claimedP: [], premium: false },
-    alliance: null,
+    alliance: null, reinforcements: {},
   };
 }
 // resolve a player-vs-player city attack on arrival (deterministic; mutates both attacker and defender)
@@ -469,7 +472,11 @@ function resolveCityAttack(p, m, now) {
   resolve(d); // bring the defender current before the blow lands
   const hb = heroBonusOf(p);
   const defMult = 1 + (d.b.wall || 0) * WALL_DEF;
-  const r = combat(m.troops, d.t, 1 + hb.atk / 100, defMult);
+  // the defending host is the lord's own troops plus every allied reinforcement garrisoned with them
+  const reinf = d.reinforcements || {};
+  const defArmy = {}; for (const u in d.t) defArmy[u] = d.t[u] || 0;
+  for (const from in reinf) for (const u in reinf[from]) defArmy[u] = (defArmy[u] || 0) + (reinf[from][u] || 0);
+  const r = combat(m.troops, defArmy, 1 + hb.atk / 100, defMult);
   const attLossF = r.attWins ? r.winnerLoss : r.loserLoss;
   const defLossF = r.attWins ? r.loserLoss : r.winnerLoss;
   // attacker survivors + carry capacity
@@ -479,6 +486,14 @@ function resolveCityAttack(p, m, now) {
   const defLost = {};
   for (const u in d.t) { const k = Math.max(0, Math.round((d.t[u] || 0) * defLossF)); if (k) { defLost[u] = k; d.t[u] -= k; } }
   addWounded(d, woundedFromLost(defLost));
+  // reinforcements take their share of the losses; each ally is told how their host fared
+  for (const from in reinf) {
+    const lost = {}; let any = false;
+    for (const u in reinf[from]) { const k = Math.max(0, Math.round((reinf[from][u] || 0) * defLossF)); if (k) { lost[u] = k; reinf[from][u] -= k; any = true; } }
+    if (Object.values(reinf[from]).every((v) => !v)) delete reinf[from];
+    const fp = db.players[from];
+    if (fp && any) { fp.reports.unshift({ time: now, kind: "reinf", ally: m.target, attacker: p.name, win: !r.attWins, lost }); fp.reports = fp.reports.slice(0, 25); }
+  }
   // spoils: a victor carries off part of the defender's stores, capped by surviving carry
   const loot = {}; let looted = 0;
   if (r.attWins) {
@@ -518,6 +533,17 @@ function resolveScout(p, m, now) {
   p.reports = p.reports.slice(0, 25);
   m.resolved = true;
 }
+// reinforcements arrive and garrison with an allied lord (they stay until recalled or slain)
+function resolveReinforce(p, m, now) {
+  const d = db.players[m.target];
+  if (!d || d.alliance !== p.alliance || !p.alliance) { m.surv = Object.assign({}, m.troops); m.resolved = true; m.ret = now; return; } // ally gone or unbanded -> troops come home
+  if (!d.reinforcements) d.reinforcements = {};
+  const g = d.reinforcements[p.name] || {};
+  for (const u in m.troops) g[u] = (g[u] || 0) + (m.troops[u] || 0);
+  d.reinforcements[p.name] = g;
+  p.reports.unshift({ time: now, kind: "reinfsent", ally: m.target, troops: Object.assign({}, m.troops) }); p.reports = p.reports.slice(0, 25);
+  m.resolved = true; m.ret = now; // garrisoned, no return leg
+}
 // resolve all time-based state up to now (lazy, deterministic, survives restarts)
 const resolving = new Set(); // re-entrancy guard: a scout/attack resolves its target, which must not recurse back
 function resolve(p) {
@@ -552,6 +578,7 @@ function resolveInner(p) {
     for (let i = p.marches.length - 1; i >= 0; i--) {
       const m = p.marches[i];
       if (!m.resolved && now >= m.arrive && m.kind === "scout") resolveScout(p, m, now);
+      if (!m.resolved && now >= m.arrive && m.kind === "reinforce") resolveReinforce(p, m, now);
       if (!m.resolved && now >= m.arrive && m.kind === "city") resolveCityAttack(p, m, now);
       if (!m.resolved && now >= m.arrive) {
         const def = campGarrison(m.level);
@@ -1034,6 +1061,37 @@ const ROUTES = {
     const a = allyOf(p); if (!a) return send(res, 400, { err: "You hold no banner." });
     const text = (b.text || "").trim(); if (!text) return send(res, 400, { err: "Say something." });
     allyChatPush(a, n, text); save(); send(res, 200, view(p));
+  },
+  // ---- send troops to garrison and defend a banded member's hold ----
+  "POST /api/reinforce": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p);
+    const a = allyOf(p); if (!a) return send(res, 400, { err: "You hold no banner." });
+    const member = b.member; if (member === n) return send(res, 400, { err: "Reinforce a fellow member, not yourself." });
+    if (!a.members.includes(member)) return send(res, 400, { err: "Not in your banner." });
+    const d = db.players[member]; if (!d) return send(res, 400, { err: "No such member." });
+    const troops = b.troops || {};
+    for (const u in troops) if ((troops[u] | 0) > (p.t[u] || 0)) return send(res, 400, { err: "You do not have that many " + (UNITS[u] ? UNITS[u].name : u) + "." });
+    if (unitsCount(troops) <= 0) return send(res, 400, { err: "Send at least one soldier." });
+    const cap = marchCap(p);
+    if ((p.marches || []).filter((m) => m.kind !== "scout").length >= cap) return send(res, 400, { err: "All your marches are out (" + cap + " max)." });
+    const dist = Math.hypot(d.x - p.x, d.y - p.y); let speed = Infinity;
+    for (const u in troops) if (troops[u]) speed = Math.min(speed, UNITS[u].speed);
+    const travel = Math.max(12, Math.round(dist / speed * 400 / (1 + vipPerks(p).march / 100)));
+    for (const u in troops) p.t[u] -= troops[u] | 0;
+    const now = NOW();
+    p.marches.push({ kind: "reinforce", target: member, tx: d.x, ty: d.y, troops: Object.assign({}, troops), depart: now, arrive: now + travel, ret: now + travel, resolved: false });
+    save(); send(res, 200, view(p));
+  },
+  "POST /api/recall": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p);
+    const member = b.member; const d = db.players[member];
+    if (!d || !d.reinforcements || !d.reinforcements[n]) return send(res, 400, { err: "You have no troops there." });
+    const g = d.reinforcements[n]; let total = 0;
+    for (const u in g) { p.t[u] = (p.t[u] || 0) + (g[u] || 0); total += g[u] || 0; }
+    delete d.reinforcements[n];
+    save(); send(res, 200, Object.assign({ recalled: total }, view(p)));
   },
 };
 
