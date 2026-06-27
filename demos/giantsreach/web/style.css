@@ -254,7 +254,10 @@ svg{width:18px;height:18px;vertical-align:middle}
 
 /* ---- the Forge: hero, equipment, relics (tiered) ---- */
 .herobar{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1.5px solid var(--gold);border-radius:12px;background:linear-gradient(#241808,#170f06);margin-bottom:14px}
-.hportrait{position:relative;width:54px;height:54px;border-radius:11px;border:2px solid var(--gold);background:radial-gradient(circle at 38% 30%,#7a5a2e,#241608);display:grid;place-items:center;flex:none;box-shadow:0 0 14px #f6e2a044}
+.hportrait{position:relative;width:54px;height:54px;border-radius:11px;border:2px solid var(--gold);background:radial-gradient(circle at 38% 30%,#7a5a2e,#241608);display:grid;place-items:center;flex:none;box-shadow:0 0 14px #f6e2a044;overflow:visible}
+.hportrait img{width:100%;height:100%;object-fit:cover;border-radius:9px;display:block}
+.hportrait .hpfall{display:none}.hportrait.noface .hpfall{display:grid;place-items:center}
+.hportrait .hpfall svg{width:26px;height:26px;stroke:var(--gold2)}
 .hportrait .hlvl{position:absolute;right:-6px;bottom:-6px;background:var(--ink);border:1.5px solid var(--gold);color:var(--gold2);font-family:'Cinzel';font-weight:700;font-size:11px;border-radius:7px;padding:1px 5px}
 .hinfo{flex:1}.hname{font-family:'Cinzel';font-weight:700;color:var(--gold2);font-size:14px;margin-bottom:6px}
 .xpbar{height:7px;border-radius:4px;background:#0c0a05;border:1px solid #00000088;overflow:hidden}.xpbar i{display:block;height:100%;background:linear-gradient(90deg,#7fc25a,#cfe89a)}

@@ -392,6 +392,19 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 44: THE CHAMPION GETS A FACE in the Forge)
+- The Forge hero bar, the most-opened progression screen (relics, traits, panoply, fusion, rally leadership), showed
+  the Champion as a faceless shield glyph. That was the single most glaring remaining art gap, on a high-traffic
+  screen. Gave the Champion a portrait.
+- The most coherent fix uses the locked, already-baked art: the Champion now wears the player's CHOSEN lord likeness
+  (the lord0-3 portrait picked at founding), so "Your Champion" is unmistakably YOU. The hero bar renders the chosen
+  lord portrait in the existing gilt frame with the level badge, with a graceful fallback to the old shield glyph if
+  the image ever fails. No new bake was needed and a generic baked face would have been LESS coherent than the
+  founding choice, so this reuse is the right design, not a shortcut. Runtime stays a static image; zero AI at runtime.
+- Verified END TO END: a Hero with portrait 2 (the Lady Commander) shows lord2.png in the Forge hero bar (image
+  loaded, framed, with the Level XXII badge), reflecting the founding choice. Screenshot hero-face.png. No JS errors,
+  guest smoke clean (no regression).
+
 ## DONE (iteration 43: MOBILE POLISH SWEEP + coach-bubble fix)
 - Audited every newer panel at a 390px phone viewport with an automated horizontal-overflow detector: the Forge
   (hero bar, Champion's Traits, fusion/salvage bars, relic stash), the Banners panel (rally card + rank chips +

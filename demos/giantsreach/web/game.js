@@ -614,7 +614,7 @@ function renderForge() {
   showModalWide(`<div class="ph">${ic("anvil")} The Forge &amp; the Hero <span class="x">&times;</span></div>
     <div class="bd">
       <div class="herobar">
-        <div class="hportrait">${ic("shield")}<div class="hlvl">${roman(h.level)}</div></div>
+        <div class="hportrait"><img src="img/lord/lord${S.portrait || 0}.png" alt="" onerror="this.style.display='none';this.parentElement.classList.add('noface')"/><span class="hpfall">${ic("shield")}</span><div class="hlvl">${roman(h.level)}</div></div>
         <div class="hinfo"><div class="hname">Your Champion &middot; Level ${h.level} <span class="panoply" title="A flat bonus to every stat, growing as you fill the four slots with finer relics">Panoply +${hb.panoply || 0} <span class="pn">(${hb.slotsFilled || 0}/4)</span></span></div>
           <div class="xpbar"><i style="width:${Math.min(100, 100 * h.xp / h.xpNeed)}%"></i></div>
           <div class="hbonus">${bonusLine}</div></div>
