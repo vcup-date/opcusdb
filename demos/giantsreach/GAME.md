@@ -392,6 +392,23 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 58: FORT-ECONOMY BALANCE, a high stronghold is now a real fortress)
+- A data-driven audit of the territory economy found a concrete imbalance: the stronghold build cost grows
+  exponentially (6000 * 1.55^level, ~552k resources cumulative to reach level 10) but the NPC garrison floor grew only
+  LINEARLY (85 troops/level), so an ungarrisoned level-10 fort fell to about 560 swordsmen (~45k resources), roughly a
+  twelfth of its build cost. Tall forts were trivially cheap to chip down when undefended.
+- Fix: the standing garrison now scales super-linearly so the defense tracks the investment. fortGarrison adds a
+  quadratic term per arm (spearman 40L + 9L^2, archer 30L + 7L^2, swordsman 15L + 4L^2, and knights 3L^2 from level 5)
+  and fortDefMult steepens from 1.35 + 0.05L to 1.4 + 0.07L. A level-10 fort now fields about 3,150 NPC defenders
+  (was 850) and needs roughly 2,400 swordsmen to crack ungarrisoned, while low forts stay accessible (a level-2 fort
+  still falls to about 140). The mixed garrison (knights have high anti-infantry defense, spearmen high anti-cavalry)
+  holds against either attacking arm. Change is isolated to forts; camp, warlord, and PvP combat are untouched.
+- Verified END TO END via simulation and LIVE assaults: a modest 900-knight host was REPELLED by a level-6 fort (87%
+  losses, its spearmen crushing the cavalry), while a serious 4,000-swordsman host with a strong champion CRACKED a
+  level-8 fort but bled 20% doing it, so forts are defensible yet still takeable by a real army. The assault dialog
+  shows the heavier garrison (a level-9 fort lists 2,628 defenders). Screenshot fort-balance.png. Guest smoke clean
+  (no regression), no em-dashes. (Note: fort marches take the full travel time to resolve, so reports lag the send.)
+
 ## DONE (iteration 57: THE SEASON TURNS, a recap when a season closes)
 - The 30-day season pass rolled over SILENTLY (seasonSync just wiped the old season when its id changed), so the
   season cycle had no climax and a returning player never learned how their season ended. Added a one-time

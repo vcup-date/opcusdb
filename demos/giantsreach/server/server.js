@@ -461,8 +461,10 @@ function findEmptyNear(cx, cy) { // spiral out from a city to the nearest open m
   return null;
 }
 function fortAt(x, y) { for (const t in db.alliances) { const a = db.alliances[t]; if (a.fort && a.fort.x === x && a.fort.y === y) return a; } return null; }
-function fortGarrison(level) { return { spearman: 40 * level, archer: 30 * level, swordsman: 15 * level }; } // the stronghold's standing defenders, by level
-function fortDefMult(level) { return 1.35 + 0.05 * level; } // forts are fortified, and sturdier the taller they stand
+// the stronghold's standing defenders, scaled super-linearly so a high fort is a real fortress even ungarrisoned
+// (the build cost grows exponentially; a purely linear garrison floor left tall forts far too cheap to chip down)
+function fortGarrison(level) { const l = level | 0; return { spearman: 40 * l + 9 * l * l, archer: 30 * l + 7 * l * l, swordsman: 15 * l + 4 * l * l, knight: l >= 5 ? 3 * l * l : 0 }; }
+function fortDefMult(level) { return 1.4 + 0.07 * level; } // forts are fortified, and sturdier the taller they stand
 const FORT_SHIELD = 1800; // 30 min of rebuilding after a stronghold is stormed
 function allyHelpShave(total) { return Math.max(HELP_MIN, Math.round(total * HELP_FRACTION)); }
 function allyRank(a, name) { return a.leader === name ? "leader" : (a.officers || []).includes(name) ? "officer" : "member"; }
