@@ -392,6 +392,22 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 42: PER-BUILDING VISUAL TIERS, the baked painterly art pass)
+- Building portraits were a single static painting regardless of level, so upgrading never changed how a building
+  looked. Baked a grander tier-2 portrait for ALL NINE buildings so the most-repeated action (upgrading) is visibly
+  rewarded. This is the roadmap's "per-building visual tiers", and the remaining locked-art item.
+- Baked OFFLINE with Qwen-Image via ComfyUI (127.0.0.1:8188), the locked slow high-quality pass (26 steps, cfg 3.5,
+  no Lightning LoRA) as img2img from each existing portrait at a moderate 0.5 denoise, so the composition is kept and
+  each grand version unmistakably reads as the SAME building grown greater (more towers, fuller, richer, prouder), in
+  the locked painterly golden-hour style. Source portraits were uploaded through ComfyUI's /upload/image so no input
+  path was assumed. Saved as web/img/bld/<name>2.png. Pipeline: scratchpad/bld_tier_bake.py (reusable for re-bakes).
+- Client: the building modal loads the grand portrait at level BLD_TIER2 (10) and up, with a graceful fallback chain
+  (tier2 -> tier1 -> the woodcut icon) so a missing bake never breaks the screen; a gilt double-border frame and a
+  gold "Grand" tag mark the upgraded art. Runtime stays a static image swap; zero AI at game time.
+- Verified END TO END: a level-15 Keep and level-11 Barracks both showed their tier-2 portrait with the Grand frame
+  and tag (keep2/barracks2.png), while a level-9 Sawmill correctly stayed on its tier-1 art; all nine PNGs baked and
+  non-empty. Screenshots grand-keep.png / grand-barracks.png. No JS errors, guest smoke clean (no regression).
+
 ## DONE (iteration 41: BANNER RANKS, officers and a transferable leadership)
 - The alliance had no internal structure: every member was equal and only the founder was nominally "leader" with no
   powers. Added member ranks (the roadmap's last alliance gap): leader, officer, and member, with a real permission
@@ -788,7 +804,7 @@ NEXT STEPS list below; none are blocking.
    tutorial bullet-proof, screenshot-verify each screen.
 2. ART: [DONE] dedicated splash/title key-art (iteration 11); [DONE] painterly building portraits in the
    upgrade modal (iteration 17); [DONE] city image that grows with keep level via img2img tiers (iteration 24).
-   Remaining (optional): a Founder/lord portrait, per-building visual tiers. All painterly, offline.
+   [DONE] per-building grand visual tiers via img2img (iteration 42). Remaining (optional): a Founder/lord portrait variety. All painterly, offline.
 3. SOUND + MUSIC: bake an ambient town theme + UI clicks/build-complete/coin/level sfx (offline);
    muted until first click; a mute toggle. Splash video via LTX if viable.
 4. [DONE] WORLD MAP + MARCHES + COMBAT (iteration 2); [DONE] PvP city attacks with a beginner shield

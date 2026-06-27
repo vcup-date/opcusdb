@@ -498,7 +498,9 @@ svg{width:18px;height:18px;vertical-align:middle}
 .bportrait img{width:100%;height:100%;object-fit:cover;display:block}
 .bportrait.noart img{width:auto;height:128px;margin:30px auto 0;object-fit:contain;mix-blend-mode:normal;filter:drop-shadow(0 6px 14px #000a)}
 .bportrait::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 -40px 50px -10px #160d05,inset 0 0 0 1px #c8a45822}
-.bpover{position:absolute;left:0;right:0;bottom:0;padding:18px 16px 10px;display:flex;justify-content:flex-end}
+.bportrait.grand::after{box-shadow:inset 0 -40px 50px -10px #160d05,inset 0 0 0 2px var(--gold),inset 0 0 26px -2px #f6e2a055}
+.bpover{position:absolute;left:0;right:0;bottom:0;padding:18px 16px 10px;display:flex;justify-content:flex-end;align-items:flex-end;gap:8px}
+.grandtag{font-family:'Cinzel';font-weight:800;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#2a1a06;background:linear-gradient(#f4dd9a,#d3a544);border:1px solid var(--goldln);border-radius:8px;padding:3px 9px;margin-right:auto;box-shadow:0 1px 3px #000a}
 .bplv{font-family:'Cinzel';font-weight:700;font-size:13px;letter-spacing:1px;color:var(--gold2);background:#140d05cc;border:1px solid var(--gold);border-radius:8px;padding:4px 11px;text-shadow:0 1px 2px #000}
 .bplv .to{color:#bfe39f}
 .bdesc{color:#cbb88f;font-size:13.5px;line-height:1.5;margin:0 0 12px}
