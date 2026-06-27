@@ -524,3 +524,18 @@ svg{width:18px;height:18px;vertical-align:middle}
 .bstats .bl{display:inline-flex;align-items:center;gap:3px;color:var(--gold2);font-weight:600;margin-left:4px}
 .bstats .bl .ic svg{width:16px;height:16px}
 #battle .gbtn{font-size:16px;padding:13px 30px}
+
+/* ---- first-session onboarding: welcome + coach bubbles ---- */
+.welcome{text-align:center}
+.welcome .wcrest{width:66px;height:66px;margin:4px auto 10px;border-radius:50%;border:2px solid var(--gold);background:radial-gradient(circle at 40% 32%,#caa244,#3a2710);display:grid;place-items:center;box-shadow:0 0 24px #f6e2a055}
+.welcome .wcrest svg{width:34px;height:34px;stroke:#3a2710}
+.welcome .wh{font-family:'Cinzel';color:var(--gold2);font-size:21px;margin-bottom:12px}
+.welcome p{color:#cbb88f;font-size:14px;line-height:1.55;margin-bottom:11px;max-width:470px;margin-inline:auto}
+.welcome .modal-actions{margin-top:14px}
+#tutorial .bubble{animation:bubblein .3s ease}
+@keyframes bubblein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+#tutorial .bubble::after{content:"";position:absolute;width:0;height:0;border-style:solid;border-color:transparent}
+#tutorial .bubble.a-u::after{top:-14px;left:28px;border-width:0 8px 14px 8px;border-bottom-color:var(--gold)}
+#tutorial .bubble.a-d::after{bottom:-14px;left:28px;border-width:14px 8px 0 8px;border-top-color:var(--gold)}
+#tutorial .bubble.a-l::after{left:-14px;top:18px;border-width:8px 14px 8px 0;border-right-color:var(--gold)}
+#tutorial .bubble.a-r::after{right:-14px;top:18px;border-width:8px 0 8px 14px;border-left-color:var(--gold)}

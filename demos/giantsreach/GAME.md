@@ -392,6 +392,20 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 20: ONBOARDING, a real first-session tutorial)
+- The tutorial was just a pulsing ring + a bottom objective line. Built a proper first-session ONBOARDING.
+- A warm steward WELCOME modal on the very first entry (gated by p.tutorial < 1): a gold crest, a personalized
+  greeting that sets the fallen-giants premise, what you will do (grow, wall, drill, march), and a "Take up the
+  banner" button that records tutorial step 1 server-side so it never shows again.
+- Coach BUBBLES: the objective spotlight now renders a tooltip anchored to the highlighted element (not just
+  the far-off bottom bar), with the step title + instruction and a gold pointer arrow that picks the roomy side
+  (left/right/above/below) and clamps to the viewport. It rides the existing objective ladder (raise the Keep,
+  grow grain, claim the daily gift, build a barracks, train a host, ...) through the early game, and hides once
+  a modal is open or the player passes the early game.
+- Verified END TO END: a fresh guest gets the welcome (tutorial 0); "Take up the banner" advances to tutorial 1
+  and the coach bubble appears anchored over the Keep ("Raise the Keep"); reloading as a returning player does
+  NOT show the welcome again (persisted). Screenshots tut_welcome.png + tut_bubble.png. No JS errors.
+
 ## DONE (iteration 19: BATTLE CINEMATIC + UI fixes + relocation into the project)
 - Project RELOCATED into the realdb project at demos/giantsreach (isolated alongside the other sample demos),
   per the user. The server is path-independent (paths are __dirname-relative) and runs unchanged from the new

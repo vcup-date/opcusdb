@@ -99,6 +99,23 @@ async function enterGame() {
   $("#auth").classList.add("hidden"); $("#game").classList.remove("hidden");
   initIcons(); updateMuteIcon();
   await sync(); setupTown(); buildHotbar(); loop(); setInterval(sync, 3500);
+  maybeWelcome();
+}
+// first-session onboarding: a warm steward welcome, then the coached objective bubbles take over
+function maybeWelcome() {
+  if (!S || (S.tutorial || 0) >= 1) return;
+  showModal(`<div class="ph">${ic("scroll")} A Steward's Welcome <span class="x">&times;</span></div>
+    <div class="bd welcome">
+      <div class="wcrest">${ic("shield")}</div>
+      <h2 class="wh">Welcome, my lord ${esc(S.name)}.</h2>
+      <p>This is your hold, raised among the bones of the fallen giants. Their carved heads break the far hills like buried moons, and the world they once carried is ours to keep now.</p>
+      <p>Grow your stores, raise your walls, drill a host, and march on the barbarian camps that prowl the Reach. I will point the way at each step. The rest, you will make your own.</p>
+      <div class="modal-actions"><button class="gbtn grn" id="w-begin">Take up the banner</button></div>
+    </div>`);
+  modalOpen = null;
+  const done = async () => { closeModal(); try { const v = await api("tutorial", { step: 1 }); S.tutorial = v.tutorial; renderObjective(); } catch (e) {} };
+  $("#w-begin").onclick = done;
+  const x = $("#modal .x"); if (x) x.onclick = done;
 }
 
 // ---- sync + interpolation ----
@@ -310,12 +327,22 @@ function objective() {
 function renderObjective() {
   const o = objective();
   $("#obj-title").textContent = o.t; $("#obj-desc").textContent = o.d;
-  // tutorial spotlight only during early game
-  const tut = $("#tutorial"); const early = keepLv() < 5 || (S.tutorial || 0) < 6;
-  if (early && o.sel && $(o.sel)) {
+  // tutorial spotlight + coach bubble only during early game (and not while a modal or the welcome is up)
+  const tut = $("#tutorial"); const early = (keepLv() < 5 || (S.tutorial || 0) < 6) && (S.tutorial || 0) >= 1;
+  const target = o.sel && $(o.sel);
+  if (early && target && !modalOpen && $("#modal").classList.contains("hidden")) {
     tut.classList.remove("hidden");
-    const r = $(o.sel).getBoundingClientRect();
-    tut.innerHTML = `<div class="ring" style="left:${r.left - 6}px;top:${r.top - 6}px;width:${r.width + 12}px;height:${r.height + 12}px"></div>`;
+    const r = target.getBoundingClientRect();
+    const vw = innerWidth, vh = innerHeight, bw = Math.min(260, vw - 24);
+    // place the bubble on the roomy side of the highlighted element, clamped to the viewport
+    let left, top, arrow;
+    if (r.left > vw * 0.55) { left = r.left - bw - 16; top = r.top; arrow = "r"; }        // element on the right -> bubble left
+    else if (r.right < vw * 0.45) { left = r.right + 16; top = r.top; arrow = "l"; }       // element on the left -> bubble right
+    else if (r.top > vh * 0.5) { left = r.left + r.width / 2 - bw / 2; top = r.top - 120; arrow = "d"; } // bottom -> bubble above
+    else { left = r.left + r.width / 2 - bw / 2; top = r.bottom + 14; arrow = "u"; }
+    left = Math.max(12, Math.min(vw - bw - 12, left)); top = Math.max(70, Math.min(vh - 150, top));
+    tut.innerHTML = `<div class="ring" style="left:${r.left - 6}px;top:${r.top - 6}px;width:${r.width + 12}px;height:${r.height + 12}px"></div>
+      <div class="bubble a-${arrow}" style="left:${left}px;top:${top}px;width:${bw}px"><h4>${esc(o.t)}</h4><p>${esc(o.d)}</p></div>`;
   } else tut.classList.add("hidden");
 }
 
