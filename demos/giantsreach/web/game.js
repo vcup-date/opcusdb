@@ -438,8 +438,8 @@ function renderObjective() {
 }
 
 // ---- modal framework ----
-function showModal(html) { const m = $("#modal"); m.classList.remove("hidden"); m.innerHTML = `<div class="sheet panel">${html}</div>`; const x = m.querySelector(".x"); if (x) x.onclick = closeModal; m.onclick = (e) => { if (e.target === m) closeModal(); }; }
-function closeModal() { $("#modal").classList.add("hidden"); $("#modal").innerHTML = ""; modalOpen = null; }
+function showModal(html) { const m = $("#modal"); const t = $("#tutorial"); if (t) t.classList.add("hidden"); m.classList.remove("hidden"); m.innerHTML = `<div class="sheet panel">${html}</div>`; const x = m.querySelector(".x"); if (x) x.onclick = closeModal; m.onclick = (e) => { if (e.target === m) closeModal(); }; }
+function closeModal() { $("#modal").classList.add("hidden"); $("#modal").innerHTML = ""; modalOpen = null; if (S) renderObjective(); }
 function refreshModal() { if (modalOpen) modalOpen(); }
 
 // building upgrade modal
@@ -999,7 +999,7 @@ $("#rl-shop").onclick = openShop;
 { const dh = $("#drawerhandle"); if (dh) dh.onclick = () => $("#right").classList.toggle("open"); }
 
 // ---- world map + marches + reports ----
-function showModalWide(html) { const m = $("#modal"); m.classList.remove("hidden"); m.innerHTML = `<div class="sheet wide panel">${html}</div>`; const x = m.querySelector(".x"); if (x) x.onclick = closeModal; m.onclick = (e) => { if (e.target === m) closeModal(); }; }
+function showModalWide(html) { const m = $("#modal"); const t = $("#tutorial"); if (t) t.classList.add("hidden"); m.classList.remove("hidden"); m.innerHTML = `<div class="sheet wide panel">${html}</div>`; const x = m.querySelector(".x"); if (x) x.onclick = closeModal; m.onclick = (e) => { if (e.target === m) closeModal(); }; }
 let MAP = null;
 let mapView = { z: 1, px: 0, py: 0, _init: false };
 async function openMap() { try { MAP = await api("map"); } catch (e) { return toast(e.message, true); } mapView._init = false; renderMap(); modalOpen = null; }

@@ -392,6 +392,22 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 43: MOBILE POLISH SWEEP + coach-bubble fix)
+- Audited every newer panel at a 390px phone viewport with an automated horizontal-overflow detector: the Forge
+  (hero bar, Champion's Traits, fusion/salvage bars, relic stash), the Banners panel (rally card + rank chips +
+  management buttons), the warlord raid dialog, and the map. All were overflow-free and the alliance grid already
+  collapses to a single column, so the newer screens hold up on mobile.
+- Fixed a real defect found in the sweep that affected ALL screen sizes: the early-game coached objective bubble
+  (rendered in #tutorial) lingered ON TOP of an open modal, because it was only re-evaluated on the next state sync.
+  showModal and showModalWide now hide the bubble the instant any modal opens, and closeModal re-renders the
+  objective so it returns immediately when the modal closes (no wait for the next sync).
+- Tightened dual-action dialogs on narrow screens: the warlord raid dialog's two buttons (Call a rally / Send the
+  march) wrapped to two lines at 390px; a small max-width:430px rule trims the modal-action button font so each label
+  now sits on one line (both buttons a clean 44px).
+- Verified END TO END at 390px: the coach bubble is HIDDEN with the Forge open and RETURNS after closing it; no panel
+  exceeds the viewport width; the warlord buttons are single-line. Screenshots m-forge.png / m-ally.png / m-warlord2.png.
+  No JS errors, guest smoke clean (no regression).
+
 ## DONE (iteration 42: PER-BUILDING VISUAL TIERS, the baked painterly art pass)
 - Building portraits were a single static painting regardless of level, so upgrading never changed how a building
   looked. Baked a grander tier-2 portrait for ALL NINE buildings so the most-repeated action (upgrading) is visibly
