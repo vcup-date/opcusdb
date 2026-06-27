@@ -392,6 +392,23 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 47: FORT GARRISONING, members defend the stronghold with real troops)
+- A stronghold's defense was a fixed garrison by level, so members could not actively defend it and an assault was a
+  formality. Members can now station their own troops in the banner stronghold, making fort defense a real, contested
+  asset that the banner stocks and risks together.
+- Server: /api/fortgarrison marches a member's host to their own stronghold (kind "fortgarrison"); on arrival the
+  troops join a.fort.garrison[name] and stay until recalled or slain. /api/fortrecall pulls a member's survivors home
+  instantly. The assault resolver now combines the standing garrison AND every garrisoned troop into the defense, so
+  a well-stocked fort genuinely repels attackers; the garrisoned troops take the defender's share of the casualties
+  (and are lost with the fort if it is razed). allianceView reports the total and your own garrison; defense reports
+  now show how many of your garrison fell.
+- Client: the stronghold card gained a garrison line (total and yours) with Garrison Troops and Recall buttons, a
+  garrison troop-picker dialog, and report cards for garrisoning and for garrison losses in a defense.
+- Verified END TO END: a member garrisoned 2000 knights into the level-3 fort (deposited after travel; alliance view
+  showed garrison 2000); a rival's 4000-knight assault still won but lost 14% to the bolstered defense (vs near zero
+  against an empty fort), the garrison fell from 2000 to 453, the defense report read lostGarrison 1547, and the
+  defender recalled the 453 survivors home. Screenshot fort-garrison.png. No JS errors, guest smoke clean (no regression).
+
 ## DONE (iteration 46: CONTESTABLE STRONGHOLDS, alliance-vs-alliance war on the map)
 - The Banner Stronghold gave alliances a map presence but it was untouchable, so there were no territorial stakes.
   Made rival strongholds contestable: a host can now march on an enemy banner's fortress and batter it down.
@@ -889,7 +906,8 @@ NEXT STEPS list below; none are blocking.
    a member's hold, join their defense, recall; [DONE] joint rally marches on warlords (iteration 40); [DONE]
    member ranks: officers + transferable leadership + moderation (iteration 41); [DONE] the Banner Stronghold, a
    shared map fortress raised by pledges for an alliance-wide march buff (iteration 45); [DONE] rival strongholds are
-   contestable, battered down a level per assault and razable (iteration 46). Future: garrisoning troops into a fort.
+   contestable, battered down a level per assault and razable (iteration 46); [DONE] members garrison their own troops
+   into the stronghold to defend it, with recall (iteration 47). Future: a baked stronghold portrait.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime; [DONE] named
    barbarian warlords as elite map camps (iteration 39). Future: per-building flavor, event log narration.

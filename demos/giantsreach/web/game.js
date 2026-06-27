@@ -864,6 +864,20 @@ function renderAlliance() {
   const rj = $("#rally-join"); if (rj) rj.onclick = () => rallyCommitDialog("join");
   const ff = $("#fort-found"); if (ff) ff.onclick = async () => { try { const v = await api("fortfound", {}); sfx("build"); toast("Your banner stronghold rises"); applyState(v); renderAlliance(); } catch (e) { toast(e.message, true); } };
   const fd = $("#fort-donate"); if (fd) fd.onclick = () => fortDonateDialog();
+  const fg = $("#fort-garrison"); if (fg) fg.onclick = () => fortGarrisonDialog();
+  const fr = $("#fort-recall"); if (fr) fr.onclick = async () => { try { const v = await api("fortrecall", {}); sfx("march"); toast(fmt(v.recalled) + " soldiers march home from the stronghold"); applyState(v); renderAlliance(); } catch (e) { toast(e.message, true); } };
+}
+function fortGarrisonDialog() {
+  const rows = Object.keys(S.units).map((u) => `<div class="unitcard"><div class="em">${ic("sword")}</div><div class="mid"><div class="un">${S.units[u].name}</div><div class="st">you have ${S.troops[u] || 0} &middot; speed ${S.units[u].speed}</div></div><input type="number" min="0" max="${S.troops[u] || 0}" value="0" data-gu="${u}"/></div>`).join("");
+  showModal(`<div class="ph">${ic("flag")} Garrison the stronghold <span class="x">&times;</span></div><div class="bd">
+    <p style="color:#caa86a;text-align:center;margin-bottom:10px;font-size:13px">Send troops to hold the banner stronghold. They join its defense against any assault until you recall them, and share the losses if it falls.</p>
+    ${rows}<div class="modal-actions"><button class="gbtn grn" id="do-garrison">Send to the walls</button></div></div>`);
+  modalOpen = null;
+  $("#do-garrison").onclick = async () => {
+    const troops = {}; $$("#modal [data-gu]").forEach((i) => { const n = +i.value || 0; if (n > 0) troops[i.dataset.gu] = n; });
+    if (!Object.keys(troops).length) return toast("Choose some soldiers to send.", true);
+    try { const v = await api("fortgarrison", { troops }); sfx("march"); toast("Your host marches to the stronghold"); applyState(v); closeModal(); openAlliance(); } catch (e) { toast(e.message, true); }
+  };
 }
 // the banner stronghold: a shared map fortress the alliance raises together for a march-speed buff
 function fortCard(A) {
@@ -873,10 +887,13 @@ function fortCard(A) {
     : `<div class="fortcard empty"><div class="fcTop"><span class="fcIco">${ic("flag")}</span><div><div class="fcTtl">No stronghold yet</div><div class="fcSub">Your leader can found a banner stronghold for an alliance-wide march-speed buff.</div></div></div></div>`;
   const pct = f.max ? 100 : Math.min(100, Math.round(100 * f.prog / Math.max(1, f.next)));
   const prog = f.max ? `<b>Full height</b>` : `${fmt(f.prog)} / ${fmt(f.next)} pledged`;
+  const g = f.garrison || { total: 0, mine: 0 };
   return `<div class="fortcard"><div class="fcTop"><span class="fcIco">${ic("flag")}</span>
       <div><div class="fcTtl">Banner Stronghold &middot; Level ${f.level}</div><div class="fcSub">at (${f.x} | ${f.y}) &middot; <b style="color:var(--gold2)">+${f.speed}% march</b> for the whole banner</div></div></div>
     <div class="fcBar"><i style="width:${pct}%"></i></div>
-    <div class="fcRow"><span class="tg">${prog}</span>${f.max ? "" : `<button class="gbtn grn" id="fort-donate" style="padding:6px 12px">Pledge resources</button>`}</div></div>`;
+    <div class="fcRow"><span class="tg">${prog}</span>${f.max ? "" : `<button class="gbtn grn" id="fort-donate" style="padding:6px 12px">Pledge resources</button>`}</div>
+    <div class="fcGar"><span class="tg">${ic("shield")} Garrison: <b>${fmt(g.total)}</b>${g.mine ? ` &middot; yours <b>${fmt(g.mine)}</b>` : ""}</span>
+      <span class="fcGarBtns"><button class="gbtn" id="fort-garrison" style="padding:6px 11px">Garrison troops</button>${g.mine ? `<button class="gbtn grn" id="fort-recall" style="padding:6px 11px">Recall ${fmt(g.mine)}</button>` : ""}</span></div></div>`;
 }
 function fortDonateDialog() {
   const rows = ["grain", "timber", "stone", "iron"].map((k) => `<div class="dnrow"><span class="dnk">${ic(k)} ${k}</span><span class="dnhave">have ${fmt(Math.floor((local && local[k]) || S.res[k] || 0))}</span><input type="number" min="0" value="0" data-dn="${k}"/></div>`).join("");
@@ -1246,9 +1263,13 @@ function reportsHtml() {
       const w = r.win; const bounty = w ? [r.razed ? "<b>razed it</b>" : `battered it to <b>level ${r.newLevel}</b>`, r.shards ? `<b>${r.shards}</b> shards` : "", loot ? `<b>${loot}</b>` : ""].filter(Boolean).join(", ") : "";
       return `<div class="repcard ${w ? "win" : "loss"}"><div class="rt">Assaulted <b>${esc(r.fortName || r.target)}</b>'s stronghold (level ${r.level}) &middot; lost ${Math.round((r.attLoss || 0) * 100)}% of the host${w ? " &middot; " + bounty : ""}</div><div class="res ${w ? "win" : "loss"}">${w ? (r.razed ? "RAZED" : "STORMED") : "REPELLED"}</div></div>`;
     }
+    if (r.kind === "fortgarrison") {
+      const n = Object.values(r.troops || {}).reduce((a, c) => a + c, 0);
+      return `<div class="repcard scout"><div class="rt">Sent <b>${fmt(n)}</b> soldiers to garrison the <b>${esc(r.fortName || "banner")}</b> stronghold</div><div class="res scout">HOLD</div></div>`;
+    }
     if (r.kind === "fortdef") {
-      const held = r.win;
-      return `<div class="repcard ${held ? "win" : "loss"} def"><div class="rt">Your banner stronghold was assaulted by <b>${esc(r.attacker)}</b> &middot; ${held ? "the walls held" : r.razed ? "it was <b>razed</b>" : `battered to <b>level ${r.newLevel}</b>`}</div><div class="res ${held ? "win" : "loss"}">${held ? "HELD" : r.razed ? "RAZED" : "BATTERED"}</div></div>`;
+      const held = r.win; const gl = r.lostGarrison ? ` &middot; lost ${fmt(r.lostGarrison)} of your garrison` : "";
+      return `<div class="repcard ${held ? "win" : "loss"} def"><div class="rt">Your banner stronghold was assaulted by <b>${esc(r.attacker)}</b> &middot; ${held ? "the walls held" : r.razed ? "it was <b>razed</b>" : `battered to <b>level ${r.newLevel}</b>`}${gl}</div><div class="res ${held ? "win" : "loss"}">${held ? "HELD" : r.razed ? "RAZED" : "BATTERED"}</div></div>`;
     }
     if (r.kind === "reinf") {
       const lost = Object.values(r.lost || {}).reduce((a, c) => a + c, 0);

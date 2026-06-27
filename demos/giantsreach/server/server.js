@@ -442,7 +442,7 @@ function allianceView(p) {
     chat: (a.chat || []).slice(-30),
     helpMax: HELP_MAX,
     canFound: myRank === "leader",
-    fort: a.fort ? { x: a.fort.x, y: a.fort.y, level: a.fort.level, prog: Math.floor(a.fort.prog || 0), next: a.fort.level >= FORT_MAX ? 0 : fortCost(a.fort.level), speed: fortSpeedFor(a), max: a.fort.level >= FORT_MAX } : null,
+    fort: a.fort ? { x: a.fort.x, y: a.fort.y, level: a.fort.level, prog: Math.floor(a.fort.prog || 0), next: a.fort.level >= FORT_MAX ? 0 : fortCost(a.fort.level), speed: fortSpeedFor(a), max: a.fort.level >= FORT_MAX, garrison: (() => { const g = a.fort.garrison || {}; let tot = 0, mine = 0; for (const o in g) for (const u in g[o]) { tot += g[o][u] || 0; if (o === p.name) mine += g[o][u] || 0; } return { total: tot, mine }; })() } : null,
     fortSpeedPer: FORT_SPEED_PER,
   };
 }
@@ -644,6 +644,16 @@ function resolveReinforce(p, m, now) {
   p.reports.unshift({ time: now, kind: "reinfsent", ally: m.target, troops: Object.assign({}, m.troops) }); p.reports = p.reports.slice(0, 25);
   m.resolved = true; m.ret = now; // garrisoned, no return leg
 }
+// troops arrive to garrison their OWN banner's stronghold, joining its defense until recalled or slain
+function resolveFortGarrison(p, m, now) {
+  const a = allyOf(p);
+  if (!a || a.tag !== m.target || !a.fort || a.fort.x !== m.tx || a.fort.y !== m.ty) { m.surv = Object.assign({}, m.troops); m.resolved = true; m.ret = now; return; } // fort gone or you left the banner -> troops come home
+  a.fort.garrison = a.fort.garrison || {}; const g = a.fort.garrison[p.name] || {};
+  for (const u in m.troops) g[u] = (g[u] || 0) + (m.troops[u] || 0);
+  a.fort.garrison[p.name] = g;
+  p.reports.unshift({ time: now, kind: "fortgarrison", tag: a.tag, fortName: a.name, troops: Object.assign({}, m.troops) }); p.reports = p.reports.slice(0, 25);
+  m.resolved = true; m.ret = now; // garrisoned, no return leg
+}
 // resolve an assault on a rival banner stronghold: a win batters it down a level (and razes it at zero)
 function resolveFortAssault(p, m, now) {
   const a = db.alliances[m.target]; const sent = Object.assign({}, m.troops);
@@ -651,10 +661,16 @@ function resolveFortAssault(p, m, now) {
     m.surv = sent; m.loot = {}; p.reports.unshift({ time: now, kind: "fort", target: m.target, win: false, gone: true, attLoss: 0, sent }); p.reports = p.reports.slice(0, 25); m.resolved = true; return;
   }
   const lvl = a.fort.level; const hb = heroBonusOf(p);
-  const r = combat(m.troops, fortGarrison(lvl), 1 + hb.atk / 100, fortDefMult(lvl));
+  // the defense is the standing garrison by level PLUS every troop members have garrisoned into the fort
+  const defArmy = fortGarrison(lvl); const gar = a.fort.garrison || {};
+  for (const owner in gar) for (const u in gar[owner]) defArmy[u] = (defArmy[u] || 0) + (gar[owner][u] || 0);
+  const r = combat(m.troops, defArmy, 1 + hb.atk / 100, fortDefMult(lvl));
   const lossF = r.attWins ? r.winnerLoss : r.loserLoss;
   const surv = {}; let carry = 0; for (const u in m.troops) { const keep = Math.max(0, Math.round(m.troops[u] * (1 - lossF))); surv[u] = keep; carry += keep * UNITS[u].carry; }
   m.surv = surv; const lostW = {}; for (const u in m.troops) lostW[u] = (m.troops[u] || 0) - (surv[u] || 0); m.wounded = woundedFromLost(lostW);
+  // the garrisoned defenders take their share of the casualties (the defender's loss fraction)
+  const defLossF = r.attWins ? r.loserLoss : r.winnerLoss; const garLost = {};
+  for (const owner in gar) { for (const u in gar[owner]) { const before = gar[owner][u] || 0; const keep = Math.max(0, Math.round(before * (1 - defLossF))); if (before - keep > 0) garLost[owner] = (garLost[owner] || 0) + (before - keep); gar[owner][u] = keep; } }
   const rep = { time: now, kind: "fort", target: m.target, tag: a.tag, fortName: a.name, level: lvl, win: r.attWins, attLoss: r.attWins ? r.winnerLoss : r.loserLoss, sent, wounded: m.wounded };
   if (r.attWins) {
     a.fort.level = Math.max(0, lvl - 1); a.fort.prog = 0; a.fort.shield = now + FORT_SHIELD;
@@ -668,7 +684,7 @@ function resolveFortAssault(p, m, now) {
     if (razed) delete a.fort;
   } else { m.loot = {}; rep.loot = {}; allyChatPush(a, "", "The stronghold threw back an assault by " + p.name + "."); }
   p.reports.unshift(rep); p.reports = p.reports.slice(0, 25); m.resolved = true;
-  for (const mem of (a.members || [])) { const q = db.players[mem]; if (q && mem !== p.name) { q.reports = q.reports || []; q.reports.unshift({ time: now, kind: "fortdef", attacker: p.name, win: !r.attWins, level: lvl, newLevel: rep.newLevel || 0, razed: !!rep.razed }); q.reports = q.reports.slice(0, 25); } }
+  for (const mem of (a.members || [])) { const q = db.players[mem]; if (q && mem !== p.name) { q.reports = q.reports || []; q.reports.unshift({ time: now, kind: "fortdef", attacker: p.name, win: !r.attWins, level: lvl, newLevel: rep.newLevel || 0, razed: !!rep.razed, lostGarrison: garLost[mem] || 0 }); q.reports = q.reports.slice(0, 25); } }
 }
 // ---- alliance rally: banded lords muster a JOINT host against a warlord, fighting as one ----
 const RALLY_MUSTER = Number(process.env.RALLY_MUSTER) || 180;   // seconds the rally gathers before it marches (members may join until then)
@@ -810,6 +826,7 @@ function resolveInner(p) {
       if (!m.resolved && now >= m.arrive && m.kind === "reinforce") resolveReinforce(p, m, now);
       if (!m.resolved && now >= m.arrive && m.kind === "city") resolveCityAttack(p, m, now);
       if (!m.resolved && now >= m.arrive && m.kind === "fort") resolveFortAssault(p, m, now);
+      if (!m.resolved && now >= m.arrive && m.kind === "fortgarrison") resolveFortGarrison(p, m, now);
       if (!m.resolved && now >= m.arrive && (m.kind === "warlord" || !m.kind)) {
         const wl = m.kind === "warlord";
         const def = wl ? warlordGarrison(m.level) : campGarrison(m.level);
@@ -1152,6 +1169,34 @@ const ROUTES = {
     const now = NOW();
     p.marches.push({ tx, ty, level: a.fort.level, troops: Object.assign({}, troops), depart: now, arrive: now + travel, ret: now + travel * 2, resolved: false, kind: "fort", target: a.tag });
     save(); send(res, 200, view(p));
+  },
+  // ---- send a host to garrison your own banner's stronghold (joins its defense until recalled or slain) ----
+  "POST /api/fortgarrison": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p); const a = allyOf(p); if (!a) return send(res, 400, { err: "You hold no banner." });
+    if (!a.fort) return send(res, 400, { err: "Your banner has no stronghold to garrison." });
+    const troops = cleanTroops(b.troops);
+    for (const u in troops) if ((troops[u] | 0) > (p.t[u] || 0)) return send(res, 400, { err: "You do not have that many " + (UNITS[u] ? UNITS[u].name : u) + "." });
+    if (unitsCount(troops) <= 0) return send(res, 400, { err: "Send at least one soldier." });
+    const cap = marchCap(p);
+    if ((p.marches || []).filter((m) => m.kind !== "scout").length >= cap) return send(res, 400, { err: "All your marches are out (" + cap + " max)." });
+    const dist = Math.hypot(a.fort.x - p.x, a.fort.y - p.y); let speed = Infinity;
+    for (const u in troops) if (troops[u]) speed = Math.min(speed, UNITS[u].speed);
+    const travel = Math.max(12, Math.round(dist / speed * 400 / (1 + (vipPerks(p).march + allyFortSpeed(p)) / 100)));
+    for (const u in troops) p.t[u] -= troops[u] | 0;
+    const now = NOW();
+    p.marches.push({ kind: "fortgarrison", target: a.tag, tx: a.fort.x, ty: a.fort.y, troops: Object.assign({}, troops), depart: now, arrive: now + travel, ret: now + travel, resolved: false });
+    save(); send(res, 200, view(p));
+  },
+  // ---- recall your troops garrisoned in the banner stronghold ----
+  "POST /api/fortrecall": async (req, res) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p); const a = allyOf(p); if (!a) return send(res, 400, { err: "You hold no banner." });
+    if (!a.fort || !a.fort.garrison || !a.fort.garrison[n]) return send(res, 400, { err: "You have no troops in the stronghold." });
+    const g = a.fort.garrison[n]; let total = 0;
+    for (const u in g) { p.t[u] = (p.t[u] || 0) + (g[u] || 0); total += g[u] || 0; }
+    delete a.fort.garrison[n];
+    save(); send(res, 200, Object.assign({ recalled: total }, view(p)));
   },
   // ---- call a joint alliance rally on a warlord: escrow your host; banded lords join until it musters ----
   "POST /api/rally": async (req, res, b) => {

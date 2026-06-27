@@ -436,6 +436,9 @@ svg{width:18px;height:18px;vertical-align:middle}
 .fcBar{height:8px;border-radius:5px;background:#0f0a04;border:1px solid #4a3a1c;margin:9px 0 7px;overflow:hidden}
 .fcBar i{display:block;height:100%;background:linear-gradient(90deg,#caa033,#f4dd9a);border-radius:5px}
 .fcRow{display:flex;align-items:center;justify-content:space-between;gap:8px}.fcRow .tg{color:#caa86a;font-size:12px}
+.fcGar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;padding-top:9px;border-top:1px solid #2a2010;flex-wrap:wrap}
+.fcGar .tg{color:#caa86a;font-size:12px;display:inline-flex;align-items:center;gap:5px}.fcGar .tg b{color:#f3e7c8}.fcGar .tg svg{width:13px;height:13px;stroke:#7fc25a}
+.fcGarBtns{display:flex;gap:6px}
 .fcAct{margin-top:10px;display:flex;justify-content:flex-end}
 .dnrow{display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid #2a2010}
 .dnrow .dnk{font-family:'Cinzel';font-weight:700;color:var(--gold2);font-size:13px;text-transform:capitalize;display:flex;align-items:center;gap:5px;flex:1}
