@@ -392,6 +392,21 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 56: YOUR BANNER'S STANDING on the Banners and Territory ladders)
+- The Lords ladder showed your own rank when you fell below the visible top, but the Banners and Territory ladders
+  did not, so a player could not see where their banner sat once it dropped out of the top 15. Surfaced own-banner
+  standing on both, the way the Lords tab already does for the player.
+- Server: the leaderboard now resolves the viewer's banner tag and returns youBanner (its rank in the full
+  might-sorted list) and youTerritory (its rank among all forted banners), each carrying the full row stats, so the
+  standing is known even far below the cut. Sends the viewer's tag too.
+- Client: the player's own banner row is highlighted with the gold "me" treatment in both tabs; if it sits below the
+  top 15, a "Your standing" row is appended (reusing the Lords-tab pattern). On the Territory tab, a banner with no
+  stronghold instead gets a dashed hint pointing to the Banners panel to found one and enter the lists.
+- Verified END TO END: the viewer's WLF banner read youBanner rank 3 and youTerritory rank 2; its row rendered
+  highlighted at Territory rank 2; and with WLF's stronghold removed, youTerritory went null and the Territory tab
+  showed the "found a stronghold" hint. Screenshots you-territory.png / territory-hint.png. No JS errors, guest smoke
+  clean (no regression), no em-dashes.
+
 ## DONE (iteration 55: THE TERRITORY LADDER, a realm scoreboard for the stronghold war)
 - The alliance stronghold war (found, pledge, garrison, assault, raze) generated real stakes but had no realm-wide
   scoreboard, so there was nothing to compete over. Added a Territory standing to the Realm Ladder.

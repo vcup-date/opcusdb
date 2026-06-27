@@ -999,9 +999,14 @@ function renderLadder() {
   } else if (ladderTab === "raiders") {
     body = (L.raiders || []).map((r) => ladderRow(r.rank, r.portrait, r.name, r.tag, `${fmt(r.raidsWon)} raids won`, r.name === meName)).join("") || `<div class="empty">No camps cleared yet. Be the first.</div>`;
   } else if (ladderTab === "territory") {
-    body = (L.territory || []).map((r) => `<div class="lrow"><div class="lrank ${r.rank <= 3 ? "top" : ""}">${r.rank}</div><div class="lpor banner fort">${ic("flag")}</div><div class="lname">${esc(r.name)} <span class="tagchip">${esc(r.tag)}</span><div class="lsub">${r.garrison ? fmt(r.garrison) + " in garrison" : "ungarrisoned"}</div></div><div class="lright"><b style="color:var(--gold2)">Stronghold ${r.fort}</b> &middot; ${fmt(r.might)} might</div></div>`).join("") || `<div class="empty">No strongholds raised yet. Found one and hold the Reach.</div>`;
+    const trow = (r, mine) => `<div class="lrow${mine ? " me" : ""}"><div class="lrank ${r.rank <= 3 ? "top" : ""}">${r.rank}</div><div class="lpor banner fort">${ic("flag")}</div><div class="lname">${esc(r.name)} <span class="tagchip">${esc(r.tag)}</span><div class="lsub">${r.garrison ? fmt(r.garrison) + " in garrison" : "ungarrisoned"}</div></div><div class="lright"><b style="color:var(--gold2)">Stronghold ${r.fort}</b> &middot; ${fmt(r.might)} might</div></div>`;
+    body = (L.territory || []).map((r) => trow(r, r.tag === L.myTag)).join("") || `<div class="empty">No strongholds raised yet. Found one and hold the Reach.</div>`;
+    if (L.youTerritory && L.youTerritory.rank > 15) body += `<div class="lyou">${trow(L.youTerritory, true)}</div>`;
+    else if (L.myTag && !L.youTerritory) body += `<div class="lhint">${ic("flag")} Your banner holds no stronghold yet. Found one in the Banners panel to enter the lists.</div>`;
   } else {
-    body = (L.banners || []).map((r) => `<div class="lrow"><div class="lrank ${r.rank <= 3 ? "top" : ""}">${r.rank}</div><div class="lpor banner">${ic("ally")}</div><div class="lname">${esc(r.name)} <span class="tagchip">${esc(r.tag)}</span></div><div class="lright">${r.members} sworn &middot; ${fmt(r.might)} might${r.fort ? ` &middot; <span style="color:var(--gold2)">${ic("flag")}${r.fort}</span>` : ""}</div></div>`).join("") || `<div class="empty">No banners raised yet.</div>`;
+    const brow = (r, mine) => `<div class="lrow${mine ? " me" : ""}"><div class="lrank ${r.rank <= 3 ? "top" : ""}">${r.rank}</div><div class="lpor banner">${ic("ally")}</div><div class="lname">${esc(r.name)} <span class="tagchip">${esc(r.tag)}</span></div><div class="lright">${r.members} sworn &middot; ${fmt(r.might)} might${r.fort ? ` &middot; <span style="color:var(--gold2)">${ic("flag")}${r.fort}</span>` : ""}</div></div>`;
+    body = (L.banners || []).map((r) => brow(r, r.tag === L.myTag)).join("") || `<div class="empty">No banners raised yet.</div>`;
+    if (L.youBanner && L.youBanner.rank > 15) body += `<div class="lyou">${brow(L.youBanner, true)}</div>`;
   }
   showModal(`<div class="ph">${ic("trophy")} The Realm Ladder <span class="sub2">${L.total} lords contend</span> <span class="x">&times;</span></div>
     <div class="bd">${tabs}<div class="lladder">${body}</div></div>`);

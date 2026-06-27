@@ -1147,10 +1147,19 @@ const ROUTES = {
     const you = mi >= 0 ? { rank: mi + 1, might: byMight[mi].might, keep: byMight[mi].keep, portrait: byMight[mi].portrait, tag: byMight[mi].tag, name: me } : null;
     const raiders = all.filter((r) => r.raidsWon > 0).sort((a, b) => b.raidsWon - a.raidsWon).slice(0, 15).map((r, i) => ({ rank: i + 1, name: r.name, raidsWon: r.raidsWon, portrait: r.portrait, tag: r.tag }));
     const bannerStats = Object.values(db.alliances).map((a) => { let mt = 0; for (const m of (a.members || [])) { const q = db.players[m]; if (q) mt += might(q); } return { tag: a.tag, name: a.name, members: (a.members || []).length, might: mt, fort: a.fort ? a.fort.level : 0, garrison: a.fort ? (() => { const g = a.fort.garrison || {}; let t = 0; for (const o in g) for (const u in g[o]) t += g[o][u] || 0; return t; })() : 0 }; });
-    const banners = bannerStats.slice().sort((a, b) => b.might - a.might).slice(0, 15).map((r, i) => Object.assign({ rank: i + 1 }, r));
+    const bByMight = bannerStats.slice().sort((a, b) => b.might - a.might);
+    const banners = bByMight.slice(0, 15).map((r, i) => Object.assign({ rank: i + 1 }, r));
     // the territory ladder: only banners that hold a stronghold, ranked by its level then by might
-    const territory = bannerStats.filter((b) => b.fort > 0).sort((a, b) => b.fort - a.fort || b.might - a.might).slice(0, 15).map((r, i) => Object.assign({ rank: i + 1 }, r));
-    send(res, 200, { lords, you, raiders, banners, territory, total: all.length });
+    const bByTerr = bannerStats.filter((b) => b.fort > 0).sort((a, b) => b.fort - a.fort || b.might - a.might);
+    const territory = bByTerr.slice(0, 15).map((r, i) => Object.assign({ rank: i + 1 }, r));
+    // the viewer's own banner standing in each ranking, so it is visible even below the top 15
+    const myTag = me && db.players[me] ? (db.players[me].alliance || null) : null;
+    let youBanner = null, youTerritory = null;
+    if (myTag) {
+      const bi = bByMight.findIndex((b) => b.tag === myTag); if (bi >= 0) youBanner = Object.assign({ rank: bi + 1 }, bByMight[bi]);
+      const ti = bByTerr.findIndex((b) => b.tag === myTag); if (ti >= 0) youTerritory = Object.assign({ rank: ti + 1 }, bByTerr[ti]);
+    }
+    send(res, 200, { lords, you, raiders, banners, territory, youBanner, youTerritory, myTag, total: all.length });
   },
   "GET /api/map": async (req, res) => {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
