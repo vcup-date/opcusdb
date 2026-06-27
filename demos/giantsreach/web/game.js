@@ -1013,13 +1013,17 @@ function renderLadder() {
     <button class="ltab ${ladderTab === "lords" ? "on" : ""}" data-tab="lords">Lords</button>
     <button class="ltab ${ladderTab === "raiders" ? "on" : ""}" data-tab="raiders">Warlords</button>
     <button class="ltab ${ladderTab === "banners" ? "on" : ""}" data-tab="banners">Banners</button>
-    <button class="ltab ${ladderTab === "territory" ? "on" : ""}" data-tab="territory">Territory</button></div>`;
+    <button class="ltab ${ladderTab === "territory" ? "on" : ""}" data-tab="territory">Territory</button>
+    <button class="ltab ${ladderTab === "deeds" ? "on" : ""}" data-tab="deeds">Deeds</button></div>`;
   let body = "";
   if (ladderTab === "lords") {
     body = (L.lords || []).map((r) => ladderRow(r.rank, r.portrait, r.name, r.tag, `${fmt(r.might)} might &middot; Keep ${roman(r.keep)}`, r.name === meName)).join("") || `<div class="empty">No lords yet.</div>`;
     if (L.you && L.you.rank > 20) body += `<div class="lyou">Your rank &middot; ${ladderRow(L.you.rank, L.you.portrait, L.you.name, L.you.tag, `${fmt(L.you.might)} might &middot; Keep ${roman(L.you.keep)}`, true)}</div>`;
   } else if (ladderTab === "raiders") {
     body = (L.raiders || []).map((r) => ladderRow(r.rank, r.portrait, r.name, r.tag, `${fmt(r.raidsWon)} raids won`, r.name === meName)).join("") || `<div class="empty">No camps cleared yet. Be the first.</div>`;
+  } else if (ladderTab === "deeds") {
+    const ic_of = (k) => k === "raze" ? "sword" : k === "fort" ? "flag" : k === "banner" ? "ally" : k === "warlord" ? "sword" : "scroll";
+    body = (L.chronicle || []).map((d) => `<div class="deed"><span class="deedi">${ic(ic_of(d.kind))}</span><div class="deedt">${esc(d.text)}<div class="deedago">${hms(Math.max(0, Math.round((S.now || d.time) - d.time)))} ago</div></div></div>`).join("") || `<div class="empty">The Reach is quiet. Found a banner, raise a stronghold, or fell a warlord to write the first deed.</div>`;
   } else if (ladderTab === "territory") {
     const trow = (r, mine) => `<div class="lrow${mine ? " me" : ""}"><div class="lrank ${r.rank <= 3 ? "top" : ""}">${r.rank}</div><div class="lpor banner fort">${ic("flag")}</div><div class="lname">${esc(r.name)} <span class="tagchip">${esc(r.tag)}</span><div class="lsub">${r.garrison ? fmt(r.garrison) + " in garrison" : "ungarrisoned"}</div></div><div class="lright"><b style="color:var(--gold2)">Stronghold ${r.fort}</b> &middot; ${fmt(r.might)} might</div></div>`;
     body = (L.territory || []).map((r) => trow(r, r.tag === L.myTag)).join("") || `<div class="empty">No strongholds raised yet. Found one and hold the Reach.</div>`;

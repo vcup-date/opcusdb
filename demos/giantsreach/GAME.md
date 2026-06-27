@@ -392,6 +392,20 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 59: THE REALM CHRONICLE, shared deeds of the Reach)
+- The single realm generated dramatic events (banners founded, strongholds raised and razed, named warlords felled)
+  but nothing surfaced them as shared news, so the world felt like a set of private games. Added a realm-wide chronicle.
+- Server: a shared db.chronicle (a capped 40-entry feed) and a chron(kind, text) helper. Notable, low-frequency deeds
+  push to it from their resolution points: founding a banner, raising a stronghold, razing a rival stronghold to the
+  ground, and felling a named warlord, each with baked phrasing naming the lord (and banner). The leaderboard now
+  returns the latest 20. Deterministic, server-authoritative, zero AI.
+- Client: a fifth Realm Ladder tab, Deeds, renders the chronicle as a feed of icon-marked entries with a time-ago
+  stamp; the ladder tabs now wrap so five fit on narrow screens.
+- Verified END TO END: founding a banner live pushed "Hero founded the banner Hawks of the Reach [HWK]." to the top of
+  the chronicle, above seeded sample deeds (a razing, a warlord felled, a stronghold raised, a banner founded); the
+  leaderboard returned five entries newest-first and the Deeds tab rendered all five with their icons and time-ago.
+  Screenshot deeds-ladder.png. No JS errors, guest smoke clean (no regression), no em-dashes.
+
 ## DONE (iteration 58: FORT-ECONOMY BALANCE, a high stronghold is now a real fortress)
 - A data-driven audit of the territory economy found a concrete imbalance: the stronghold build cost grows
   exponentially (6000 * 1.55^level, ~552k resources cumulative to reach level 10) but the NPC garrison floor grew only
@@ -1066,7 +1080,7 @@ NEXT STEPS list below; none are blocking.
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime; [DONE] named
    barbarian warlords as elite map camps (iteration 39); [DONE] per-building flavor lines in the upgrade modal
    (iteration 53); [DONE] defender + siege war-report narration (iteration 54); [DONE] a season-turn recap with the
-   lord's realm standing (iteration 57). Future: a realm-wide event chronicle.
+   lord's realm standing (iteration 57); [DONE] a realm-wide chronicle of shared deeds (iteration 59). Future: more.
 10. [DONE] MOBILE LAYOUT pass (iteration 12); [DONE] SETTINGS + accessibility (iteration 30); [DONE] in-game
     incoming-attack alerts (iteration 31). Remaining (optional): a SERVER SELECT (one realm) screen.
 11. PRODUCTION HARDENING: rate-limiting, input validation, save integrity, error states,

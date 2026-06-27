@@ -277,6 +277,8 @@ const BLD_FLAVOR = {
 };
 function buildFlavor(bid, lv) { const a = BLD_FLAVOR[bid]; if (!a) return ""; return pick(a, hstr(bid) ^ ((lv | 0) * 2654435761)); }
 function pick(arr, seed) { return arr[(seed >>> 0) % arr.length]; }
+// the realm chronicle: a shared, capped feed of the Reach's notable deeds (founding, sieges, fallen warlords)
+function chron(kind, text) { db.chronicle = db.chronicle || []; db.chronicle.unshift({ time: NOW(), kind, text: String(text).slice(0, 160) }); if (db.chronicle.length > 40) db.chronicle.length = 40; }
 // deterministic battle resolver (Travian-style mixed-arms, no RNG)
 function combat(att, def, atkMult, defMult) {
   let Ainf = 0, Acav = 0;
@@ -594,7 +596,7 @@ function load() {
     catch (e) { if (fs.existsSync(f)) console.error("db read failed (" + path.basename(f) + "):", e.message); }
   }
   if (loaded && typeof loaded === "object") db = loaded;
-  if (!db.accounts) db.accounts = {}; if (!db.players) db.players = {}; if (!db.alliances) db.alliances = {}; if (!db.rallies) db.rallies = {}; if (!db.meta) db.meta = { created: NOW() };
+  if (!db.accounts) db.accounts = {}; if (!db.players) db.players = {}; if (!db.alliances) db.alliances = {}; if (!db.rallies) db.rallies = {}; if (!db.chronicle) db.chronicle = []; if (!db.meta) db.meta = { created: NOW() };
 }
 // durable, atomic write: temp file -> backup the old -> rename over. A crash mid-write never corrupts db.json.
 function writeDbNow() {
@@ -748,7 +750,7 @@ function resolveFortAssault(p, m, now) {
     const shards = 20 + lvl * 5; p.gems += shards; rep.shards = shards;
     life(p, "looted", Object.values(loot).reduce((c, v) => c + v, 0)); seasonGain(p, 80);
     allyChatPush(a, "", razed ? (p.name + " razed the banner stronghold to the ground.") : (p.name + " stormed the stronghold and battered it to level " + a.fort.level + "."));
-    if (razed) delete a.fort;
+    if (razed) { chron("raze", p.name + (p.alliance ? " of " + (allyOf(p) ? allyOf(p).name : p.alliance) : "") + " razed " + a.name + "'s stronghold to the ground."); delete a.fort; }
   } else { m.loot = {}; rep.loot = {}; allyChatPush(a, "", "The stronghold threw back an assault by " + p.name + "."); }
   p.reports.unshift(rep); p.reports = p.reports.slice(0, 25); m.resolved = true;
   for (const mem of (a.members || [])) { const q = db.players[mem]; if (q && mem !== p.name) { q.reports = q.reports || []; q.reports.unshift({ time: now, kind: "fortdef", attacker: p.name, win: !r.attWins, level: lvl, newLevel: rep.newLevel || 0, razed: !!rep.razed, lostGarrison: garLost[mem] || 0, flavor: pick(r.attWins ? FLAVOR.overrun : FLAVOR.defended, (hstr(mem) ^ (now >>> 5) ^ (lvl * 131 + (garLost[mem] || 0))) >>> 0) }); q.reports = q.reports.slice(0, 25); } }
@@ -921,6 +923,7 @@ function resolveInner(p) {
             while (p.relics.some((x) => x.seed === it.seed)) it.seed = (it.seed + 0x9e3779b9) >>> 0;
             p.relics.push(it);
             rep.relic = { seed: it.seed, slot: it.slot, slotName: SLOT_NAME[it.slot], tier: it.tier, tierName: TIERS[it.tier], aff: it.aff, affName: AFFIX_NAME[it.aff], val: it.val };
+            chron("warlord", p.name + " felled " + (WARLORDS[m.wi % WARLORDS.length].name) + ", " + WARLORDS[m.wi % WARLORDS.length].title + ".");
           }
           bump(p, "raid"); if (Object.values(loot).some((v) => v > 0)) bump(p, "loot");
           life(p, "raidsWon"); life(p, "looted", Object.values(loot).reduce((a, c) => a + c, 0)); seasonGain(p, wl ? 120 : 50);
@@ -1180,7 +1183,7 @@ const ROUTES = {
       const bi = bByMight.findIndex((b) => b.tag === myTag); if (bi >= 0) youBanner = Object.assign({ rank: bi + 1 }, bByMight[bi]);
       const ti = bByTerr.findIndex((b) => b.tag === myTag); if (ti >= 0) youTerritory = Object.assign({ rank: ti + 1 }, bByTerr[ti]);
     }
-    send(res, 200, { lords, you, raiders, banners, territory, youBanner, youTerritory, myTag, total: all.length });
+    send(res, 200, { lords, you, raiders, banners, territory, youBanner, youTerritory, myTag, chronicle: (db.chronicle || []).slice(0, 20), total: all.length });
   },
   "GET /api/map": async (req, res) => {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
@@ -1561,6 +1564,7 @@ const ROUTES = {
     if (p.gems < ALLY_CREATE_COST) return send(res, 400, { err: "Founding a banner costs " + ALLY_CREATE_COST + " shards." });
     p.gems -= ALLY_CREATE_COST;
     db.alliances[tag] = { tag, name, leader: n, officers: [], members: [n], created: NOW(), chat: [], help: {} };
+    chron("banner", n + " founded the banner " + name + " [" + tag + "].");
     p.alliance = tag; allyChatPush(db.alliances[tag], "", n + " founded the banner.");
     save(); send(res, 200, view(p));
   },
@@ -1614,6 +1618,7 @@ const ROUTES = {
     if (a.fort) return send(res, 400, { err: "Your banner already holds a stronghold." });
     const spot = findEmptyNear(p.x, p.y); if (!spot) return send(res, 400, { err: "No open ground near your hold to raise it." });
     a.fort = { x: spot.x, y: spot.y, level: 1, prog: 0, founded: NOW() };
+    chron("fort", n + " of " + a.name + " raised a banner stronghold in the Reach.");
     allyChatPush(a, "", n + " raised the banner stronghold at (" + spot.x + ", " + spot.y + ").");
     save(); send(res, 200, view(p));
   },
