@@ -392,6 +392,20 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 36: THE PANOPLY, a hero set bonus)
+- The hero was shallow beyond levelling and equipping four relics. Added a set bonus that rewards completing
+  and refining the loadout, giving the whole relic economy (Forge, ruins, reforge, salvage) a long-term goal.
+- heroBonusOf now computes a Panoply = (relics equipped) + (sum of their tiers), 0 when bare up to 16 for four
+  Legendaries, and adds it as a FLAT bonus to every affix (attack, defense, march, spoils). It flows through
+  everywhere the hero bonus is used: combat, loot, and march speed. So filling all four slots with finer relics
+  broadly strengthens the champion, not just the slotted stats.
+- Client: a green "Panoply +N (M/4)" badge in the Forge hero bar (with a tooltip explaining it), so the player
+  sees the set bonus and how full the loadout is; the combined affix line already reflects it.
+- Verified END TO END: a bare hero reads panoply 0 / all bonuses 0; equipping a full Epic/Legendary loadout
+  (tiers 2,2,3,3) gave panoply 14 and lifted every affix by 14 on top of the per-relic rolls. The hero bar
+  shows "Panoply +12 (4/4)" for a test loadout with Attack +31% / Defense +26% / March +32% / Spoils +44%.
+  Screenshot panoply.png. No JS errors, no regression (a bare hero is unchanged from before).
+
 ## DONE (iteration 35: RELIC SALVAGE + REFORGE, depth for the Forge)
 - The Forge gacha and now ruin delving both grant relics, so the stash fills with duplicates and junk that had
   no use. Added the two grounded gacha levers (on the roadmap as "relic salvage/fusion"): salvage and reforge.

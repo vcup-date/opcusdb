@@ -683,3 +683,8 @@ body.reduce-motion #tutorial .ring{animation:none !important;box-shadow:0 0 14px
 .salvbar .ract{flex:none;padding:5px 11px;font-size:11px}
 .eqacts{display:flex;gap:8px;justify-content:center;margin-top:5px}
 .eqacts .eqx{cursor:pointer}.eqacts .eqx[data-reforge]:hover{color:var(--gold2)}
+
+/* ---- hero panoply (set bonus) ---- */
+.panoply{font-family:'Cinzel';font-weight:700;font-size:11px;letter-spacing:.5px;color:#11250a;background:linear-gradient(#a6e07a,#5d9e36);border-radius:7px;padding:2px 8px;margin-left:8px;vertical-align:middle;box-shadow:0 2px 0 var(--grnln)}
+.panoply .pn{color:#11250a99;font-weight:400}
+.hname{display:flex;align-items:center;flex-wrap:wrap;gap:4px}

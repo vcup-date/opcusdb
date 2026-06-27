@@ -439,8 +439,13 @@ function delveReward(x, y) {
 }
 function heroBonusOf(p) {
   const b = { atk: 0, def: 0, speed: 0, gold: 0 };
-  for (const s of SLOTS) { const it = p.equipped && p.equipped[s]; if (it) b[it.aff] += it.val; }
+  let count = 0, tierSum = 0;
+  for (const s of SLOTS) { const it = p.equipped && p.equipped[s]; if (it) { b[it.aff] += it.val; count++; tierSum += it.tier; } }
   const lvl = (p.hero && p.hero.level) || 1; b.atk += (lvl - 1) * 2; b.def += (lvl - 1) * 2;
+  // the Panoply: a set bonus added to every affix, scaling with how full and how fine the loadout is
+  const panoply = count + tierSum; // 0 (bare) .. 16 (four Legendaries)
+  for (const k of ["atk", "def", "speed", "gold"]) b[k] += panoply;
+  b.panoply = panoply; b.slotsFilled = count;
   return b;
 }
 
