@@ -392,6 +392,25 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 45: THE BANNER STRONGHOLD, a shared alliance fortress on the map)
+- Alliances had help, reinforcement, rallies, and ranks, but no shared PRESENCE on the world map and no collective
+  build goal. Added the Banner Stronghold: a fortress the whole banner raises together, the roadmap's "shared map
+  territory" in a bounded, fully-testable form.
+- Server: the leader founds it with /api/fortfound, which places it on the nearest open map tile to the leader's hold
+  (a deterministic spiral scan past camps, ruins, cities and other forts). Any member raises it with /api/fortdonate,
+  pledging owned resources; accumulated pledges level it up (cost 6000 * 1.55^(level-1)), to a cap of level 10. Every
+  level grants the WHOLE banner +2% march speed (up to +20%), folded into the march, city-attack, and rally travel
+  formulas via allyFortSpeed. The stronghold appears as a map tile for everyone in view; allianceView carries its
+  level, pledge progress, next cost, and speed bonus. Founding and each level-up post to the War Table.
+- Client: a gold Banner Stronghold card atop the Banners panel (level, +march%, a pledge progress bar, a Pledge
+  Resources dialog, or a Found button for the leader); a distinct gold (allied) or violet (rival) banner marker on the
+  world map. Runtime stays deterministic and server-authoritative.
+- Verified END TO END: a non-leader was blocked from founding; the leader founded it at (398,398); founding twice was
+  rejected; a 6000 pledge raised it to level 2 (+4% march, next cost 9300) and the storage-capped donation math was
+  correct; an empty pledge was rejected; the fort showed on a member's map as an allied L2 banner; a real allied march
+  computed its travel with the buff folded in without error. Screenshots fort-panel.png / fort-map.png. No JS errors,
+  guest smoke clean (no regression).
+
 ## DONE (iteration 44: THE CHAMPION GETS A FACE in the Forge)
 - The Forge hero bar, the most-opened progression screen (relics, traits, panoply, fusion, rally leadership), showed
   the Champion as a faceless shield glyph. That was the single most glaring remaining art gap, on a high-traffic
@@ -851,7 +870,8 @@ NEXT STEPS list below; none are blocking.
 8. [DONE] ALLIANCES (banners) (iteration 13): create/join/leave/browse, timer-shaving help (max(1%,60s),
    20 per order), +1%/member production bonus, War Table chat; [DONE] reinforcement (iteration 27): garrison
    a member's hold, join their defense, recall; [DONE] joint rally marches on warlords (iteration 40); [DONE]
-   member ranks: officers + transferable leadership + moderation (iteration 41). Future: a shared map territory.
+   member ranks: officers + transferable leadership + moderation (iteration 41); [DONE] the Banner Stronghold, a
+   shared map fortress raised by pledges for an alliance-wide march buff (iteration 45). Future: rival forts contestable.
 9. [DONE] A LITTLE AI / FLAVOR (iteration 14): camp taunts, battle narration, steward counsel, a lore
    codex, all baked offline to a static corpus, deterministic, never an API call at runtime; [DONE] named
    barbarian warlords as elite map camps (iteration 39). Future: per-building flavor, event log narration.

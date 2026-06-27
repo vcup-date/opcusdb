@@ -382,6 +382,22 @@ const HELP_FRACTION = 0.01;      // each help shaves 1% of total build time
 const HELP_MIN = 60;             // ...but at least 60s
 function allyOf(p) { return p.alliance ? db.alliances[p.alliance] : null; }
 function allyProdBonus(p) { const a = allyOf(p); if (!a) return 0; return Math.min(10, (a.members || []).length); } // +1%/member up to +10%
+// the Banner Stronghold: a shared map fortress the alliance raises together by donating resources, for an alliance-wide march-speed buff
+const FORT_BASE = 6000;       // combined resources to raise the stronghold from level 1 to level 2
+const FORT_GROWTH = 1.55;     // each level costs more
+const FORT_MAX = 10;          // capped
+const FORT_SPEED_PER = 2;     // +2% march speed for every member of the banner, per stronghold level (up to +20%)
+function fortCost(level) { return Math.round(FORT_BASE * Math.pow(FORT_GROWTH, Math.max(0, level - 1))); } // cost to raise level -> level+1
+function fortSpeedFor(a) { return a && a.fort ? Math.min(FORT_MAX, a.fort.level) * FORT_SPEED_PER : 0; }
+function allyFortSpeed(p) { return fortSpeedFor(allyOf(p)); }
+function findEmptyNear(cx, cy) { // spiral out from a city to the nearest open map tile (no camp/warlord/ruin/city)
+  for (let r = 2; r <= 14; r++) for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = cx + dx, y = cy + dy;
+    if (!tileAt(x, y) && !cityAt(x, y, null) && !fortAt(x, y)) return { x, y };
+  }
+  return null;
+}
+function fortAt(x, y) { for (const t in db.alliances) { const a = db.alliances[t]; if (a.fort && a.fort.x === x && a.fort.y === y) return a; } return null; }
 function allyHelpShave(total) { return Math.max(HELP_MIN, Math.round(total * HELP_FRACTION)); }
 function allyRank(a, name) { return a.leader === name ? "leader" : (a.officers || []).includes(name) ? "officer" : "member"; }
 function isOfficer(a, name) { return a.leader === name || (a.officers || []).includes(name); }
@@ -422,6 +438,9 @@ function allianceView(p) {
     }).sort((x, y) => (y.leader - x.leader) || ((y.rank === "officer") - (x.rank === "officer")) || y.might - x.might),
     chat: (a.chat || []).slice(-30),
     helpMax: HELP_MAX,
+    canFound: myRank === "leader",
+    fort: a.fort ? { x: a.fort.x, y: a.fort.y, level: a.fort.level, prog: Math.floor(a.fort.prog || 0), next: a.fort.level >= FORT_MAX ? 0 : fortCost(a.fort.level), speed: fortSpeedFor(a), max: a.fort.level >= FORT_MAX } : null,
+    fortSpeedPer: FORT_SPEED_PER,
   };
 }
 function alliancesList() {
@@ -638,7 +657,7 @@ function advanceRally(ra, now) {
     if (!isFinite(speed)) { ra.dead = true; return; }
     const dist = Math.hypot(ra.tx - leader.x, ra.ty - leader.y);
     const hbL = heroBonusOf(leader);
-    const travel = Math.max(12, Math.round(dist / speed * 400 / (1 + (hbL.speed + vipPerks(leader).march) / 100)));
+    const travel = Math.max(12, Math.round(dist / speed * 400 / (1 + (hbL.speed + vipPerks(leader).march + allyFortSpeed(leader)) / 100)));
     ra.launched = true; ra.arrive = ra.muster + travel; ra.ret = ra.arrive + travel;
   }
   if (ra.launched && !ra.resolved && now >= ra.arrive) {
@@ -1055,6 +1074,10 @@ const ROUTES = {
         tiles.push({ type: "city", x: q.x, y: q.y, name: q.name, might: might(q), keep: q.b.keep || 1, shielded: shielded(q), allied: !!(p.alliance && q.alliance === p.alliance), dist: Math.round(Math.hypot(q.x - p.x, q.y - p.y) * 10) / 10, intel: (p.intel && p.intel[q.name]) || null });
       }
     }
+    for (const t of Object.keys(db.alliances)) { // banner strongholds in view
+      const a = db.alliances[t]; if (!a.fort) continue; const f = a.fort;
+      if (Math.abs(f.x - p.x) <= R && Math.abs(f.y - p.y) <= R) tiles.push({ type: "fort", x: f.x, y: f.y, tag: a.tag, name: a.name, level: f.level, allied: a.tag === p.alliance, dist: Math.round(Math.hypot(f.x - p.x, f.y - p.y) * 10) / 10 });
+    }
     send(res, 200, { center: { x: p.x, y: p.y }, name: p.name, troops: p.t, units: UNITS, tiles, R, shielded: shielded(p), shieldKeep: SHIELD_KEEP, watchtower: p.b.watchtower || 0 });
   },
   "POST /api/march": async (req, res, b) => {
@@ -1070,7 +1093,7 @@ const ROUTES = {
     const dist = Math.hypot(tx - p.x, ty - p.y); let speed = Infinity;
     for (const u in troops) if (troops[u]) speed = Math.min(speed, UNITS[u].speed);
     const hb = heroBonusOf(p);
-    const travel = Math.max(12, Math.round(dist / speed * 400 / (1 + (hb.speed + vipPerks(p).march) / 100)));
+    const travel = Math.max(12, Math.round(dist / speed * 400 / (1 + (hb.speed + vipPerks(p).march + allyFortSpeed(p)) / 100)));
     for (const u in troops) p.t[u] -= troops[u];
     const now = NOW();
     const mr = { tx, ty, level: t.level, troops: Object.assign({}, troops), depart: now, arrive: now + travel, ret: now + travel * 2, resolved: false };
@@ -1128,7 +1151,7 @@ const ROUTES = {
     const dist = Math.hypot(tx - p.x, ty - p.y); let speed = Infinity;
     for (const u in troops) if (troops[u]) speed = Math.min(speed, UNITS[u].speed);
     const hb = heroBonusOf(p);
-    const travel = Math.max(12, Math.round(dist / speed * 400 / (1 + (hb.speed + vipPerks(p).march) / 100)));
+    const travel = Math.max(12, Math.round(dist / speed * 400 / (1 + (hb.speed + vipPerks(p).march + allyFortSpeed(p)) / 100)));
     for (const u in troops) p.t[u] -= troops[u];
     const now = NOW();
     p.marches.push({ kind: "city", target, tx, ty, troops: Object.assign({}, troops), depart: now, arrive: now + travel, ret: now + travel * 2, resolved: false });
@@ -1401,6 +1424,31 @@ const ROUTES = {
     const a = allyOf(p); if (!a) return send(res, 400, { err: "You hold no banner." });
     const text = (b.text || "").trim(); if (!text) return send(res, 400, { err: "Say something." });
     allyChatPush(a, n, text); save(); send(res, 200, view(p));
+  },
+  // ---- the Banner Stronghold: the leader founds it on the map; every member donates to raise it for a shared march-speed buff ----
+  "POST /api/fortfound": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p); const a = allyOf(p); if (!a) return send(res, 400, { err: "You hold no banner." });
+    if (a.leader !== n) return send(res, 400, { err: "Only the banner's leader may found the stronghold." });
+    if (a.fort) return send(res, 400, { err: "Your banner already holds a stronghold." });
+    const spot = findEmptyNear(p.x, p.y); if (!spot) return send(res, 400, { err: "No open ground near your hold to raise it." });
+    a.fort = { x: spot.x, y: spot.y, level: 1, prog: 0, founded: NOW() };
+    allyChatPush(a, "", n + " raised the banner stronghold at (" + spot.x + ", " + spot.y + ").");
+    save(); send(res, 200, view(p));
+  },
+  "POST /api/fortdonate": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p); const a = allyOf(p); if (!a) return send(res, 400, { err: "You hold no banner." });
+    if (!a.fort) return send(res, 400, { err: "Your banner has no stronghold yet." });
+    if (a.fort.level >= FORT_MAX) return send(res, 400, { err: "The stronghold already stands at its full height." });
+    const want = b.res || {}; let given = 0; const took = {};
+    for (const k of LOOTABLE) { const v = Math.max(0, Math.floor(Number(want[k]) || 0)); const t = Math.min(v, Math.floor(p.r[k] || 0)); if (t > 0) { p.r[k] -= t; given += t; took[k] = t; } }
+    if (given <= 0) return send(res, 400, { err: "Pledge some resources to the stronghold." });
+    a.fort.prog = (a.fort.prog || 0) + given;
+    let raised = 0;
+    while (a.fort.level < FORT_MAX && a.fort.prog >= fortCost(a.fort.level)) { a.fort.prog -= fortCost(a.fort.level); a.fort.level++; raised++; }
+    if (raised) allyChatPush(a, "", n + " raised the stronghold to level " + a.fort.level + " (+" + fortSpeedFor(a) + "% march for the banner).");
+    save(); send(res, 200, Object.assign({ given, took, raised }, view(p)));
   },
   // ---- banner officership: the leader raises and lowers officers, hands on the mantle; leaders and officers expel ----
   "POST /api/alliancepromote": async (req, res, b) => {

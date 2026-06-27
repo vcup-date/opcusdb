@@ -833,6 +833,7 @@ function renderAlliance() {
     <div class="bd">
       <div class="allyhead"><div><b>${A.members.length}</b> sworn &middot; production <b style="color:var(--gold2)">+${A.bonus}%</b> while banded</div>
         <button class="gbtn ox" id="ally-leave" style="padding:8px 12px">Leave</button></div>
+      ${fortCard(A)}
       ${rallyCard(S.rally, now)}
       <div class="allygrid">
         <div class="allyroster"><div class="ph" style="border:0;padding:6px 0">The sworn</div>${roster}</div>
@@ -861,6 +862,34 @@ function renderAlliance() {
   $("#chat-send").onclick = send; $("#chat-txt").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
   const cl = $("#chatlog"); if (cl) cl.scrollTop = cl.scrollHeight;
   const rj = $("#rally-join"); if (rj) rj.onclick = () => rallyCommitDialog("join");
+  const ff = $("#fort-found"); if (ff) ff.onclick = async () => { try { const v = await api("fortfound", {}); sfx("build"); toast("Your banner stronghold rises"); applyState(v); renderAlliance(); } catch (e) { toast(e.message, true); } };
+  const fd = $("#fort-donate"); if (fd) fd.onclick = () => fortDonateDialog();
+}
+// the banner stronghold: a shared map fortress the alliance raises together for a march-speed buff
+function fortCard(A) {
+  const f = A.fort;
+  if (!f) return A.canFound
+    ? `<div class="fortcard empty"><div class="fcTop"><span class="fcIco">${ic("flag")}</span><div><div class="fcTtl">No stronghold yet</div><div class="fcSub">Found a banner stronghold on the map. Every member can raise it for an alliance-wide march-speed buff.</div></div></div><div class="fcAct"><button class="gbtn grn" id="fort-found" style="padding:8px 12px">Raise the stronghold</button></div></div>`
+    : `<div class="fortcard empty"><div class="fcTop"><span class="fcIco">${ic("flag")}</span><div><div class="fcTtl">No stronghold yet</div><div class="fcSub">Your leader can found a banner stronghold for an alliance-wide march-speed buff.</div></div></div></div>`;
+  const pct = f.max ? 100 : Math.min(100, Math.round(100 * f.prog / Math.max(1, f.next)));
+  const prog = f.max ? `<b>Full height</b>` : `${fmt(f.prog)} / ${fmt(f.next)} pledged`;
+  return `<div class="fortcard"><div class="fcTop"><span class="fcIco">${ic("flag")}</span>
+      <div><div class="fcTtl">Banner Stronghold &middot; Level ${f.level}</div><div class="fcSub">at (${f.x} | ${f.y}) &middot; <b style="color:var(--gold2)">+${f.speed}% march</b> for the whole banner</div></div></div>
+    <div class="fcBar"><i style="width:${pct}%"></i></div>
+    <div class="fcRow"><span class="tg">${prog}</span>${f.max ? "" : `<button class="gbtn grn" id="fort-donate" style="padding:6px 12px">Pledge resources</button>`}</div></div>`;
+}
+function fortDonateDialog() {
+  const rows = ["grain", "timber", "stone", "iron"].map((k) => `<div class="dnrow"><span class="dnk">${ic(k)} ${k}</span><span class="dnhave">have ${fmt(Math.floor((local && local[k]) || S.res[k] || 0))}</span><input type="number" min="0" value="0" data-dn="${k}"/></div>`).join("");
+  showModal(`<div class="ph">${ic("flag")} Pledge to the stronghold <span class="x">&times;</span></div><div class="bd">
+    <p style="color:#caa86a;text-align:center;margin-bottom:10px;font-size:13px">Resources pledged raise the banner stronghold for all members. Every level adds <b style="color:var(--gold2)">+${S.alliance.fortSpeedPer}% march speed</b> across the banner.</p>
+    ${rows}<div class="modal-actions"><button class="gbtn grn" id="do-donate">Pledge</button></div></div>`);
+  modalOpen = null;
+  $("#do-donate").onclick = async () => {
+    const res = {}; $$("#modal [data-dn]").forEach((i) => { const n = +i.value || 0; if (n > 0) res[i.dataset.dn] = n; });
+    if (!Object.keys(res).length) return toast("Pledge some resources.", true);
+    try { const v = await api("fortdonate", { res }); sfx("coin"); toast(v.raised ? `The stronghold rises to level ${v.alliance.fort.level}` : `Pledged ${fmt(v.given)} to the stronghold`); applyState(v); closeModal(); openAlliance(); }
+    catch (e) { toast(e.message, true); }
+  };
 }
 // the active joint rally, shown atop the banner panel: who has mustered, the countdown, and a Join
 function rallyCard(R, now) {
@@ -1015,6 +1044,7 @@ function renderMap() {
     else if (t.type === "camp") cells += `<div class="cell camp ${t.cleared ? "cleared" : ""}" data-x="${x}" data-y="${y}" title="Barbarian camp, level ${t.level}">${t.level}</div>`;
     else if (t.type === "warlord") cells += `<div class="cell warlord ${t.cleared ? "cleared" : ""}" ${t.cleared ? "" : `data-x="${x}" data-y="${y}"`} title="${esc(t.name)}, ${esc(t.title)} &middot; warlord camp, level ${t.level}">${ic("sword")}</div>`;
     else if (t.type === "ruin") cells += `<div class="cell ruin ${t.delved ? "delved" : ""}" ${t.delved ? "" : `data-rx="${x}" data-ry="${y}"`} title="${t.delved ? "A delved ruin" : "A fallen giant's ruin (delve it)"}">${ic("ruin")}</div>`;
+    else if (t.type === "fort") cells += `<div class="cell fort ${t.allied ? "ally" : "foe"}" title="${esc(t.name)} [${esc(t.tag)}] &middot; banner stronghold, level ${t.level}">${ic("flag")}</div>`;
     else if (t.type === "city") {
       const attackable = !t.shielded && !t.allied;
       const cls = t.allied ? "ally" : (t.shielded ? "shielded" : "foe");

@@ -426,6 +426,27 @@ svg{width:18px;height:18px;vertical-align:middle}
 .tagchip{font-family:'Cinzel';font-weight:700;font-size:11px;letter-spacing:1px;color:#2a1a06;background:linear-gradient(#f6e2a0,#cf9f3f);border-radius:5px;padding:1px 6px;vertical-align:middle}
 .allyhead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 13px;border:1.5px solid var(--gold);border-radius:11px;background:linear-gradient(#241808,#160d05);margin-bottom:12px;font-size:13px;color:#caa86a}
 .allyhead b{color:#f3e7c8}
+.fortcard{border:1.5px solid var(--gold);border-radius:11px;background:linear-gradient(#241808,#160d05);padding:11px 13px;margin-bottom:12px}
+.fortcard.empty{border-color:#5a4416}
+.fcTop{display:flex;align-items:center;gap:10px}
+.fcIco{flex:none;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:#1c1206;border:1px solid var(--gold)}
+.fcIco svg{width:16px;height:16px;stroke:var(--gold2)}
+.fcTtl{font-family:'Cinzel';font-weight:800;color:#f6e2a0;font-size:14px}
+.fcSub{font-size:12px;color:#caa86a;margin-top:1px}.fcSub b{color:#f3e7c8}
+.fcBar{height:8px;border-radius:5px;background:#0f0a04;border:1px solid #4a3a1c;margin:9px 0 7px;overflow:hidden}
+.fcBar i{display:block;height:100%;background:linear-gradient(90deg,#caa033,#f4dd9a);border-radius:5px}
+.fcRow{display:flex;align-items:center;justify-content:space-between;gap:8px}.fcRow .tg{color:#caa86a;font-size:12px}
+.fcAct{margin-top:10px;display:flex;justify-content:flex-end}
+.dnrow{display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid #2a2010}
+.dnrow .dnk{font-family:'Cinzel';font-weight:700;color:var(--gold2);font-size:13px;text-transform:capitalize;display:flex;align-items:center;gap:5px;flex:1}
+.dnrow .dnk svg{width:14px;height:14px;stroke:#caa244}
+.dnrow .dnhave{color:#8a7858;font-size:11px}
+.dnrow input{width:96px;background:#140d05;border:1px solid #4a3a1c;border-radius:7px;color:#f3e7c8;font-family:'Cinzel';padding:6px 8px;text-align:right}
+.cell.fort{font-weight:800;z-index:2}
+.cell.fort svg{width:16px;height:16px}
+.cell.fort.ally{background:radial-gradient(#f4dd9a,#caa033);color:#241a06}.cell.fort.ally svg{stroke:#241a06}
+.cell.fort.foe{background:radial-gradient(#7a4a7a,#3a1f3a);box-shadow:0 0 0 1px #caa86a inset}.cell.fort.foe svg{stroke:#e6c8e6}
+.cell.fort:hover{transform:scale(1.18);z-index:4}
 .rallycard{border:1.5px solid var(--ox);border-radius:11px;background:linear-gradient(#2a130c,#180c07);padding:11px 13px;margin-bottom:12px}
 .rcTop{display:flex;align-items:center;gap:10px}
 .rcIco{flex:none;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:#3a140b;border:1px solid var(--ox)}
