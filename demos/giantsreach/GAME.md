@@ -392,6 +392,22 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 29: THE COUNCIL, a returning-player recap)
+- A time-based game leaves you returning after hours to scattered glowing badges. Added a "Council" digest
+  shown once per session to RETURNING lords (tutorial >= 1; brand-new players still get the Welcome instead).
+- Two sections. WHILE YOU WERE AWAY: a tally of the battles resolved since your last visit (camp raids, marches
+  on rival holds, and how many times your hold was assailed and whether any broke through), with a "See the
+  battle reports" link that opens the world map's report list. AWAITING YOUR WORD: clickable rows for every
+  thing ready to claim right now (daily tribute, task chests, the free chest, the VIP audience, season pass
+  rewards, wounded to tend, banner aid to give), each jumping straight to its modal.
+- Implemented entirely client-side from the existing /api/state snapshot; the "since last visit" boundary is a
+  per-lord localStorage timestamp, and a sessionStorage flag keeps it to once per browser session (no nag on
+  every sync or reload). It only appears when there is actually something to report or claim.
+- Verified END TO END: a seeded returning lord with recent reports, wounded, and an unclaimed daily got the
+  Council showing "2 raids resolved / hold assailed 1 time (1 broke through)" plus four claim rows (daily, free
+  chest, VIP, 35 wounded); a brand-new guest correctly gets the Welcome and NO council. Screenshot council.png.
+  No JS errors.
+
 ## DONE (iteration 28: THE REALM LADDER, a real competitive hub)
 - The leaderboard was a plain top-20-by-might list, despite "climb the realm ladder" being the stated endgame.
   Rebuilt it into a tabbed competitive hub.

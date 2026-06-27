@@ -601,3 +601,17 @@ svg{width:18px;height:18px;vertical-align:middle}
 .lyou{margin-top:9px;padding-top:9px;border-top:1px dashed #5a431f}
 .lyou>.lrow{margin-top:4px}
 .lyou::before{content:"Your standing";font-family:'Cinzel';font-size:10px;letter-spacing:1px;color:#8a7448;text-transform:uppercase}
+
+/* ---- the Council: returning-player recap ---- */
+.council .csub{color:#caa86a;text-align:center;font-style:italic;margin-bottom:14px}
+.cwsec{margin-bottom:14px}
+.cwh{font-family:'Cinzel';font-weight:700;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#caa86a;margin-bottom:8px}
+.cwline{display:flex;align-items:center;gap:9px;padding:7px 11px;color:#e7d6ad;font-size:13.5px;border-left:2px solid #5a431f;background:#140d0588;border-radius:0 8px 8px 0;margin-bottom:5px}
+.cwline svg{width:16px;height:16px;flex:none}
+.cmore{background:none;border:0;color:var(--gold2);text-decoration:underline;cursor:pointer;font-size:12.5px;font-family:inherit;margin-top:3px;padding:2px}
+.cmore:hover{color:#fff}
+.crow{display:flex;align-items:center;gap:10px;padding:11px 13px;border:1.5px solid var(--gold);border-radius:10px;background:linear-gradient(#241808,#160d05);margin-bottom:7px;cursor:pointer;color:var(--gold2);font-family:'Cinzel';font-weight:700;font-size:14px;transition:filter .1s,transform .05s}
+.crow:hover{filter:brightness(1.12)}.crow:active{transform:translateY(1px)}
+.crow svg{width:20px;height:20px;flex:none}
+.crow span:first-of-type{flex:1}
+.crow .cgo{color:var(--grn);font-weight:900;font-size:18px}

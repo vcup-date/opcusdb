@@ -100,6 +100,47 @@ async function enterGame() {
   initIcons(); updateMuteIcon();
   await sync(); setupTown(); buildHotbar(); loop(); setInterval(sync, 3500);
   maybeWelcome();
+  maybeCouncil();
+}
+// returning-player digest: what happened while away + what awaits your word (shown once per session)
+function maybeCouncil() {
+  if (!S || (S.tutorial || 0) < 1) return;          // brand-new players get the welcome instead
+  if (sessionStorage.getItem("gr_council")) return;  // once per browser session
+  const key = "gr_lastvisit_" + (S.name || "");
+  const lastVisit = +localStorage.getItem(key) || 0;
+  const since = (S.reports || []).filter((r) => r.time > lastVisit && lastVisit > 0);
+  // tally the battles
+  let raids = 0, sieges = 0, defenses = 0, defLost = 0;
+  since.forEach((r) => { if (r.kind === "defense") { defenses++; if (!r.win) defLost++; } else if (r.kind === "city") sieges++; else if (!r.kind || r.kind === "camp") raids++; });
+  const today = Math.floor(S.now / 86400);
+  const claim = [];
+  if (!S.login || S.login.claimed !== today) claim.push(["gift", "Daily tribute", openDaily]);
+  if (S.tasks && S.tasks.chests.some((c) => c.ready && !c.claimed)) claim.push(["tasks", "Task reward chests", openTasks]);
+  if (S.chest && S.chest.ready) claim.push(["gift", "The free chest", openTasks]);
+  if (S.vip && S.vip.dailyReady) claim.push(["crown", "VIP audience", openVip]);
+  if (S.season && S.season.claimable) claim.push(["pass", "Season pass rewards", openSeason]);
+  const wounded = Object.values(S.wounded || {}).reduce((a, c) => a + c, 0);
+  if (wounded > 0) claim.push(["shield", fmt(wounded) + " wounded to tend", openArmy]);
+  if (S.alliance && S.alliance.members.some((m) => (m.orders || []).some((o) => !o.helpedByYou && !o.maxed))) claim.push(["ally", "Banner aid to give", openAlliance]);
+  localStorage.setItem(key, "" + Math.floor(S.now));
+  if (!since.length && !claim.length) return;        // nothing worth interrupting for
+  sessionStorage.setItem("gr_council", "1");
+  const battleLines = [];
+  if (raids) battleLines.push(`${raids} raid${raids > 1 ? "s" : ""} on the camps resolved`);
+  if (sieges) battleLines.push(`${sieges} march${sieges > 1 ? "es" : ""} on rival holds returned`);
+  if (defenses) battleLines.push(`your hold was assailed ${defenses} time${defenses > 1 ? "s" : ""}${defLost ? " (" + defLost + " broke through)" : " (all thrown back)"}`);
+  const wereAway = since.length ? `<div class="cwsec"><div class="cwh">While you were away</div>${battleLines.map((l) => `<div class="cwline">${ic("sword")}<span>${l}</span></div>`).join("")}<button class="cmore" id="c-reports">See the battle reports</button></div>` : "";
+  const claimRows = claim.length ? `<div class="cwsec"><div class="cwh">Awaiting your word</div>${claim.map(([icn, label], i) => `<div class="crow" data-ci="${i}">${ic(icn)}<span>${esc(label)}</span><span class="cgo">&#8594;</span></div>`).join("")}</div>` : "";
+  showModal(`<div class="ph">${ic("scroll")} The Council &middot; ${esc(S.name)} <span class="x">&times;</span></div>
+    <div class="bd council">
+      <p class="csub">Welcome back, my lord. Here is the realm's account.</p>
+      ${wereAway}${claimRows}
+      <div class="modal-actions"><button class="gbtn grn" id="c-done">To your hold</button></div>
+    </div>`);
+  modalOpen = null;
+  $("#c-done").onclick = closeModal;
+  const rb = $("#c-reports"); if (rb) rb.onclick = () => { closeModal(); openMap(); };
+  $$("#modal .crow").forEach((row) => row.onclick = () => { const fn = claim[+row.dataset.ci][2]; closeModal(); fn(); });
 }
 // first-session onboarding: a warm steward welcome, then the coached objective bubbles take over
 const LORD_NAMES = ["The Veteran", "The Young Lord", "The Lady Commander", "The Old King"];
