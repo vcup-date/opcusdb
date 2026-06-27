@@ -925,7 +925,7 @@ function renderMap() {
     const t = idx[x + "," + y];
     if (!t) cells += `<div class="cell"></div>`;
     else if (t.type === "camp") cells += `<div class="cell camp ${t.cleared ? "cleared" : ""}" data-x="${x}" data-y="${y}" title="Barbarian camp, level ${t.level}">${t.level}</div>`;
-    else if (t.type === "ruin") cells += `<div class="cell ruin" title="A fallen giant's ruin">${ic("ruin")}</div>`;
+    else if (t.type === "ruin") cells += `<div class="cell ruin ${t.delved ? "delved" : ""}" ${t.delved ? "" : `data-rx="${x}" data-ry="${y}"`} title="${t.delved ? "A delved ruin" : "A fallen giant's ruin (delve it)"}">${ic("ruin")}</div>`;
     else if (t.type === "city") {
       const attackable = !t.shielded && !t.allied;
       const cls = t.allied ? "ally" : (t.shielded ? "shielded" : "foe");
@@ -940,6 +940,7 @@ function renderMap() {
       <div class="mapctl"><button id="mz-in">+</button><button id="mz-out">&minus;</button><button id="mz-home" title="center on home">&#9733;</button></div>
     </div>${reportsHtml()}</div>`);
   $$("#mapinner .cell.camp:not(.cleared)").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); marchDialog(+e.dataset.x, +e.dataset.y); });
+  $$("#mapinner .cell.ruin[data-rx]").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); delveDialog(+e.dataset.rx, +e.dataset.ry); });
   $$("#mapinner .cell.city.foe[data-ax]").forEach((e) => e.onclick = (ev) => { ev.stopPropagation(); attackDialog(+e.dataset.ax, +e.dataset.ay); });
   initIcons($("#mapinner"));
   buildMapMarchLayer();
@@ -1006,6 +1007,31 @@ function setupMapPanZoom(side, CELL) {
   $("#mz-home").onclick = (e) => { e.stopPropagation(); center(); apply(); };
 }
 function esc(s) { return ("" + (s || "")).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+const TIER_CLS = ["t0", "t1", "t2", "t3"];
+function delveReveal(d) {
+  const r = d.delved;
+  let body;
+  if (r.kind === "res") body = `<div class="delvereward">${RESES.filter((k) => r.res[k]).map((k) => `<span class="rwc">${ICON[k]}${fmt(r.res[k])}</span>`).join(" ")}</div><div class="delvelabel">A buried cache</div>`;
+  else if (r.kind === "gems") body = `<div class="delvereward big">${ICON.gem} <b>${fmt(r.gems)}</b></div><div class="delvelabel">Shards of the old age</div>`;
+  else { const it = r.relic; body = `<div class="delvereward"><span class="relic ${TIER_CLS[it.tier]}" style="display:inline-flex"><span class="rico">${ic(SLOT_ICON[it.slot])}</span><span class="rmid"><span class="rn">${it.slotName} <span class="rt">${it.tierName}</span></span><span class="rv">+${it.val}${AFF_SUFFIX[it.aff]}</span></span></span></div><div class="delvelabel">A relic, lost and found</div>`; }
+  showModal(`<div class="ph">${ic("ruin")} The Ruin Gives Up Its Dead <span class="x">&times;</span></div><div class="bd" style="text-align:center">
+    ${body}
+    <p class="epitaph">&ldquo;${esc(d.epitaph)}&rdquo;</p>
+    <div class="modal-actions"><button class="gbtn grn" id="delve-ok">Honor the fallen</button></div></div>`);
+  modalOpen = null; $("#delve-ok").onclick = closeModal;
+}
+function delveDialog(x, y) {
+  showModal(`<div class="ph">${ic("ruin")} A Fallen Giant <span class="x">&times;</span></div><div class="bd" style="text-align:center">
+    <div class="delvegiant">${ic("ruin")}</div>
+    <p style="color:#cbb88f;font-size:13.5px;line-height:1.5;margin:6px 0 12px">A carved titan lies here under the moss, older than any banner. Send a delving party to search the ruin. What sleeps in the stone may be a cache of stores, a hoard of shards, or a relic of the lost age.</p>
+    <div class="statline"><span class="k">Provisions</span><span class="v">${ICON.grain}250 ${ICON.timber}250</span></div>
+    <div class="modal-actions"><button class="gbtn grn" id="do-delve">Send a delving party</button></div></div>`);
+  modalOpen = null;
+  $("#do-delve").onclick = async () => {
+    try { const v = await api("delve", { x, y }); sfx(v.delved.kind === "relic" ? "level" : "reward"); applyState(v); delveReveal(v); }
+    catch (e) { toast(e.message, true); }
+  };
+}
 function marchDialog(x, y) {
   const t = MAP.tiles.find((c) => c.x === x && c.y === y); if (!t) return;
   const garr = Object.entries(t.garrison).filter(([k, v]) => v > 0).map(([k, v]) => v + " " + MAP.units[k].name).join(", ");
@@ -1066,6 +1092,10 @@ function reportsHtml() {
     }
     if (r.kind === "spotted") {
       return `<div class="repcard def"><div class="rt">Your watchtower caught a scout from <b>${esc(r.scout)}</b>. They may march on you.</div><div class="res win">SPOTTED</div></div>`;
+    }
+    if (r.kind === "delve") {
+      const rw = r.reward; const what = rw.kind === "res" ? "a buried cache" : rw.kind === "gems" ? fmt(rw.gems) + " shards" : "a " + (rw.relic.tierName || "") + " relic";
+      return `<div class="repcard scout"><div class="rt">Delved a fallen giant's ruin &middot; found <b>${what}</b></div><div class="res scout">DELVED</div></div>`;
     }
     if (r.kind === "reinfsent") {
       const n = Object.values(r.troops || {}).reduce((a, c) => a + c, 0);

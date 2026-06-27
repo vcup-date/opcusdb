@@ -651,3 +651,17 @@ body.reduce-motion #tutorial .ring{animation:none !important;box-shadow:0 0 14px
 #incoming .inccd{color:var(--gold2);font-variant-numeric:tabular-nums}
 #incoming:hover{filter:brightness(1.1)}
 @media (max-width:760px){#incoming{top:auto;bottom:60px;font-size:12px;padding:6px 12px 6px 9px}}
+
+/* ---- ruins + delving ---- */
+.cell.ruin[data-rx]{cursor:pointer}
+.cell.ruin[data-rx]:hover{filter:brightness(1.3);box-shadow:0 0 10px #caa86a88}
+.cell.ruin svg{stroke:#caa86a}
+.cell.ruin.delved{opacity:.4}
+.delvegiant{width:64px;height:64px;margin:2px auto 4px;border-radius:14px;border:1.5px solid #5a431f;background:radial-gradient(circle at 40% 32%,#3a2a14,#160d05);display:grid;place-items:center}
+.delvegiant svg{width:34px;height:34px;stroke:#caa86a}
+.delvereward{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin:14px 0 6px}
+.delvereward.big{font-family:'Cinzel';font-weight:900;font-size:30px;color:var(--gold2);align-items:center}
+.delvereward .rwc{display:inline-flex;align-items:center;gap:4px;font-size:17px;color:var(--gold2);font-weight:600}
+.delvereward .rwc svg{width:20px;height:20px}
+.delvelabel{font-family:'Cinzel';font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#caa86a;margin-bottom:4px}
+.epitaph{font-style:italic;color:#cbb88f;font-size:14px;line-height:1.55;max-width:440px;margin:14px auto;border-top:1px solid #4a3a1c;border-bottom:1px solid #4a3a1c;padding:12px 0}

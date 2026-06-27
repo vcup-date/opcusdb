@@ -392,6 +392,24 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 34: DELVING THE FALLEN GIANTS, ruins become explorable)
+- The world is named for the fallen giants, but their RUINS on the map were purely decorative. Now they are
+  explorable points of interest that finally pay off the central theme and reward exploring the big map.
+- /api/delve {x,y}: validates a ruin actually lies there, charges a small provisioning fee (250 grain + 250
+  timber), and yields a DETERMINISTIC one-time reward seeded by the ruin's coords: a buried resource cache
+  (~45%), a hoard of shards (~30%), or a Rare-or-better RELIC (~25%, via the same Forge roller, giving relics
+  a second source). Each ruin can be delved only once (tracked in p.delved), and the map marks delved ruins.
+- Every delve also reveals a baked EPITAPH of the giant who lies there (a new 8-line FLAVOR pool, picked by
+  coord seed), and drops a "delve" entry in the battle log.
+- Client: undelved ruins on the world map are now clickable (delved ones dim out); a "A Fallen Giant" dialog
+  ("Send a delving party", with the provisions cost) opens a reveal ("The Ruin Gives Up Its Dead") that shows
+  the reward and the giant's epitaph between carved rules.
+- Verified END TO END: delving a ruin returned a resource cache and the epitaph "Here lies one who held a
+  mountain on his shoulders...", a second delve of the same ruin was rejected ("already picked clean"),
+  delving a camp coord errored ("No ruin lies there"), and the map flips the ruin to delved. The client dialog
+  and reveal render in the locked aesthetic (a shards find showed "43 SHARDS OF THE OLD AGE" + epitaph).
+  Screenshots delve_dialog.png, delve_reveal.png. No JS errors, no regression.
+
 ## DONE (iteration 33: ADVERSARIAL SWEEP, prototype-key hardening)
 - Ran a systematic adversarial sweep of every state-mutating route with hostile inputs (negative and huge
   numbers, out-of-range indices, bogus ids, no auth, prototype keys). Most rejected cleanly and state stayed

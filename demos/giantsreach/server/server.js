@@ -195,6 +195,17 @@ const FLAVOR = {
     { t: "The Barbarian Camps", b: "Not all who wander the Reach kneel to a lord. The camps take what the land offers and what the holds cannot defend. They are not lawless so much as bound to an older, colder law. Clear them, and the roads breathe easier for a while." },
     { t: "The Banners", b: "No single hold outlasts the Reach alone. Lords swear their banners together, lend their hands to one another's walls, and march as one when the drums demand. Alone you are a flame. Banded, a hearth." },
   ],
+  // what a delving party finds carved or whispered in a fallen giant's ruin
+  epitaphs: [
+    "Here lies one who held a mountain on his shoulders so the valley folk could sleep. The valley forgot. The stone did not.",
+    "Her open hand still cups a hollow where rain gathers. Birds drink there. It is the kindest grave in the Reach.",
+    "They carved his name in a tongue no living mouth can shape. Your delvers trace the letters and feel, for a moment, very small and very safe.",
+    "A child of the small folk once sheltered in this giant's footprint through a winter. The giant never knew. Or perhaps lay still on purpose.",
+    "Under the moss, a heart of pale stone the size of a cart. It is warm. No one can say why.",
+    "This one fell facing the dawn, as if it meant to rise. The diggers leave its eyes uncovered, just in case.",
+    "Coins, a broken crown, a soldier's ring, all swept into the giant's slack palm by some old flood. The dead share with the dead.",
+    "Its ribs make a hall taller than any keep. Your scholars copy the runes and go quiet for a long while after.",
+  ],
 };
 function pick(arr, seed) { return arr[(seed >>> 0) % arr.length]; }
 // deterministic battle resolver (Travian-style mixed-arms, no RNG)
@@ -417,6 +428,13 @@ function rollRelic(seed, minTier) {
   const aff = SLOT_AFFIX[slot]; const [lo, hi] = AFFIX_RANGE[aff][tier];
   return { seed, slot, tier, aff, val: lo + Math.floor(r() * (hi - lo + 1)) };
 }
+// a deterministic, once-per-ruin reward for delving a fallen giant: a resource cache, shards, or a relic
+function delveReward(x, y) {
+  const h = ihash(x, y); const r = h % 100;
+  if (r < 45) { const a = 600 + (h % 1300); return { kind: "res", res: { grain: a, timber: a, stone: Math.floor(a * 0.8), iron: Math.floor(a * 0.55) } }; }
+  if (r < 75) { return { kind: "gems", gems: 20 + (h % 41) }; }
+  return { kind: "relic", relic: rollRelic((h ^ 0x5bd1e995) >>> 0, 1) }; // a find is always at least Rare
+}
 function heroBonusOf(p) {
   const b = { atk: 0, def: 0, speed: 0, gold: 0 };
   for (const s of SLOTS) { const it = p.equipped && p.equipped[s]; if (it) b[it.aff] += it.val; }
@@ -455,7 +473,7 @@ function newPlayer(name) {
     queue: [], t: { spearman: 0, swordsman: 0, archer: 0, knight: 0 }, train: [], wounded: { spearman: 0, swordsman: 0, archer: 0, knight: 0 },
     tutorial: 0, portrait: 0, login: { streak: 0, lastDay: 0, claimed: -1 }, boughtStarter: false,
     x: 400 + Math.floor(Math.random() * 80) - 40, y: 400 + Math.floor(Math.random() * 80) - 40,
-    marches: [], reports: [], cleared: {}, intel: {},
+    marches: [], reports: [], cleared: {}, intel: {}, delved: {},
     tasks: { day: 0, counts: {}, claimed: [] }, chest: { last: 0 },
     relics: [], equipped: { weapon: null, armor: null, banner: null, charm: null }, hero: { level: 1, xp: 0 }, pity: 0, drawN: 0,
     life: { raidsWon: 0, looted: 0, trained: 0, peakMight: 0, logins: 0 }, achv: {},
@@ -854,6 +872,7 @@ const ROUTES = {
       const x = p.x + dx, y = p.y + dy; if (x === p.x && y === p.y) continue;
       const t = tileAt(x, y); if (!t) continue;
       if (t.type === "camp") { const until = (p.cleared || {})[x + "," + y] || 0; tiles.push({ type: "camp", x, y, level: t.level, cleared: until > now, dist: Math.round(Math.hypot(dx, dy) * 10) / 10, garrison: campGarrison(t.level), loot: campLoot(t.level), taunt: pick(FLAVOR.taunts, ihash(x, y)) }); }
+      else if (t.type === "ruin") tiles.push({ type: "ruin", x, y, dist: Math.round(Math.hypot(dx, dy) * 10) / 10, delved: !!(p.delved && p.delved[x + "," + y]) });
       else tiles.push({ type: t.type, x, y, dist: Math.round(Math.hypot(dx, dy) * 10) / 10 });
     }
     for (const m of Object.keys(db.players)) {
@@ -923,6 +942,26 @@ const ROUTES = {
     const now = NOW();
     p.marches.push({ kind: "scout", target, tx, ty, depart: now, arrive: now + travel, ret: now + travel, resolved: false });
     save(); send(res, 200, view(p));
+  },
+  // ---- delve a fallen giant's ruin for a one-time reward + its epitaph ----
+  "POST /api/delve": async (req, res, b) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p);
+    const x = b.x | 0, y = b.y | 0; const t = tileAt(x, y);
+    if (!t || t.type !== "ruin") return send(res, 400, { err: "No ruin lies there." });
+    if (!p.delved) p.delved = {}; const key = x + "," + y;
+    if (p.delved[key]) return send(res, 400, { err: "Your delvers have already picked this ruin clean." });
+    const fee = { grain: 250, timber: 250 }; // provisioning a delving party
+    for (const k of Object.keys(fee)) if ((p.r[k] || 0) < fee[k]) return send(res, 400, { err: "A delving party needs " + fee.grain + " grain and " + fee.timber + " timber." });
+    for (const k of Object.keys(fee)) p.r[k] -= fee[k];
+    p.delved[key] = NOW();
+    const rew = delveReward(x, y); const out = { kind: rew.kind };
+    if (rew.kind === "res") { for (const k in rew.res) p.r[k] = (p.r[k] || 0) + rew.res[k]; out.res = rew.res; }
+    else if (rew.kind === "gems") { p.gems += rew.gems; out.gems = rew.gems; }
+    else { const it = rew.relic; p.relics.push(it); out.relic = { seed: it.seed, slot: it.slot, slotName: SLOT_NAME[it.slot], tier: it.tier, tierName: TIERS[it.tier], aff: it.aff, affName: AFFIX_NAME[it.aff], val: it.val }; }
+    const epitaph = pick(FLAVOR.epitaphs, ihash(x, y));
+    p.reports.unshift({ time: NOW(), kind: "delve", x, y, reward: out, epitaph }); p.reports = p.reports.slice(0, 25);
+    save(); send(res, 200, Object.assign({ delved: out, epitaph }, view(p)));
   },
   "GET /api/reports": async (req, res) => {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
