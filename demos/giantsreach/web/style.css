@@ -539,3 +539,13 @@ svg{width:18px;height:18px;vertical-align:middle}
 #tutorial .bubble.a-d::after{bottom:-14px;left:28px;border-width:14px 8px 0 8px;border-top-color:var(--gold)}
 #tutorial .bubble.a-l::after{left:-14px;top:18px;border-width:8px 14px 8px 0;border-right-color:var(--gold)}
 #tutorial .bubble.a-r::after{right:-14px;top:18px;border-width:8px 0 8px 14px;border-left-color:var(--gold)}
+
+/* ---- the infirmary (wounded / heal) in the Army modal ---- */
+.infirm{border:1.5px solid var(--blue);border-radius:11px;background:linear-gradient(#16222a,#0e161b);padding:11px 13px;margin-bottom:14px}
+.infirm .ph svg{stroke:#9fcbe0}
+.wlist{display:flex;flex-wrap:wrap;gap:6px 12px;margin-bottom:9px}
+.wcount{font-size:13px;color:#bcd6e3}.wcount b{color:#eaf4fa}
+.healrow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.healcost{font-size:13px;color:#caa86a;display:inline-flex;align-items:center;gap:4px}
+.healcost .rwc{display:inline-flex;align-items:center;gap:2px;color:var(--gold2)}
+.healcost .rwc svg,.healcost svg{width:15px;height:15px}

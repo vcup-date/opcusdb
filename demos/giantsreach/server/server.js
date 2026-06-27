@@ -213,6 +213,18 @@ function combat(att, def, atkMult, defMult) {
   const loserLoss = Math.min(1, winnerLoss + (1 - ratio) * 0.85);
   return { attWins, winnerLoss, loserLoss, A, D };
 }
+// ---- the infirmary: a share of the slain are recoverable wounded, not lost outright ----
+const WOUND_RATE = 0.30;   // 30% of casualties become wounded (the rest are lost)
+const HEAL_FRACTION = 0.5; // tending a wounded soldier costs half its training cost
+function woundCap(p) { return (p.b.keep || 1) * 60; } // the keep limits how many wounded can be sheltered
+function totalWounded(p) { let s = 0; for (const u in (p.wounded || {})) s += p.wounded[u] || 0; return s; }
+function woundedFromLost(lost) { const w = {}; for (const u in lost) { const c = Math.floor((lost[u] || 0) * WOUND_RATE); if (c > 0) w[u] = c; } return w; }
+function addWounded(p, w) { // add capped to the keep's shelter; overflow is lost
+  if (!p.wounded) p.wounded = { spearman: 0, swordsman: 0, archer: 0, knight: 0 };
+  let room = Math.max(0, woundCap(p) - totalWounded(p));
+  for (const u in w) { const add = Math.min(w[u] || 0, room); if (add > 0) { p.wounded[u] = (p.wounded[u] || 0) + add; room -= add; } }
+}
+function healCostOf(p) { const w = p.wounded || {}; const cost = {}; for (const u in w) { const n = w[u] || 0; if (!n || !UNITS[u]) continue; for (const k in UNITS[u].cost) cost[k] = (cost[k] || 0) + Math.ceil(UNITS[u].cost[k] * n * HEAL_FRACTION); } return cost; }
 // ---- player-vs-player: attacking rival cities ----
 const SHIELD_KEEP = 3;   // a hold below this keep is under beginner's peace: it cannot attack or be attacked
 const PVP_LOOT = 0.5;    // fraction of a beaten defender's resources the victor can carry off
@@ -433,7 +445,7 @@ function newPlayer(name) {
     name, created: NOW(), lastSeen: NOW(),
     r: Object.assign({}, START_RES), gems: 120, resTick: NOW(),
     b: { keep: 1, granary: 1, sawmill: 1, quarry: 1, mine: 1, market: 0, barracks: 1, wall: 0, watchtower: 0 },
-    queue: [], t: { spearman: 0, swordsman: 0, archer: 0, knight: 0 }, train: [],
+    queue: [], t: { spearman: 0, swordsman: 0, archer: 0, knight: 0 }, train: [], wounded: { spearman: 0, swordsman: 0, archer: 0, knight: 0 },
     tutorial: 0, login: { streak: 0, lastDay: 0, claimed: -1 }, boughtStarter: false,
     x: 400 + Math.floor(Math.random() * 80) - 40, y: 400 + Math.floor(Math.random() * 80) - 40,
     marches: [], reports: [], cleared: {},
@@ -463,9 +475,10 @@ function resolveCityAttack(p, m, now) {
   // attacker survivors + carry capacity
   const surv = {}; let carry = 0;
   for (const u in m.troops) { const k = Math.max(0, Math.round(m.troops[u] * (1 - attLossF))); surv[u] = k; carry += k * UNITS[u].carry; }
-  // defender casualties
+  // defender casualties (a share become wounded, sheltered immediately at home)
   const defLost = {};
   for (const u in d.t) { const k = Math.max(0, Math.round((d.t[u] || 0) * defLossF)); if (k) { defLost[u] = k; d.t[u] -= k; } }
+  addWounded(d, woundedFromLost(defLost));
   // spoils: a victor carries off part of the defender's stores, capped by surviving carry
   const loot = {}; let looted = 0;
   if (r.attWins) {
@@ -475,10 +488,12 @@ function resolveCityAttack(p, m, now) {
     for (const k of LOOTABLE) { const take = Math.floor(want[k] * f); loot[k] = take; d.r[k] = Math.max(0, (d.r[k] || 0) - take); looted += take; }
   }
   m.surv = surv; m.loot = loot;
+  const attLost = {}; for (const u in m.troops) attLost[u] = (m.troops[u] || 0) - (surv[u] || 0);
+  m.wounded = woundedFromLost(attLost); // the attacker's injured come home with the survivors
   if (r.attWins) { bump(p, "raid"); if (looted > 0) bump(p, "loot"); life(p, "looted", looted); seasonGain(p, 60); life(p, "raidsWon"); }
   // reports for both lords
   const flav = pick(r.attWins ? FLAVOR.victory : FLAVOR.defeat, (hstr(m.target) ^ (now >>> 4)) >>> 0);
-  p.reports.unshift({ time: now, kind: "city", target: m.target, tx: m.tx, ty: m.ty, win: r.attWins, attLoss: attLossF, sent, loot, surv, flavor: flav });
+  p.reports.unshift({ time: now, kind: "city", target: m.target, tx: m.tx, ty: m.ty, win: r.attWins, attLoss: attLossF, sent, loot, surv, wounded: m.wounded, flavor: flav });
   p.reports = p.reports.slice(0, 25);
   d.reports.unshift({ time: now, kind: "defense", attacker: p.name, win: !r.attWins, defLoss: defLossF, lost: defLost, looted: loot, raided: r.attWins });
   d.reports = d.reports.slice(0, 25);
@@ -526,19 +541,22 @@ function resolve(p) {
           for (const k of LOOTABLE) { loot[k] = Math.round(src[k] * (1 + hb.gold / 100)); sum += loot[k]; }
           if (sum > carry && sum > 0) { const f = carry / sum; for (const k in loot) loot[k] = Math.floor(loot[k] * f); }
           m.surv = surv; m.loot = loot; rep.loot = loot; rep.surv = surv;
+          const lostW = {}; for (const u in m.troops) lostW[u] = (m.troops[u] || 0) - (surv[u] || 0);
+          m.wounded = woundedFromLost(lostW); rep.wounded = m.wounded;
           // hero earns experience from each cleared camp; level grants flat atk/def
           const gain = m.level * 8; p.hero.xp += gain; rep.heroXp = gain;
           while (p.hero.xp >= p.hero.level * 100) { p.hero.xp -= p.hero.level * 100; p.hero.level++; rep.heroLevel = p.hero.level; }
           bump(p, "raid"); if (Object.values(loot).some((v) => v > 0)) bump(p, "loot");
           life(p, "raidsWon"); life(p, "looted", Object.values(loot).reduce((a, c) => a + c, 0)); seasonGain(p, 50);
           p.cleared[m.tx + "," + m.ty] = now + 1800; // camp returns after 30 min
-        } else { m.surv = {}; m.loot = {}; rep.loot = {}; rep.surv = {}; }
+        } else { m.surv = {}; m.loot = {}; rep.loot = {}; rep.surv = {}; m.wounded = woundedFromLost(m.troops); rep.wounded = m.wounded; }
         p.reports.unshift(rep); p.reports = p.reports.slice(0, 25);
         m.resolved = true;
       }
       if (m.resolved && now >= m.ret) {
         for (const u in (m.surv || {})) p.t[u] = (p.t[u] || 0) + m.surv[u];
         for (const k in (m.loot || {})) p.r[k] = (p.r[k] || 0) + m.loot[k];
+        if (m.wounded) addWounded(p, m.wounded); // the injured limp home to the infirmary
         p.marches.splice(i, 1);
       }
     }
@@ -578,6 +596,7 @@ function view(p) {
     res: { grain: Math.floor(p.r.grain), timber: Math.floor(p.r.timber), stone: Math.floor(p.r.stone), iron: Math.floor(p.r.iron), gold: Math.floor(p.r.gold) },
     rate: ratePerSec(p), cap: capacity(p), buildSlots: BUILD_SLOTS,
     buildings, queue, troops: p.t, train, units: UNITS,
+    wounded: p.wounded || { spearman: 0, swordsman: 0, archer: 0, knight: 0 }, woundCap: woundCap(p), healCost: healCostOf(p),
     tutorial: p.tutorial, login: p.login, daily: DAILY, packs: PACKS, starter: STARTER, boughtStarter: !!p.boughtStarter,
     coords: { x: p.x, y: p.y },
     marches: (p.marches || []).map((m) => ({ tx: m.tx, ty: m.ty, level: m.level, arrive: m.arrive, ret: m.ret, resolved: m.resolved, troops: m.troops, kind: m.kind || "camp", target: m.target || null })),
@@ -697,6 +716,19 @@ const ROUTES = {
     p.train.push({ unit, n: num, done: 0, start: NOW(), per });
     bump(p, "train", num); bump(p, "spend", sumCost(c, num)); life(p, "trained", num); seasonGain(p, Math.min(num, 60));
     save(); send(res, 200, view(p));
+  },
+  // ---- the infirmary: tend the wounded back into the host for a share of their cost ----
+  "POST /api/heal": async (req, res) => {
+    const n = authName(req); if (!n) return send(res, 401, { err: "auth" });
+    const p = db.players[n]; resolve(p);
+    if (!p.wounded) p.wounded = { spearman: 0, swordsman: 0, archer: 0, knight: 0 };
+    const tot = totalWounded(p); if (tot <= 0) return send(res, 400, { err: "No wounded to tend." });
+    const cost = healCostOf(p);
+    for (const k of Object.keys(cost)) if ((p.r[k] || 0) < cost[k]) return send(res, 400, { err: "Not enough resources to tend the wounded." });
+    for (const k of Object.keys(cost)) p.r[k] -= cost[k];
+    for (const u in p.wounded) { if (p.wounded[u]) p.t[u] = (p.t[u] || 0) + p.wounded[u]; }
+    p.wounded = { spearman: 0, swordsman: 0, archer: 0, knight: 0 };
+    save(); send(res, 200, Object.assign({ healed: tot }, view(p)));
   },
   "POST /api/buygems": async (req, res, b) => {
     const n = authName(req); if (!n) return send(res, 401, { err: "auth" });

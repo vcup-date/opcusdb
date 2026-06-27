@@ -141,6 +141,8 @@ function applyState(v) {
   const drb = $("#draw-bdg"); if (drb) drb.classList.toggle("hidden", !(v.season && v.season.claimable));
   const canHelp = !!(v.alliance && v.alliance.members.some((m) => (m.orders || []).some((o) => !o.helpedByYou && !o.maxed)));
   const ab = $("#rl-ally-bdg"); if (ab) ab.classList.toggle("hidden", !canHelp);
+  const woundedN = Object.values(v.wounded || {}).reduce((a, c) => a + c, 0);
+  const wb = $("#rl-army-bdg"); if (wb) wb.classList.toggle("hidden", woundedN <= 0);
   // a freshly resolved battle: play the cinematic for your own attacks, toast incoming raids
   if (v.reports && v.reports.length) {
     const r = v.reports[0];
@@ -165,6 +167,7 @@ function playBattle(r) {
   if (battleBusy) return; battleBusy = true;
   const foe = r.kind === "city" ? esc(r.target) : ("a level " + r.level + " camp");
   const sentN = Object.values(r.sent || {}).reduce((a, c) => a + c, 0);
+  const woundedN = Object.values(r.wounded || {}).reduce((a, c) => a + c, 0);
   const lossPct = Math.round((r.attLoss || 0) * 100);
   const lootRows = Object.entries(r.loot || {}).filter(([k, x]) => x).map(([k, x]) => `<span class="bl"><span class="ic">${ICON[k]}</span>+${fmt(x)}</span>`).join("");
   const ov = el(`<div id="battle" class="phase-in">
@@ -177,7 +180,7 @@ function playBattle(r) {
       <div class="bseal ${r.win ? "win" : "loss"}"><span>${r.win ? "VICTORY" : "DEFEAT"}</span></div>
       <div class="baftermath">
         ${r.flavor ? `<div class="bflav">&ldquo;${esc(r.flavor)}&rdquo;</div>` : ""}
-        <div class="bstats"><span class="bs">Host lost <b>${lossPct}%</b></span>${r.win && lootRows ? `<span class="bs">Spoils ${lootRows}</span>` : ""}</div>
+        <div class="bstats"><span class="bs">Host lost <b>${lossPct}%</b></span>${woundedN ? `<span class="bs">${ic("shield")} <b>${fmt(woundedN)}</b> wounded</span>` : ""}${r.win && lootRows ? `<span class="bs">Spoils ${lootRows}</span>` : ""}</div>
         <button class="gbtn ${r.win ? "grn" : "ox"}" id="b-done">${r.win ? "To the spoils" : "Onward"}</button>
       </div>
     </div></div>`);
@@ -451,12 +454,26 @@ function renderArmy() {
       <div class="st">atk ${un.atk} &middot; def ${un.dinf}/${un.dcav} &middot; ${cost}</div></div>
       <input type="number" min="1" value="10" data-u="${k}"/><button class="gbtn grn" data-train="${k}" style="padding:9px 12px">Train</button></div>`;
   }).join("");
+  const woundedTot = Object.values(S.wounded || {}).reduce((a, c) => a + c, 0);
+  let infirm = "";
+  if (woundedTot > 0) {
+    const rows = Object.keys(u).filter((k) => (S.wounded[k] || 0) > 0).map((k) => `<span class="wcount">${u[k].name} <b>${fmt(S.wounded[k])}</b></span>`).join("");
+    const costHtml = RESES.filter((r) => S.healCost[r]).map((r) => `<span class="rwc">${ICON[r]}${fmt(S.healCost[r])}</span>`).join(" ");
+    const canHeal = RESES.every((r) => (local[r] || 0) >= (S.healCost[r] || 0));
+    infirm = `<div class="infirm">
+      <div class="ph" style="border:0;padding:4px 0">${ic("shield")} The Infirmary</div>
+      <p style="color:#caa86a;font-size:12px;margin-bottom:8px">A share of your fallen are carried home wounded. Tend them and they rejoin the host. Sheltered ${fmt(woundedTot)} / ${fmt(S.woundCap)}.</p>
+      <div class="wlist">${rows}</div>
+      <div class="healrow"><div class="healcost">Cost ${costHtml || "free"}</div>${canHeal ? `<button class="gbtn grn" id="do-heal">Tend all (${fmt(woundedTot)})</button>` : `<button class="gbtn" disabled>Not enough resources</button>`}</div>
+    </div>`;
+  }
   showModal(`<div class="ph">${ic("sword")} The Barracks <span class="x">&times;</span></div>
-    <div class="bd"><p style="color:#caa86a;text-align:center;margin-bottom:12px">${S.buildings.find((b) => b.id === "barracks").level ? "Drill soldiers for your host." : "Build a Barracks first to train soldiers."}</p>${cards}</div>`);
+    <div class="bd"><p style="color:#caa86a;text-align:center;margin-bottom:12px">${S.buildings.find((b) => b.id === "barracks").level ? "Drill soldiers for your host." : "Build a Barracks first to train soldiers."}</p>${infirm}${cards}</div>`);
   $$("#modal [data-train]").forEach((b) => b.onclick = async () => {
     const k = b.dataset.train; const n = +$(`#modal input[data-u="${k}"]`).value || 1;
     try { const v = await api("train", { unit: k, n }); applyState(v); sfx("build"); toast(`Training ${n} ${u[k].name}`); renderArmy(); } catch (e) { toast(e.message, true); }
   });
+  const hb = $("#do-heal"); if (hb) hb.onclick = async () => { try { const v = await api("heal", {}); applyState(v); sfx("reward"); toast(`${fmt(v.healed)} soldiers tended back to the host`); renderArmy(); } catch (e) { toast(e.message, true); } };
 }
 
 // forge / hero / relics modal (equipment with transparent pity gacha)

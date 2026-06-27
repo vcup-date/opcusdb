@@ -392,6 +392,23 @@ timestamps; resolve on read; survives restarts). Launch with `./launch.sh` (PORT
   advances (2.49s) over a 95s duration; toggling mute pauses it and flips isMuted; zero JS errors. Bake config
   and analysis in scratchpad; the ACE-Step run log captured.
 
+## DONE (iteration 21: THE INFIRMARY, wounded soldiers are recoverable)
+- Softened the one harsh part of combat: every casualty used to be gone forever. Now a share of the slain are
+  WOUNDED (recoverable), not lost. 30% of casualties become wounded; the rest die. The keep shelters up to
+  keep*60 wounded (overflow is lost).
+- Wired into every combat site deterministically: camp raids (on a win the winnerLoss casualties, and even on a
+  loss a share of the wiped host limps home wounded), and PvP both ways (the attacker's wounded come home with
+  the survivors on the return leg; the defender's are sheltered immediately). The injured are added at the
+  return barrier, so it survives restarts like the rest of the lazy resolver.
+- The INFIRMARY in the Army modal: shows the wounded per unit and the shelter usage (N / cap), and a "Tend all"
+  button that heals every wounded back into the host for half their original training cost in resources
+  (instant). Endpoint /api/heal; wounded + woundCap + healCost in /api/state. An Army rail badge lights while
+  wounded await tending, and the battle cinematic now reads "N wounded" alongside the casualties and spoils.
+- Verified END TO END: a seeded keep-5 raid that lost generated 18 wounded (30% of the fallen) with the rest
+  lost; healCost computed as half the training cost (grain 195 / timber 270 / iron 120); "Tend all" returned
+  them to the host and spent exactly that; a second heal correctly returned "No wounded to tend." Screenshots
+  infirm.png (the infirmary panel + lit rail badge) and cin_wounded.png (the cinematic wounded line). No JS errors.
+
 ## DONE (iteration 20: ONBOARDING, a real first-session tutorial)
 - The tutorial was just a pulsing ring + a bottom objective line. Built a proper first-session ONBOARDING.
 - A warm steward WELCOME modal on the very first entry (gated by p.tutorial < 1): a gold crest, a personalized
